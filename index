@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Centralizado de Pedidos - Logística, Proveedores & Sucursales</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cobalto: '#005c42',
+                        cobaltoDark: '#004330',
+                        oxford: '#4a4a4a',
+                        oxfordDark: '#363636'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .header-cobalt {
+            background-color: #005c42;
+        }
+        .table-head-oxford {
+            background-color: #4a4a4a;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        /* Custom checkbox style for touch targets */
+        .touch-checkbox {
+            width: 1.35rem;
+            height: 1.35rem;
+            cursor: pointer;
+            accent-color: #005c42;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-gray-800">
+
+    <!-- MODAL DE LOGIN (ROLES) -->
+    <div id="modal-login" class="fixed inset-0 bg-cobalto/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="shield-check" class="w-8 h-8 text-emerald-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Iniciar Sesión</h2>
+            <p class="text-sm text-gray-500 mb-6">Selecciona tu rol para ingresar al sistema</p>
+            
+            <div class="space-y-3 text-left">
+                <button onclick="seleccionarRol('Logística')" class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 text-cobalto"></i>
+                        <span class="font-bold text-gray-700">Administrador / Compras</span>
+                    </div>
+                </button>
+                <button onclick="seleccionarRol('Sucursal Centro')" class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="store" class="w-5 h-5 text-gray-500"></i>
+                        <span class="font-semibold text-gray-700">Sucursal Centro</span>
+                    </div>
+                </button>
+                <button onclick="seleccionarRol('Sucursal Norte')" class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="store" class="w-5 h-5 text-gray-500"></i>
+                        <span class="font-semibold text-gray-700">Sucursal Norte</span>
+                    </div>
+                </button>
+                <button onclick="seleccionarRol('Sucursal Sur')" class="w-full flex items-center justify-between p-3 rounded-lg border-2 border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="store" class="w-5 h-5 text-gray-500"></i>
+                        <span class="font-semibold text-gray-700">Sucursal Sur</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
+    <header class="header-cobalt text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            
+            <!-- Marca y Subtítulo -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-sm border border-white/20">
+                    <i data-lucide="boxes" class="w-6 h-6 text-emerald-200"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight leading-none">Gestión Central de Pedidos</h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <p class="text-xs text-emerald-100 font-medium flex items-center gap-1" id="db-status">
+                            <span class="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                            Conectando a Nube...
+                        </p>
+                        <span class="text-white/50 text-[10px]">|</span>
+                        <button onclick="mostrarLogin()" id="btn-rol-actual" class="text-xs text-white font-bold bg-white/20 px-2 py-0.5 rounded-md hover:bg-white/30 transition">
+                            Rol: Sin Asignar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Buscador y Acciones -->
+            <div class="flex items-center gap-3 w-full lg:w-auto">
+                <div class="relative w-full lg:w-64">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="h-4 w-4 text-emerald-100"></i>
+                    </div>
+                    <input type="text" id="input-busqueda" placeholder="Buscar pedido, SKU..." 
+                        class="block w-full pl-9 pr-3 py-2 bg-cobaltoDark border border-white/20 rounded-lg text-sm text-white placeholder-emerald-100/70 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition">
+                </div>
+                <button onclick="abrirModalNuevoPedido()" class="shrink-0 bg-white text-cobalto hover:bg-gray-100 font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Crear Pedido
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-grow flex flex-col">
+        
+        <!-- PESTAÑAS PRINCIPALES -->
+        <div class="flex gap-1 border-b border-gray-200 mb-6 w-full overflow-x-auto">
+            <button id="tab-operaciones" onclick="cambiarVistaPrincipal('operaciones')" class="px-5 py-2.5 text-sm font-bold text-cobalto border-b-[3px] border-cobalto bg-white rounded-t-xl shadow-[0_-2px_4px_rgba(0,0,0,0.02)] transition-all flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="package" class="w-4 h-4"></i> Flujo Operativo
+            </button>
+            <button id="tab-cotizaciones" onclick="cambiarVistaPrincipal('cotizaciones')" class="px-5 py-2.5 text-sm font-bold text-gray-500 border-b-[3px] border-transparent hover:text-gray-700 hover:bg-gray-100 rounded-t-xl transition-all flex items-center gap-2 whitespace-nowrap hidden lg:flex">
+                <i data-lucide="file-text" class="w-4 h-4"></i> Cotizaciones
+            </button>
+            <button id="tab-proveedores" onclick="cambiarVistaPrincipal('proveedores')" class="px-5 py-2.5 text-sm font-bold text-gray-500 border-b-[3px] border-transparent hover:text-gray-700 hover:bg-gray-100 rounded-t-xl transition-all flex items-center gap-2 whitespace-nowrap hidden lg:flex">
+                <i data-lucide="truck" class="w-4 h-4"></i> Panel de Compras (Por Proveedor)
+            </button>
+        </div>
+
+        <!-- TARJETAS DE KPIs -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="p-3 bg-gray-100 rounded-lg"><i data-lucide="list" class="w-5 h-5 text-gray-600"></i></div>
+                <div><p class="text-xs text-gray-500 font-bold uppercase">Total Visibles</p><h3 class="text-2xl font-black text-gray-800" id="stat-total">0</h3></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-amber-100 flex items-center gap-4">
+                <div class="p-3 bg-amber-100 rounded-lg"><i data-lucide="clock" class="w-5 h-5 text-amber-600"></i></div>
+                <div><p class="text-xs text-amber-600 font-bold uppercase">Pendientes</p><h3 class="text-2xl font-black text-gray-800" id="stat-pendientes">0</h3></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-sky-100 flex items-center gap-4">
+                <div class="p-3 bg-sky-100 rounded-lg"><i data-lucide="package-open" class="w-5 h-5 text-sky-600"></i></div>
+                <div><p class="text-xs text-sky-600 font-bold uppercase">En Preparación</p><h3 class="text-2xl font-black text-gray-800" id="stat-preparacion">0</h3></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-emerald-100 flex items-center gap-4">
+                <div class="p-3 bg-emerald-100 rounded-lg"><i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600"></i></div>
+                <div><p class="text-xs text-emerald-600 font-bold uppercase">Preparados</p><h3 class="text-2xl font-black text-gray-800" id="stat-preparados">0</h3></div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR VISTA PEDIDOS (FLUJO OPERATIVO Y COTIZACIONES) -->
+        <div id="vista-pedidos-container" class="flex-grow flex flex-col">
+            <!-- FILTROS -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <label class="text-sm font-bold text-gray-600 whitespace-nowrap"><i data-lucide="store" class="w-4 h-4 inline mr-1"></i>Sucursal:</label>
+                    <select id="vista-sucursal" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cobalto focus:border-cobalto block w-full p-2 font-medium">
+                        <option value="todas">Todas las sucursales</option>
+                        <option value="Sucursal Centro">Sucursal Centro</option>
+                        <option value="Sucursal Norte">Sucursal Norte</option>
+                        <option value="Sucursal Sur">Sucursal Sur</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center gap-3 w-full md:w-auto border-t md:border-t-0 md:border-l border-gray-200 pt-3 md:pt-0 md:pl-4">
+                    <label class="text-sm font-bold text-gray-600 whitespace-nowrap"><i data-lucide="truck" class="w-4 h-4 inline mr-1"></i>Proveedor:</label>
+                    <select id="vista-proveedor" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cobalto focus:border-cobalto block w-full p-2 font-medium md:hidden">
+                        <!-- Llenado por JS -->
+                    </select>
+                    
+                    <div class="hidden md:flex items-center bg-gray-100 p-1 rounded-lg gap-1 border border-gray-200 overflow-x-auto max-w-full" id="tabs-proveedor">
+                        <!-- Llenado por JS -->
+                    </div>
+                    <button onclick="abrirModalProveedor()" class="hidden md:flex shrink-0 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold p-1.5 rounded-lg text-sm transition-colors shadow-sm ml-1" title="Añadir Nuevo Proveedor">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- FILTROS DE ESTADO RÁPIDOS -->
+            <div class="flex gap-2 mb-3 overflow-x-auto pb-2" id="tabs-estado">
+                <button data-estado="todos" class="btn-tab bg-oxford text-white px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">Todos los Estados</button>
+                <button data-estado="Pendiente" class="btn-tab bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border border-gray-200">⏳ Pendiente</button>
+                <button data-estado="En Preparación" class="btn-tab bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border border-gray-200">📦 En Preparación</button>
+                <button data-estado="Preparado" class="btn-tab bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border border-gray-200">✅ Preparado</button>
+            </div>
+
+            <!-- TABLA DE PEDIDOS -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-grow relative">
+                <div class="overflow-x-auto h-full">
+                    <table class="w-full text-left border-collapse min-w-[800px]">
+                        <thead>
+                            <tr class="table-head-oxford text-white text-xs uppercase tracking-wide">
+                                <th class="py-4 px-4 font-semibold text-center w-20 rounded-tl-xl">Foto</th>
+                                <th class="py-4 px-4 font-semibold w-40">Info Pedido</th>
+                                <th class="py-4 px-4 font-semibold w-32">Destino</th>
+                                <th class="py-4 px-4 font-semibold min-w-[300px]">Checklist de Empaque & Proveedor</th>
+                                <th class="py-4 px-4 font-semibold text-center w-40 rounded-tr-xl">Estado / Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-pedidos" class="text-sm text-gray-700 bg-white">
+                            <!-- JS inyecta aquí -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ESTADO VACÍO -->
+                <div id="sin-pedidos" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center z-10">
+                    <div class="bg-gray-50 p-4 rounded-full mb-3 border border-gray-100">
+                        <i data-lucide="package-search" class="w-12 h-12 text-gray-300"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">No hay pedidos a la vista</h3>
+                    <p class="text-gray-500 text-sm max-w-sm">No se encontraron resultados con los filtros actuales.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR VISTA PROVEEDORES (PANEL DE COMPRAS) -->
+        <div id="vista-proveedores-container" class="flex-grow flex-col hidden mt-4">
+            <!-- JS inyecta aquí las tablas por proveedor -->
+        </div>
+
+    </main>
+
+    <!-- MODAL DE DETALLE (FICHA) -->
+    <div id="modal-detalle" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-oxford p-4 text-white flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="text-lg font-black tracking-tight" id="modal-id">Pedido #</h2>
+                    <p class="text-xs text-gray-300 font-medium mt-0.5"><i data-lucide="store" class="w-3 h-3 inline mr-1"></i><span id="modal-sucursal">Sucursal</span></p>
+                </div>
+                <button onclick="cerrarModal()" class="text-gray-400 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-grow bg-gray-50">
+                <div class="flex justify-between items-center mb-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="text-center">
+                        <span class="block text-[10px] uppercase font-bold text-gray-400">Tipo</span>
+                        <span class="text-sm font-black text-gray-800" id="modal-tipo">-</span>
+                    </div>
+                    <div class="text-center px-4 border-x border-gray-100">
+                        <span class="block text-[10px] uppercase font-bold text-gray-400">Hora Ingreso</span>
+                        <span class="text-sm font-black text-gray-800" id="modal-hora">-</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-[10px] uppercase font-bold text-gray-400">Estado</span>
+                        <span class="text-sm font-black text-cobalto" id="modal-estado">-</span>
+                    </div>
+                </div>
+                
+                <h3 class="font-bold text-sm text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-1.5"><i data-lucide="list-checks" class="w-4 h-4"></i> Resumen de Ítems</h3>
+                <div id="modal-productos-lista" class="space-y-2">
+                    <!-- JS inyecta aquí -->
+                </div>
+            </div>
+            <div class="bg-white p-4 border-t border-gray-200 flex justify-end gap-3 shrink-0">
+                <button onclick="cerrarModal()" class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors">Cerrar</button>
+                <button onclick="imprimirTicket()" class="px-5 py-2 bg-cobalto hover:bg-cobaltoDark text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center gap-2">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Orden
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO PEDIDO -->
+    <div id="modal-nuevo-pedido" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="bg-cobalto p-4 text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    <h3 class="font-bold text-lg">Crear Nuevo Requerimiento</h3>
+                </div>
+                <button onclick="cerrarModalNuevoPedido()" class="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto flex-grow bg-white flex flex-col gap-4">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Destino:</label>
+                        <select id="np-sucursal" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50">
+                            <option value="Sucursal Centro">Sucursal Centro</option>
+                            <option value="Sucursal Norte">Sucursal Norte</option>
+                            <option value="Sucursal Sur">Sucursal Sur</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Tipo:</label>
+                        <select id="np-tipo" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50">
+                            <option value="Pedido">Pedido Normal</option>
+                            <option value="Reposición">Reposición</option>
+                            <option value="Cotización">Cotización</option>
+                            <option value="Consulta">Consulta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-4">
+                    <label class="block text-xs font-bold text-gray-700 mb-2">Agregar Productos:</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="number" id="np-cantidad" value="1" min="1" class="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-center" placeholder="Cant">
+                        <input type="text" id="np-producto" class="flex-grow px-3 py-1.5 border border-gray-300 rounded-lg text-sm" placeholder="Nombre (Ej. Boxer M)">
+                    </div>
+                    <!-- Uso de Datalist para el Proveedor -->
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="np-sku" class="w-1/3 px-3 py-1.5 border border-gray-300 rounded-lg text-sm" placeholder="SKU (Opcional)">
+                        <input list="np-proveedores-list" id="np-proveedor" class="flex-grow px-3 py-1.5 border border-gray-300 rounded-lg text-sm" placeholder="Proveedor (Escribe o elige)">
+                        <datalist id="np-proveedores-list">
+                            <!-- Llenado por JS dinámicamente -->
+                        </datalist>
+                        <button type="button" onclick="agregarItemTemporal()" class="shrink-0 bg-gray-800 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-700 transition shadow-sm">
+                            Añadir
+                        </button>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-lg border border-gray-200 min-h-[100px] max-h-40 overflow-y-auto p-2" id="np-lista-items">
+                        <p class="text-xs text-gray-400 text-center py-4 italic" id="np-empty-msg">Añade productos arriba para armar la lista.</p>
+                    </div>
+                </div>
+
+                <!-- CÁMARA O GALERÍA -->
+                <div class="border-t border-gray-200 pt-4">
+                    <label class="block text-xs font-bold text-gray-700 mb-2">Evidencia Fotográfica (Opcional):</label>
+                    
+                    <div id="botones-foto" class="flex justify-center gap-3">
+                        <button type="button" id="btn-start-camera" onclick="iniciarCamara()" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-xs flex items-center gap-2 hover:bg-gray-700 shadow-sm transition">
+                            <i data-lucide="camera" class="w-4 h-4"></i> Tomar Foto
+                        </button>
+                        <label class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs flex items-center gap-2 hover:bg-emerald-700 shadow-sm cursor-pointer transition">
+                            <i data-lucide="upload" class="w-4 h-4"></i> Subir Galería
+                            <input type="file" id="file-upload" class="hidden" accept="image/*" onchange="procesarFotoSubida(event)">
+                        </label>
+                    </div>
+
+                    <div id="camera-container" class="bg-gray-100 rounded-lg overflow-hidden border border-gray-300 flex flex-col items-center justify-center relative h-48 mt-2 hidden">
+                        <video id="camera-stream" class="w-full h-full object-cover hidden" autoplay playsinline></video>
+                        <img id="camera-preview" class="w-full h-full object-contain hidden" />
+                        
+                        <button type="button" id="btn-take-photo" onclick="tomarFoto()" class="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-5 py-2 rounded-full text-xs font-bold hidden shadow-lg hover:bg-emerald-600 transition-colors">
+                            Capturar
+                        </button>
+                        
+                        <button type="button" id="btn-retake-photo" onclick="reiniciarCamara()" class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full hidden shadow-lg transition-colors">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                        
+                        <canvas id="camera-canvas" class="hidden"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-100 px-5 py-3 flex justify-end gap-2 shrink-0 border-t border-gray-200">
+                <button onclick="cerrarModalNuevoPedido()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors">Cancelar</button>
+                <button onclick="guardarNuevoPedido()" class="px-4 py-2 bg-cobalto text-white rounded-lg text-xs font-semibold hover:bg-cobaltoDark transition-colors flex items-center gap-1.5 shadow-md">
+                    <i data-lucide="send" class="w-4 h-4"></i> Guardar Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO PROVEEDOR -->
+    <div id="modal-nuevo-proveedor" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="truck" class="w-5 h-5"></i>
+                    <h3 class="font-bold text-base">Añadir Nuevo Proveedor</h3>
+                </div>
+            </div>
+            <div class="p-5">
+                <label class="block text-xs font-bold text-gray-700 mb-1">Nombre del Proveedor:</label>
+                <input type="text" id="input-nuevo-proveedor" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Ej. Textiles Los Andes" onkeyup="if(event.key === 'Enter') guardarProveedor()">
+            </div>
+            <div class="bg-gray-50 px-5 py-3 flex justify-end gap-2 border-t border-gray-100">
+                <button onclick="cerrarModalProveedor()" class="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-300 transition-colors">Cancelar</button>
+                <button onclick="guardarProveedor()" class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICACIONES TOAST -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- SCRIPT PRINCIPAL -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // CONFIGURACIÓN DE FIREBASE Y RUTAS
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mi-sistema-pedidos';
+        const isImmersive = typeof __app_id !== 'undefined';
+        
+        let firebaseConfig = {};
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } else {
+            // Reemplaza con tus credenciales si lo usas en tu propio hosting
+            firebaseConfig = {
+                apiKey: "TU_API_KEY",
+                authDomain: "tu-proyecto.firebaseapp.com",
+                projectId: "tu-proyecto",
+                storageBucket: "tu-proyecto.appspot.com",
+                messagingSenderId: "TUS_NUMEROS",
+                appId: "TU_APP_ID"
+            };
+        }
+
+        let app, auth, db, user;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (e) {
+            console.warn("Firebase Init Error:", e);
+        }
+
+        // Para evitar problemas de permisos si está en tu servidor vs el editor colaborativo
+        const PATH_PEDIDOS = isImmersive ? `artifacts/${appId}/public/data/pedidos` : 'pedidos';
+
+        // VARIABLES DE ESTADO GLOBALES
+        let pedidosGlobales = []; 
+        let listaProveedores = ["Textiles El Hilo", "Importaciones Lima", "Confecciones del Sur"];
+        
+        let rolActual = 'Sin Asignar';
+        let vistaPrincipal = 'operaciones';
+        let sucursalSeleccionada = 'todas';
+        let proveedorSeleccionado = 'todos';
+        let estadoSeleccionado = 'todos';
+        let terminoBusqueda = '';
+
+        let itemsNuevoPedido = [];
+        let streamGlobal = null;
+        let fotoCapturada = null;
+
+        // ELEMENTOS DEL DOM
+        const tbody = document.getElementById('lista-pedidos');
+        const selectSucursal = document.getElementById('vista-sucursal');
+        const selectProveedor = document.getElementById('vista-proveedor');
+        const inputBusqueda = document.getElementById('input-busqueda');
+        const sinPedidosDiv = document.getElementById('sin-pedidos');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarUIProveedores();
+            lucide.createIcons();
+            conectarBaseDeDatos();
+
+            selectSucursal.addEventListener('change', (e) => {
+                sucursalSeleccionada = e.target.value;
+                renderizarTodo();
+            });
+
+            selectProveedor.addEventListener('change', (e) => {
+                proveedorSeleccionado = e.target.value;
+                window.sincronizarPestañasProveedor(e.target.value);
+                renderizarTodo();
+            });
+
+            inputBusqueda.addEventListener('input', (e) => {
+                terminoBusqueda = e.target.value.toLowerCase().trim();
+                renderizarTodo();
+            });
+
+            document.querySelectorAll('#tabs-estado .btn-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#tabs-estado .btn-tab').forEach(b => {
+                        b.classList.remove('bg-oxford', 'text-white');
+                        b.classList.add('bg-gray-100', 'text-gray-700');
+                    });
+                    btn.classList.remove('bg-gray-100', 'text-gray-700');
+                    btn.classList.add('bg-oxford', 'text-white');
+                    estadoSeleccionado = btn.getAttribute('data-estado');
+                    renderizarTodo();
+                });
+            });
+        });
+
+        async function conectarBaseDeDatos() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                user = auth.currentUser;
+                document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizado';
+                if(user) iniciarEscuchaPedidos();
+            } catch(e) {
+                console.error("Error Auth", e);
+                document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400"></span> Desconectado';
+            }
+        }
+
+        function iniciarEscuchaPedidos() {
+            if (!user) return;
+            const pedidosRef = collection(db, PATH_PEDIDOS);
+            
+            onSnapshot(pedidosRef, (snapshot) => {
+                pedidosGlobales = [];
+                snapshot.forEach(docSnap => {
+                    pedidosGlobales.push({ docId: docSnap.id, ...docSnap.data() });
+                });
+
+                pedidosGlobales.sort((a, b) => b.id.localeCompare(a.id));
+
+                const provsDinamicos = new Set(["Textiles El Hilo", "Importaciones Lima", "Confecciones del Sur"]);
+                pedidosGlobales.forEach(p => {
+                    p.productos.forEach(prod => provsDinamicos.add(prod.proveedor));
+                });
+                listaProveedores = Array.from(provsDinamicos);
+                
+                renderizarUIProveedores();
+                renderizarTodo();
+                
+                const modal = document.getElementById('modal-detalle');
+                if (!modal.classList.contains('hidden')) {
+                    const idActual = document.getElementById('modal-id').textContent.replace('Pedido ', '');
+                    if (pedidosGlobales.some(p => p.id === idActual)) window.verDetalle(idActual);
+                }
+            }, (error) => {
+                mostrarToast("Error de lectura en la nube", "amber");
+            });
+        }
+
+        window.mostrarLogin = function() { document.getElementById('modal-login').classList.remove('hidden'); }
+
+        window.seleccionarRol = function(rol) {
+            rolActual = rol;
+            document.getElementById('modal-login').classList.add('hidden');
+            document.getElementById('btn-rol-actual').textContent = `Rol: ${rol}`;
+            
+            const tabCot = document.getElementById('tab-cotizaciones');
+            const tabProv = document.getElementById('tab-proveedores');
+            const contSucursal = document.getElementById('vista-sucursal').parentElement;
+
+            if (rol === 'Logística') {
+                tabCot.style.display = 'flex';
+                tabProv.style.display = 'flex';
+                contSucursal.classList.remove('hidden');
+                sucursalSeleccionada = 'todas';
+                selectSucursal.value = 'todas';
+            } else {
+                tabCot.style.display = 'none';
+                tabProv.style.display = 'none';
+                contSucursal.classList.add('hidden');
+                sucursalSeleccionada = rol;
+                selectSucursal.value = rol;
+                window.cambiarVistaPrincipal('operaciones');
+            }
+            mostrarToast(`Sesión iniciada como ${rol}`, 'emerald');
+            renderizarTodo();
+        }
+
+        function renderizarUIProveedores() {
+            const tabsContainer = document.getElementById('tabs-proveedor');
+            const dataListProveedores = document.getElementById('np-proveedores-list');
+            
+            selectProveedor.innerHTML = '<option value="todos" class="text-gray-900">Todos los Proveedores</option>';
+            dataListProveedores.innerHTML = ''; 
+
+            listaProveedores.forEach(prov => {
+                selectProveedor.innerHTML += `<option value="${prov}" class="text-gray-900">${prov}</option>`;
+                dataListProveedores.innerHTML += `<option value="${prov}">`;
+            });
+            selectProveedor.value = proveedorSeleccionado;
+
+            let tabsHTML = `<button data-prov="todos" class="btn-prov ${proveedorSeleccionado === 'todos' ? 'bg-cobalto text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} text-xs font-semibold px-2.5 py-1 rounded-md transition-all">Todos</button>`;
+            
+            listaProveedores.forEach(prov => {
+                const isActive = proveedorSeleccionado === prov;
+                const clases = isActive ? 'bg-cobalto text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+                tabsHTML += `<button data-prov="${prov}" class="btn-prov ${clases} text-xs font-semibold px-2.5 py-1 rounded-md transition-all">${prov}</button>`;
+            });
+            
+            tabsContainer.innerHTML = tabsHTML;
+
+            document.querySelectorAll('#tabs-proveedor .btn-prov').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const prov = btn.getAttribute('data-prov');
+                    proveedorSeleccionado = prov;
+                    selectProveedor.value = prov;
+                    window.sincronizarPestañasProveedor(prov);
+                    renderizarTodo();
+                });
+            });
+        }
+
+        window.sincronizarPestañasProveedor = function(provTarget) {
+            document.querySelectorAll('#tabs-proveedor .btn-prov').forEach(b => {
+                if (b.getAttribute('data-prov') === provTarget) {
+                    b.classList.remove('bg-gray-100', 'text-gray-700');
+                    b.classList.add('bg-cobalto', 'text-white');
+                } else {
+                    b.classList.remove('bg-cobalto', 'text-white');
+                    b.classList.add('bg-gray-100', 'text-gray-700');
+                }
+            });
+        }
+
+        window.cambiarVistaPrincipal = function(vista) {
+            vistaPrincipal = vista;
+            const tabOps = document.getElementById('tab-operaciones');
+            const tabCot = document.getElementById('tab-cotizaciones');
+            const tabProv = document.getElementById('tab-proveedores');
+            const containerPedidos = document.getElementById('vista-pedidos-container');
+            const containerProv = document.getElementById('vista-proveedores-container');
+
+            const baseClass = "px-5 py-2.5 text-sm font-bold text-gray-500 border-b-[3px] border-transparent hover:text-gray-700 hover:bg-gray-100 rounded-t-xl transition-all flex items-center gap-2 whitespace-nowrap";
+            tabOps.className = baseClass;
+            tabCot.className = baseClass;
+            tabProv.className = baseClass;
+
+            if (vista === 'operaciones') {
+                tabOps.className = "px-5 py-2.5 text-sm font-bold text-cobalto border-b-[3px] border-cobalto bg-white rounded-t-xl shadow-[0_-2px_4px_rgba(0,0,0,0.02)] transition-all flex items-center gap-2 whitespace-nowrap";
+                containerPedidos.classList.remove('hidden');
+                containerProv.classList.add('hidden');
+            } else if (vista === 'cotizaciones') {
+                tabCot.className = "px-5 py-2.5 text-sm font-bold text-orange-600 border-b-[3px] border-orange-600 bg-white rounded-t-xl shadow-[0_-2px_4px_rgba(0,0,0,0.02)] transition-all flex items-center gap-2 whitespace-nowrap";
+                containerPedidos.classList.remove('hidden');
+                containerProv.classList.add('hidden');
+            } else if (vista === 'proveedores') {
+                tabProv.className = "px-5 py-2.5 text-sm font-bold text-indigo-600 border-b-[3px] border-indigo-600 bg-white rounded-t-xl shadow-[0_-2px_4px_rgba(0,0,0,0.02)] transition-all flex items-center gap-2 whitespace-nowrap";
+                containerPedidos.classList.add('hidden');
+                containerProv.classList.remove('hidden');
+            }
+            renderizarTodo();
+        };
+
+        function renderizarTodo() {
+            if (vistaPrincipal === 'proveedores') {
+                renderizarListaProveedores();
+                actualizarEstadisticas();
+                return;
+            }
+
+            tbody.innerHTML = '';
+            const pedidosFiltrados = pedidosGlobales.filter(pedido => {
+                const coincideVista = vistaPrincipal === 'cotizaciones' ? pedido.tipo === 'Cotización' : pedido.tipo !== 'Cotización';
+                const evalSucursal = rolActual === 'Logística' ? sucursalSeleccionada : rolActual;
+                const coincideSucursal = evalSucursal === 'todas' || pedido.sucursal === evalSucursal;
+                const coincideProveedor = proveedorSeleccionado === 'todos' || pedido.productos.some(p => p.proveedor === proveedorSeleccionado);
+                const coincideEstado = estadoSeleccionado === 'todos' || pedido.estado === estadoSeleccionado;
+                const textoProductos = pedido.productos.map(p => `${p.nombre} ${p.sku} ${p.proveedor}`).join(' ').toLowerCase();
+                const coincideBusqueda = terminoBusqueda === '' || 
+                    pedido.id.toLowerCase().includes(terminoBusqueda) ||
+                    pedido.tipo.toLowerCase().includes(terminoBusqueda) ||
+                    pedido.sucursal.toLowerCase().includes(terminoBusqueda) ||
+                    textoProductos.includes(terminoBusqueda);
+                return coincideVista && coincideSucursal && coincideProveedor && coincideEstado && coincideBusqueda;
+            });
+
+            actualizarEstadisticas();
+            sinPedidosDiv.classList.toggle('hidden', pedidosFiltrados.length > 0);
+
+            pedidosFiltrados.forEach(pedido => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50/80 transition-colors border-b border-gray-200';
+                
+                const productosAMostrar = proveedorSeleccionado === 'todos' ? pedido.productos : pedido.productos.filter(p => p.proveedor === proveedorSeleccionado);
+
+                const productosHTML = productosAMostrar.map((prod) => {
+                    const indexReal = pedido.productos.indexOf(prod);
+                    return `
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 py-2 border-b border-gray-100 last:border-none">
+                        <div class="flex items-start space-x-2">
+                            <label class="cursor-pointer select-none mt-0.5">
+                                <input type="checkbox" ${prod.preparado ? 'checked' : ''} onchange="toggleCheckProducto('${pedido.id}', ${indexReal})" class="touch-checkbox">
+                            </label>
+                            <div class="flex flex-col">
+                                <span class="text-xs ${prod.preparado ? 'line-through text-gray-400 font-normal' : 'text-gray-800 font-medium'}">
+                                    <b class="text-gray-900">${prod.cantidad}x</b> ${prod.nombre}
+                                </span>
+                                <div class="mt-1 inline-flex items-center w-fit pl-1.5 pr-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 relative hover:bg-indigo-100 transition-colors">
+                                    <i data-lucide="truck" class="w-3 h-3 mr-1 pointer-events-none"></i>
+                                    <select onchange="cambiarProveedor('${pedido.id}', ${indexReal}, this.value)" class="bg-transparent appearance-none outline-none cursor-pointer text-indigo-700 font-bold uppercase pr-3 w-full">
+                                        ${listaProveedores.map(prov => `<option value="${prov}" ${prod.proveedor === prov ? 'selected' : ''}>${prov}</option>`).join('')}
+                                    </select>
+                                    <i data-lucide="chevron-down" class="w-2.5 h-2.5 absolute right-1 top-1/2 transform -translate-y-1/2 pointer-events-none text-indigo-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-[11px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono font-bold border border-gray-200 shrink-0 mt-1 sm:mt-0">Cód: ${prod.sku}</span>
+                    </div>`}).join('');
+
+                const estatusBg = pedido.estado === 'Pendiente' ? 'bg-amber-100 text-amber-900 border-amber-300' :
+                                  pedido.estado === 'En Preparación' ? 'bg-sky-100 text-sky-900 border-sky-300' :
+                                  'bg-emerald-100 text-emerald-900 border-emerald-300';
+                                  
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-center">
+                        <img src="${pedido.imagen}" alt="Producto" class="w-12 h-12 rounded-lg object-cover border border-gray-200 shadow-sm mx-auto cursor-pointer hover:opacity-80" onclick="verDetalle('${pedido.id}')" onerror="this.src='https://placehold.co/100x100/005c42/ffffff?text=Prenda'">
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        <div class="flex flex-col items-start gap-1">
+                            <span class="text-sm font-mono font-bold text-gray-900">${pedido.id}</span>
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${pedido.tipo === 'Reposición' ? 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200' : pedido.tipo === 'Pedido' ? 'bg-blue-100 text-blue-800 border-blue-200' : pedido.tipo === 'Consulta' ? 'bg-slate-100 text-slate-800 border-slate-200' : 'bg-orange-100 text-orange-800 border-orange-200'}">${pedido.tipo}</span>
+                            <span class="inline-flex items-center text-[11px] font-medium text-gray-500"><i data-lucide="clock" class="w-3 h-3 mr-1"></i>${pedido.hora}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200"><i data-lucide="map-pin" class="w-3 h-3 mr-1 text-emerald-600"></i>${pedido.sucursal}</span>
+                    </td>
+                    <td class="py-3 px-4"><div class="space-y-0.5 max-w-md">${productosHTML}</div></td>
+                    <td class="py-3 px-4 text-center whitespace-nowrap">
+                        <div class="flex flex-col items-center gap-2">
+                            <select onchange="cambiarEstadoDirecto('${pedido.id}', this.value)" class="text-xs font-bold px-3 py-1.5 rounded-lg border cursor-pointer focus:outline-none transition-colors ${estatusBg}">
+                                <option value="Pendiente" ${pedido.estado === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                                <option value="En Preparación" ${pedido.estado === 'En Preparación' ? 'selected' : ''}>📦 En Preparación</option>
+                                <option value="Preparado" ${pedido.estado === 'Preparado' ? 'selected' : ''}>✅ Preparado</option>
+                            </select>
+                            <button onclick="verDetalle('${pedido.id}')" class="text-[11px] text-gray-500 hover:text-cobalto font-medium flex items-center gap-0.5"><i data-lucide="eye" class="w-3 h-3"></i> Abrir Ficha</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // FUNCIONES DE COMPRA Y LOGÍSTICA (NUEVAS)
+        function renderizarListaProveedores() {
+            const container = document.getElementById('vista-proveedores-container');
+            container.innerHTML = '';
+            
+            listaProveedores.forEach(prov => {
+                let itemsStr = '';
+                let tieneAlgo = false;
+                
+                pedidosGlobales.forEach(pedido => {
+                    const sucMatch = (rolActual === 'Logística') ? (sucursalSeleccionada === 'todas' || pedido.sucursal === sucursalSeleccionada) : pedido.sucursal === rolActual;
+                    if(sucMatch) {
+                        pedido.productos.forEach((prod, indexReal) => {
+                            if(prod.proveedor === prov) {
+                                tieneAlgo = true;
+                                const isComprado = prod.comprado ? true : false;
+                                const bgCls = isComprado ? 'bg-emerald-50 text-emerald-900' : 'hover:bg-gray-50';
+                                
+                                itemsStr += `
+                                <tr class="border-b transition-colors ${bgCls} text-sm">
+                                    <td class="py-2 px-3 w-10 text-center">
+                                        <input type="checkbox" ${isComprado ? 'checked' : ''} onchange="toggleComprado('${pedido.id}', ${indexReal})" class="touch-checkbox">
+                                    </td>
+                                    <td class="py-2 px-3 font-mono text-gray-500 text-xs">${prod.sku}</td>
+                                    <td class="py-2 px-3 ${isComprado ? 'line-through text-emerald-700' : 'font-medium text-gray-800'}">${prod.nombre}</td>
+                                    <td class="py-2 px-3 font-black text-center text-indigo-700">${prod.cantidad}</td>
+                                    <td class="py-2 px-3">
+                                        <input type="text" class="w-full text-xs px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none bg-white" placeholder="Ej. Galería A..." value="${prod.lugarCompra || ''}" onblur="guardarLugarCompra('${pedido.id}', ${indexReal}, this.value)">
+                                    </td>
+                                    <td class="py-2 px-3 text-xs text-gray-400 font-bold">${pedido.id}</td>
+                                </tr>`;
+                            }
+                        });
+                    }
+                });
+                if(tieneAlgo) {
+                    container.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+                        <div class="flex justify-between items-center mb-3 border-b pb-2">
+                            <h3 class="font-black text-indigo-900 flex items-center gap-2"><i data-lucide="store" class="w-5 h-5"></i> ${prov}</h3>
+                            <button onclick="copiarOrdenCompra('${prov}')" class="text-xs font-bold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                                <i data-lucide="copy" class="w-4 h-4"></i> Copiar al Portapapeles
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="text-xs text-gray-500 bg-gray-50 uppercase tracking-wide">
+                                    <tr>
+                                        <th class="py-2 px-3 text-center" title="Marcar como Comprado">✓</th>
+                                        <th class="py-2 px-3">SKU</th>
+                                        <th class="py-2 px-3">Producto</th>
+                                        <th class="py-2 px-3 text-center">Cant</th>
+                                        <th class="py-2 px-3">Lugar de Compra</th>
+                                        <th class="py-2 px-3">Ids de Pedido</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${itemsStr}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+                }
+            });
+            lucide.createIcons();
+        }
+
+        window.toggleComprado = async function(pedidoId, indexReal) {
+            if (!user) return;
+            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
+            if (pedido && pedido.productos[indexReal]) {
+                const nuevosProductos = [...pedido.productos];
+                nuevosProductos[indexReal].comprado = !nuevosProductos[indexReal].comprado;
+                
+                try {
+                    const docRef = doc(db, PATH_PEDIDOS, pedido.docId);
+                    await updateDoc(docRef, { productos: nuevosProductos });
+                    mostrarToast(nuevosProductos[indexReal].comprado ? 'Marcado como comprado' : 'Desmarcado de compras', 'emerald');
+                } catch(e) {
+                    mostrarToast('Error al actualizar compra', 'amber');
+                }
+            }
+        };
+
+        window.guardarLugarCompra = async function(pedidoId, indexReal, valor) {
+            if (!user) return;
+            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
+            if (pedido && pedido.productos[indexReal]) {
+                if (pedido.productos[indexReal].lugarCompra === valor) return; // No hay cambios
+                const nuevosProductos = [...pedido.productos];
+                nuevosProductos[indexReal].lugarCompra = valor;
+                try {
+                    const docRef = doc(db, PATH_PEDIDOS, pedido.docId);
+                    await updateDoc(docRef, { productos: nuevosProductos });
+                } catch(e) {
+                    console.error("Error guardando lugar", e);
+                }
+            }
+        };
+
+        window.copiarOrdenCompra = function(proveedor) {
+            let txt = `*ORDEN COMPRA - ${proveedor}*\n\n`;
+            let totalUnidades = 0;
+            pedidosGlobales.forEach(p => {
+                p.productos.forEach(pr => { 
+                    if(pr.proveedor === proveedor && !pr.comprado) {
+                        txt += `- ${pr.cantidad}x ${pr.nombre} (Cod: ${pr.sku})\n`; 
+                        totalUnidades += parseInt(pr.cantidad);
+                    }
+                });
+            });
+            if(totalUnidades === 0) txt += "No hay artículos pendientes de compra.\n";
+            else txt += `\n*TOTAL UNIDADES:* ${totalUnidades}`;
+            
+            navigator.clipboard.writeText(txt).then(() => mostrarToast('Lista copiada para WhatsApp', 'emerald'));
+        };
+
+
+        // ACTUALIZACIÓN FIREBASE (EMPAQUE Y ESTADO)
+        window.toggleCheckProducto = async function(pedidoId, productoIndex) {
+            if (!user) return;
+            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
+            if (pedido && pedido.productos[productoIndex]) {
+                const nuevosProductos = [...pedido.productos];
+                nuevosProductos[productoIndex].preparado = !nuevosProductos[productoIndex].preparado;
+                
+                let nuevoEstado = pedido.estado;
+                const todosPreparados = nuevosProductos.every(p => p.preparado);
+                if (todosPreparados && pedido.estado !== 'Preparado') { nuevoEstado = 'Preparado'; mostrarToast(`¡Todos los ítems de ${pedido.id} listos!`, 'emerald'); } 
+                else if (!todosPreparados && pedido.estado === 'Pendiente') { nuevoEstado = 'En Preparación'; }
+
+                try {
+                    const docRef = doc(db, PATH_PEDIDOS, pedido.docId);
+                    await updateDoc(docRef, { productos: nuevosProductos, estado: nuevoEstado });
+                } catch(e) { mostrarToast('Error', 'amber'); }
+            }
+        };
+
+        window.cambiarEstadoDirecto = async function(pedidoId, nuevoEstado) {
+            if (!user) return;
+            const ped = pedidosGlobales.find(p => p.id === pedidoId);
+            if (ped) {
+                const actualizados = [...ped.productos];
+                if (nuevoEstado === 'Preparado') actualizados.forEach(p => p.preparado = true);
+                try {
+                    const docRef = doc(db, PATH_PEDIDOS, ped.docId);
+                    await updateDoc(docRef, { estado: nuevoEstado, productos: actualizados });
+                    mostrarToast(`Pedido actualizado: ${nuevoEstado}`, 'sky');
+                } catch(e) { mostrarToast('Error', 'amber'); }
+            }
+        };
+
+        window.cambiarProveedor = async function(pedidoId, productoIndex, nuevoProveedor) {
+            if (!user) return;
+            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
+            if (pedido && pedido.productos[productoIndex]) {
+                const nuevosProductos = [...pedido.productos];
+                nuevosProductos[productoIndex].proveedor = nuevoProveedor;
+                try {
+                    const docRef = doc(db, PATH_PEDIDOS, pedido.docId);
+                    await updateDoc(docRef, { productos: nuevosProductos });
+                    mostrarToast(`Proveedor actualizado a ${nuevoProveedor}`, 'sky');
+                } catch(e) { mostrarToast('Error', 'amber'); }
+            }
+        };
+
+        // CÁMARA Y GALERÍA
+        window.iniciarCamara = async function() {
+            const video = document.getElementById('camera-stream');
+            const container = document.getElementById('camera-container');
+            const botones = document.getElementById('botones-foto');
+            const btnTake = document.getElementById('btn-take-photo');
+            try {
+                streamGlobal = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = streamGlobal;
+                botones.classList.add('hidden');
+                container.classList.remove('hidden');
+                video.classList.remove('hidden');
+                btnTake.classList.remove('hidden');
+            } catch (err) { mostrarToast("Error con la cámara", "amber"); }
+        };
+
+        window.procesarFotoSubida = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.getElementById('camera-canvas');
+                    const MAX_WIDTH = 600;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    fotoCapturada = canvas.toDataURL("image/jpeg", 0.6);
+                    
+                    document.getElementById('botones-foto').classList.add('hidden');
+                    const container = document.getElementById('camera-container');
+                    const preview = document.getElementById('camera-preview');
+                    container.classList.remove('hidden');
+                    preview.src = fotoCapturada;
+                    preview.classList.remove('hidden');
+                    document.getElementById('btn-retake-photo').classList.remove('hidden');
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        };
+
+        window.tomarFoto = function() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            const preview = document.getElementById('camera-preview');
+            const btnTake = document.getElementById('btn-take-photo');
+            const btnRetake = document.getElementById('btn-retake-photo');
+            canvas.width = 400;
+            canvas.height = (video.videoHeight / video.videoWidth) * 400;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            fotoCapturada = canvas.toDataURL('image/jpeg', 0.5); 
+            if (streamGlobal) streamGlobal.getTracks().forEach(track => track.stop());
+            video.classList.add('hidden');
+            btnTake.classList.add('hidden');
+            preview.src = fotoCapturada;
+            preview.classList.remove('hidden');
+            btnRetake.classList.remove('hidden');
+        };
+
+        window.reiniciarCamara = function() {
+            fotoCapturada = null;
+            document.getElementById('camera-preview').classList.add('hidden');
+            document.getElementById('btn-retake-photo').classList.add('hidden');
+            document.getElementById('camera-container').classList.add('hidden');
+            document.getElementById('botones-foto').classList.remove('hidden');
+            document.getElementById('file-upload').value = '';
+            if (streamGlobal) streamGlobal.getTracks().forEach(track => track.stop());
+        };
+
+        // NUEVO PEDIDO
+        window.abrirModalNuevoPedido = function() {
+            itemsNuevoPedido = [];
+            window.reiniciarCamara();
+            document.getElementById('np-lista-items').innerHTML = '<p class="text-xs text-gray-400 text-center py-4 italic">Añade productos arriba para armar la lista.</p>';
+            document.getElementById('np-cantidad').value = '1';
+            document.getElementById('np-producto').value = '';
+            document.getElementById('np-sku').value = '';
+            document.getElementById('np-proveedor').value = '';
+            document.getElementById('modal-nuevo-pedido').classList.remove('hidden');
+        };
+
+        window.cerrarModalNuevoPedido = function() {
+            if (streamGlobal) streamGlobal.getTracks().forEach(track => track.stop());
+            document.getElementById('modal-nuevo-pedido').classList.add('hidden');
+        };
+
+        window.agregarItemTemporal = function() {
+            const cant = document.getElementById('np-cantidad').value;
+            const prod = document.getElementById('np-producto').value.trim();
+            const sku = document.getElementById('np-sku').value.trim();
+            let provIngresado = document.getElementById('np-proveedor').value.trim();
+
+            if(!prod) return mostrarToast('Ingresa el nombre del producto', 'amber');
+            if(!provIngresado) provIngresado = 'Por Asignar';
+
+            itemsNuevoPedido.push({ nombre: prod, cantidad: parseInt(cant) || 1, sku: sku || 'S/C', preparado: false, comprado: false, lugarCompra: '', proveedor: provIngresado });
+            
+            document.getElementById('np-cantidad').value = '1';
+            document.getElementById('np-producto').value = '';
+            document.getElementById('np-sku').value = '';
+            document.getElementById('np-proveedor').value = '';
+            
+            const contenedor = document.getElementById('np-lista-items');
+            contenedor.innerHTML = itemsNuevoPedido.map((item) => `
+                <div class="flex items-center justify-between bg-white border border-gray-100 p-2 mb-1 rounded shadow-sm">
+                    <div class="text-xs"><span class="font-bold text-cobalto">${item.cantidad}x</span> ${item.nombre} <span class="text-gray-400">(${item.proveedor})</span></div>
+                </div>`).join('');
+        };
+
+        window.guardarNuevoPedido = async function() {
+            if (!user) return mostrarToast('Sin conexión a base de datos', 'amber');
+            if(itemsNuevoPedido.length === 0) return mostrarToast('Agrega al menos un producto', 'amber');
+
+            const sucursal = document.getElementById('np-sucursal').value;
+            const tipo = document.getElementById('np-tipo').value;
+            const nuevoIdNum = Math.floor(Math.random() * 9000) + 1000; 
+            
+            const nuevoPedido = {
+                id: `PED-${nuevoIdNum}`,
+                tipo: tipo,
+                sucursal: sucursal,
+                hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                imagen: fotoCapturada || "https://placehold.co/100x100/4a4a4a/ffffff?text=Sin+Foto",
+                productos: [...itemsNuevoPedido],
+                estado: "Pendiente"
+            };
+
+            try {
+                const pedidosRef = collection(db, PATH_PEDIDOS);
+                await addDoc(pedidosRef, nuevoPedido);
+                window.cerrarModalNuevoPedido();
+                mostrarToast(`Registrado exitosamente`, 'emerald');
+            } catch(e) { mostrarToast('Error al guardar', 'amber'); }
+        };
+
+        // OTROS UTILITARIOS
+        window.verDetalle = function(id) {
+            const pedido = pedidosGlobales.find(p => p.id === id);
+            if (!pedido) return;
+            document.getElementById('modal-id').textContent = `Pedido ${pedido.id}`;
+            document.getElementById('modal-sucursal').textContent = pedido.sucursal;
+            document.getElementById('modal-tipo').textContent = pedido.tipo;
+            document.getElementById('modal-hora').textContent = pedido.hora;
+            document.getElementById('modal-estado').textContent = pedido.estado;
+            document.getElementById('modal-productos-lista').innerHTML = pedido.productos.map(p => `
+                <div class="flex justify-between bg-gray-100 p-2 rounded mb-2 text-xs">
+                    <div><b>${p.nombre}</b> <br> <span class="text-gray-500">Prov: ${p.proveedor}</span></div>
+                    <div class="font-bold text-cobalto">x${p.cantidad}</div>
+                </div>
+            `).join('');
+            document.getElementById('modal-detalle').classList.remove('hidden');
+        };
+
+        window.cerrarModal = function() { document.getElementById('modal-detalle').classList.add('hidden'); };
+        window.imprimirTicket = function() { mostrarToast("Enviando a impresora...", "cobalto"); window.cerrarModal(); };
+        window.abrirModalProveedor = function() { document.getElementById('input-nuevo-proveedor').value = ''; document.getElementById('modal-nuevo-proveedor').classList.remove('hidden'); };
+        window.cerrarModalProveedor = function() { document.getElementById('modal-nuevo-proveedor').classList.add('hidden'); };
+
+        window.guardarProveedor = function() {
+            const prov = document.getElementById('input-nuevo-proveedor').value.trim();
+            if (prov && !listaProveedores.includes(prov)) {
+                listaProveedores.push(prov);
+                renderizarUIProveedores();
+                renderizarTodo();
+                window.cerrarModalProveedor();
+                mostrarToast(`Proveedor ${prov} añadido localmente`, 'emerald');
+            }
+        };
+
+        function actualizarEstadisticas() {
+            const cxt = pedidosGlobales.filter(p => {
+                const esCotizacion = vistaPrincipal === 'cotizaciones';
+                const typeMatch = esCotizacion ? p.tipo === 'Cotización' : p.tipo !== 'Cotización';
+                const sucMatch = (rolActual === 'Logística') ? (sucursalSeleccionada === 'todas' || p.sucursal === sucursalSeleccionada) : p.sucursal === rolActual;
+                return typeMatch && sucMatch;
+            });
+            document.getElementById('stat-total').textContent = cxt.length;
+            document.getElementById('stat-pendientes').textContent = cxt.filter(p => p.estado === 'Pendiente').length;
+            document.getElementById('stat-preparacion').textContent = cxt.filter(p => p.estado === 'En Preparación').length;
+            document.getElementById('stat-preparados').textContent = cxt.filter(p => p.estado === 'Preparado').length;
+        }
+
+        function mostrarToast(mensaje, color) {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            const bg = color === 'emerald' ? 'bg-emerald-700' : color === 'amber' ? 'bg-amber-600' : color === 'sky' ? 'bg-sky-700' : 'bg-gray-900';
+            t.className = `${bg} text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-lg`;
+            t.textContent = mensaje;
+            container.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+        }
+    </script>
+</body>
+</html>
