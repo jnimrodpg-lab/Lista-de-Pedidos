@@ -416,7 +416,9 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIGURACIÓN DE FIREBASE Y RUTAS
+        // =========================================================
+        // ⚠️ PEGA AQUÍ TUS CREDENCIALES DE FIREBASE (FASE 4 y 5) ⚠️
+        // =========================================================
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'mi-sistema-pedidos';
         const isImmersive = typeof __app_id !== 'undefined';
         
@@ -424,7 +426,7 @@
         if (typeof __firebase_config !== 'undefined') {
             firebaseConfig = JSON.parse(__firebase_config);
         } else {
-            // Reemplaza con tus credenciales si lo usas en tu propio hosting
+            // Reemplaza ESTE bloque por el que te dio Firebase
             firebaseConfig = {
                 apiKey: "TU_API_KEY",
                 authDomain: "tu-proyecto.firebaseapp.com",
@@ -434,6 +436,7 @@
                 appId: "TU_APP_ID"
             };
         }
+        // =========================================================
 
         let app, auth, db, user;
         try {
