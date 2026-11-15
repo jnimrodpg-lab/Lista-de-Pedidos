@@ -416,20 +416,21 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =========================================================
+// =========================================================
         // ⚠️ PEGA AQUÍ TUS CREDENCIALES DE FIREBASE (FASE 4 y 5) ⚠️
         // =========================================================
-       firebaseConfig = {
-  apiKey: "AIzaSyCcHClKyeMlz6DexTM80q_zT4oMbk6WWuM",
-  authDomain: "lista-de-pedidos-pg.firebaseapp.com",
-  projectId: "lista-de-pedidos-pg",
-  storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
-  messagingSenderId: "640372061129",
-  appId: "1:640372061129:web:c7a3bbfcc30b0ce3aeee18",
-  measurementId: "G-P1T09TSQ1D"
-};
-        // =========================================================
+        const isImmersive = false;
 
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcHclKyeMlz6DexTM80q_zT4oMbk6WWuM",
+            authDomain: "lista-de-pedidos-pg.firebaseapp.com",
+            projectId: "lista-de-pedidos-pg",
+            storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
+            messagingSenderId: "640372061129",
+            appId: "1:640372061129:web:c7a3bbfcc30b0ce3aeee18",
+            measurementId: "G-P1T09TSQ1D"
+        };
+        // =========================================================
         let app, auth, db, user;
         try {
             app = initializeApp(firebaseConfig);
