@@ -419,23 +419,15 @@
         // =========================================================
         // ⚠️ PEGA AQUÍ TUS CREDENCIALES DE FIREBASE (FASE 4 y 5) ⚠️
         // =========================================================
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mi-sistema-pedidos';
-        const isImmersive = typeof __app_id !== 'undefined';
-        
-        let firebaseConfig = {};
-        if (typeof __firebase_config !== 'undefined') {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } else {
-            // Reemplaza ESTE bloque por el que te dio Firebase
-            firebaseConfig = {
-                apiKey: "TU_API_KEY",
-                authDomain: "tu-proyecto.firebaseapp.com",
-                projectId: "tu-proyecto",
-                storageBucket: "tu-proyecto.appspot.com",
-                messagingSenderId: "TUS_NUMEROS",
-                appId: "TU_APP_ID"
-            };
-        }
+       const firebaseConfig = {
+  apiKey: "AIzaSyCcHClKyeMlz6DexTM80q_zT4oMbk6WWuM",
+  authDomain: "lista-de-pedidos-pg.firebaseapp.com",
+  projectId: "lista-de-pedidos-pg",
+  storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
+  messagingSenderId: "640372061129",
+  appId: "1:640372061129:web:c7a3bbfcc30b0ce3aeee18",
+  measurementId: "G-P1T09TSQ1D"
+};
         // =========================================================
 
         let app, auth, db, user;
