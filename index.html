@@ -428,15 +428,15 @@
         // =========================================================
         // ⚠️ CREDENCIALES DE FIREBASE ⚠️
         // =========================================================
-     const firebaseConfig = {
-  apiKey: "AIzaSyCcHClKyeMlz6DexTM80q_zT4oMbk6WWuM",
-  authDomain: "lista-de-pedidos-pg.firebaseapp.com",
-  projectId: "lista-de-pedidos-pg",
-  storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
-  messagingSenderId: "640372061129",
-  appId: "1:640372061129:web:c7a3bbfcc30b0ce3aeee18",
-  measurementId: "G-P1T09TSQ1D"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcHclKyeMlz6DexTM80q_zT4oMbk6WWuM",
+            authDomain: "lista-de-pedidos-pg.firebaseapp.com",
+            projectId: "lista-de-pedidos-pg",
+            storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
+            messagingSenderId: "640372061129",
+            appId: "1:640372061129:web:c7a3bbfcc30b0ce3aeee18",
+            measurementId: "G-P1T09TSQ1D"
+        };
         // =========================================================
 
         let app, auth, db, user;
@@ -517,9 +517,7 @@
                 document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizado';
                 if(user) iniciarEscuchas();
             } catch(e) {
-                console.error("Error Autenticación. ¿Habilitaste el modo Anónimo en Firebase?", e);
                 document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400"></span> Desconectado';
-                mostrarToast('Error de conexión a BD. Revisa configuración en Firebase.', 'amber');
             }
         }
 
@@ -1016,13 +1014,9 @@
         window.abrirModalNuevoPedido = function() {
             itemsNuevoPedido = [];
             document.getElementById('np-lista-items').innerHTML = '<div class="h-full flex flex-col items-center justify-center pt-6 text-gray-400"><i data-lucide="shopping-basket" class="w-8 h-8 mb-2 opacity-50"></i><p class="text-xs font-bold uppercase tracking-wider">Lista vacía</p></div>';
-            
             document.getElementById('np-cantidad').value = '1';
             document.getElementById('np-producto').value = '';
-            
-            // CORRECCIÓN APLICADA: Se eliminó el reseteo del elemento 'np-sku' 
-            // ya que ya no existe en el HTML en este nuevo diseño moderno.
-            
+            document.getElementById('np-sku').value = '';
             document.querySelector('.btn-tipo-ped').click();
             document.getElementById('modal-nuevo-pedido').classList.remove('hidden');
             lucide.createIcons();
@@ -1056,19 +1050,17 @@
 
         window.agregarItemTemporal = function() {
             const cant = document.getElementById('np-cantidad').value;
-            const nombreStr = document.getElementById('np-producto').value.trim();
-            
-            // CORRECCIÓN APLICADA: Como se eliminó la cajita individual de SKU, 
-            // le ponemos 'S/C' (Sin código) por defecto para que la BD no falle.
-            const sku = 'S/C'; 
+            const nombre = document.getElementById('np-producto').value.trim();
+            const sku = document.getElementById('np-sku').value.trim() || 'N/A';
             const provStr = 'Sin Asignar'; 
 
-            if (!nombreStr || cant < 1) return mostrarToast('Agrega el nombre del producto', 'amber');
+            if (!nombre || cant < 1) return mostrarToast('Agrega un nombre de producto', 'amber');
 
-            itemsNuevoPedido.push({ cantidad: parseInt(cant), nombre: nombreStr, sku, proveedor: provStr, preparado: false, comprado: false, lugarCompra: '' });
+            itemsNuevoPedido.push({ cantidad: parseInt(cant), nombre, sku, proveedor: provStr, preparado: false, comprado: false, lugarCompra: '' });
 
             document.getElementById('np-cantidad').value = '1';
             document.getElementById('np-producto').value = '';
+            document.getElementById('np-sku').value = '';
             document.getElementById('np-producto').focus();
             
             document.querySelectorAll('.btn-qty').forEach(b => {
@@ -1085,11 +1077,12 @@
                         <span class="bg-gray-100 text-cobalto px-2 py-1 rounded-lg border border-gray-200">${item.cantidad}x</span> 
                         ${item.nombre}
                     </div>
+                    <span class="text-[10px] font-mono font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">Cód: ${item.sku}</span>
                 </div>`).join('');
         };
 
         window.guardarNuevoPedido = async function() {
-            if (!user) return mostrarToast('Asegúrate de estar conectado a Firebase', 'amber');
+            if (!user) return mostrarToast('Sin conexión', 'amber');
             if (itemsNuevoPedido.length === 0) return mostrarToast('Agrega al menos un producto a la lista', 'amber');
             
             const sucursal = document.getElementById('np-sucursal').value;
