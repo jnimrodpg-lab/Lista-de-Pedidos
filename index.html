@@ -28,18 +28,22 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
         
-        /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
         .touch-checkbox { width: 1.35rem; height: 1.35rem; cursor: pointer; accent-color: #005c42; }
+
+        .dropzone-active {
+            border-color: #005c42 !important;
+            background-color: #ecfdf5 !important;
+        }
     </style>
 </head>
 <body class="h-screen flex bg-[#f4f7f6] text-gray-800 font-sans overflow-hidden">
 
-    <!-- MODAL DE LOGIN (ROLES) -->
+    <!-- MODAL DE LOGIN -->
     <div id="modal-login" class="fixed inset-0 bg-cobalto/95 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div class="bg-white rounded-[24px] shadow-2xl max-w-sm w-full p-8 text-center">
             <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5 rotate-3">
@@ -56,7 +60,7 @@
                     </div>
                 </button>
                 <div class="border-t border-gray-100 pt-4" id="botones-sucursales-login">
-                    <!-- JS inyecta botones aquí al instante -->
+                    <!-- JS inyecta botones aquí -->
                 </div>
             </div>
         </div>
@@ -78,7 +82,10 @@
         </div>
     </div>
 
-    <!-- SIDEBAR (MENÚ LATERAL) -->
+    <!-- INPUT INVISIBLE PARA EDITAR IMAGEN POSTERIORMENTE -->
+    <input type="file" id="input-edit-image" class="hidden" accept="image/*" onchange="procesarEdicionImagen(event)">
+
+    <!-- SIDEBAR -->
     <aside class="w-64 bg-cobaltoDark text-white flex-col shrink-0 hidden md:flex shadow-2xl z-20 relative">
         <div class="h-20 flex items-center px-6 border-b border-white/10">
             <div class="bg-white/10 p-2.5 rounded-xl mr-3 backdrop-blur-sm shadow-inner">
@@ -141,6 +148,11 @@
                     <input type="text" id="input-busqueda" placeholder="Buscar pedidos, SKU..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cobalto/20 focus:border-cobalto transition-all text-gray-700">
                 </div>
                 
+                <!-- BOTÓN: EXPORTAR EXCEL -->
+                <button id="btn-exportar" onclick="exportarExcel()" class="hidden bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 shrink-0">
+                    <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden sm:inline">Exportar CSV</span>
+                </button>
+
                 <div class="flex items-center gap-3 border-l border-gray-200 pl-5">
                     <button class="p-2 text-gray-400 hover:bg-gray-50 rounded-full relative transition-colors">
                         <i data-lucide="bell" class="w-5 h-5"></i>
@@ -177,7 +189,7 @@
 
                 <!-- FILTROS Y ACCIONES -->
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-                    <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0" id="tabs-estado">
+                    <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto" id="tabs-estado">
                         <button data-estado="todos" class="btn-tab bg-cobalto text-white px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shadow-md transition-all">Todos</button>
                         <button data-estado="Pendiente" class="btn-tab bg-white text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border border-gray-200 transition-all">⏳ Pendiente</button>
                         <button data-estado="En Preparación" class="btn-tab bg-white text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border border-gray-200 transition-all">📦 En Proceso</button>
@@ -185,8 +197,18 @@
                     </div>
 
                     <div class="flex items-center gap-3">
+                        
+                        <!-- FILTRO: FECHA -->
+                        <div class="relative hidden sm:block">
+                            <i data-lucide="calendar" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
+                            <input type="date" id="filtro-fecha" class="pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 focus:outline-none focus:border-cobalto cursor-pointer shadow-sm" title="Filtrar por fecha">
+                            <button id="btn-limpiar-fecha" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full p-0.5 hidden hover:bg-red-600" title="Borrar fecha" onclick="limpiarFecha()">
+                                <i data-lucide="x" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+
                         <div class="relative hidden lg:block">
-                            <i data-lucide="store" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <i data-lucide="store" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
                             <select id="vista-sucursal" class="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:border-cobalto appearance-none cursor-pointer shadow-sm">
                                 <option value="todas">Todas las sucursales</option>
                             </select>
@@ -194,7 +216,7 @@
                         <button id="btn-config-sucs" onclick="abrirModalSucursales()" class="hidden shrink-0 bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 font-bold p-2 rounded-xl transition-colors shadow-sm" title="Gestionar Sucursales">
                             <i data-lucide="settings" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="abrirModalNuevoPedido()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2">
+                        <button onclick="abrirModalNuevoPedido()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 shrink-0">
                             <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Pedido
                         </button>
                     </div>
@@ -206,7 +228,7 @@
                         <table class="w-full text-left border-collapse min-w-[800px]">
                             <thead class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wider font-bold">
                                 <tr>
-                                    <th class="py-4 px-5 text-center w-20">Img</th>
+                                    <th class="py-4 px-5 text-center w-28">Evidencia</th>
                                     <th class="py-4 px-4 w-48">ID Pedido</th>
                                     <th class="py-4 px-4 w-40">Destino</th>
                                     <th class="py-4 px-4 min-w-[250px]">Productos</th>
@@ -229,67 +251,7 @@
                     </div>
                 </div>
             </div>
-
-            <!-- CONTENEDOR PROVEEDORES (COMPRAS) -->
-            <div id="vista-proveedores-container" class="flex flex-col hidden h-full">
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div class="flex items-center gap-3 w-full md:w-auto">
-                        <label class="text-sm font-bold text-gray-600">Proveedor:</label>
-                        <select id="vista-proveedor" class="bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:outline-none focus:border-cobalto block w-full p-2.5 font-bold md:hidden">
-                            <!-- JS -->
-                        </select>
-                        <div class="hidden md:flex items-center bg-gray-50 p-1.5 rounded-xl gap-1.5 border border-gray-100 overflow-x-auto max-w-full" id="tabs-proveedor">
-                            <!-- JS -->
-                        </div>
-                    </div>
-                    <button onclick="abrirModalProveedor()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl text-sm transition-colors shadow-sm flex items-center gap-2 border border-indigo-200 shrink-0">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Añadir
-                    </button>
-                </div>
-                
-                <div id="lista-tablas-proveedores">
-                    <!-- JS inyecta las tablas de compras -->
-                </div>
-            </div>
-
         </main>
-    </div>
-
-    <!-- MODAL DETALLE (FICHA) -->
-    <div id="modal-detalle" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-[24px] shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 pt-6 pb-4 flex justify-between items-center bg-white border-b border-gray-100 shrink-0">
-                <div>
-                    <h2 class="text-xl font-black text-gray-800" id="modal-id">Pedido #</h2>
-                    <p class="text-xs text-gray-500 font-bold mt-1 flex items-center gap-1"><i data-lucide="store" class="w-3.5 h-3.5"></i><span id="modal-sucursal">Sucursal</span></p>
-                </div>
-                <button onclick="cerrarModal()" class="text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto flex-grow bg-gray-50/50">
-                <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                    <div class="text-center">
-                        <span class="block text-[10px] uppercase font-bold text-gray-400 mb-0.5">Tipo</span>
-                        <span class="text-sm font-black text-gray-800" id="modal-tipo">-</span>
-                    </div>
-                    <div class="text-center px-4 border-x border-gray-100">
-                        <span class="block text-[10px] uppercase font-bold text-gray-400 mb-0.5">Ingreso</span>
-                        <span class="text-sm font-black text-gray-800" id="modal-hora">-</span>
-                    </div>
-                    <div class="text-center">
-                        <span class="block text-[10px] uppercase font-bold text-gray-400 mb-0.5">Estado</span>
-                        <span class="text-sm font-black text-cobalto" id="modal-estado">-</span>
-                    </div>
-                </div>
-                
-                <h3 class="font-black text-sm text-gray-800 mb-3 uppercase tracking-wider flex items-center gap-2"><div class="w-6 h-6 bg-cobalto/10 text-cobalto flex items-center justify-center rounded-lg"><i data-lucide="list-checks" class="w-3.5 h-3.5"></i></div> Resumen</h3>
-                <div id="modal-productos-lista" class="space-y-2">
-                    <!-- JS -->
-                </div>
-            </div>
-            <div class="bg-white px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0">
-                <button onclick="cerrarModal()" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors">Cerrar</button>
-            </div>
-        </div>
     </div>
 
     <!-- MODAL NUEVO PEDIDO -->
@@ -304,19 +266,12 @@
             </div>
             
             <div class="p-6 overflow-y-auto flex-grow bg-white flex flex-col gap-6">
-                <div class="flex items-center justify-between mb-2 relative max-w-lg mx-auto w-full px-4">
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-gray-100 -z-10"></div>
-                    <div class="flex flex-col items-center gap-1.5 bg-white px-2"><div class="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shadow-md">1</div><span class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Destino</span></div>
-                    <div class="flex flex-col items-center gap-1.5 bg-white px-2"><div class="w-7 h-7 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold border border-gray-300">2</div><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tipo</span></div>
-                    <div class="flex flex-col items-center gap-1.5 bg-white px-2"><div class="w-7 h-7 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold border border-gray-300">3</div><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Productos</span></div>
-                    <div class="flex flex-col items-center gap-1.5 bg-white px-2"><div class="w-7 h-7 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-bold border border-gray-300">4</div><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Confirmar</span></div>
-                </div>
-
+                <!-- Selectores Principales -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-xs font-bold text-gray-800 mb-2">Destino</label>
                         <div class="relative">
-                            <i data-lucide="store" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <i data-lucide="store" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
                             <select id="np-sucursal" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm bg-white font-bold text-gray-700 focus:outline-none focus:border-cobalto focus:ring-2 focus:ring-cobalto/10 shadow-sm appearance-none cursor-pointer"></select>
                             <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
                         </div>
@@ -333,15 +288,29 @@
                     </div>
                 </div>
 
+                <!-- Zona de Productos -->
                 <div class="border-t border-gray-100 pt-5">
                     <label class="block text-xs font-bold text-gray-800 mb-3">Agregar Productos</label>
-                    <div class="relative mb-3 flex gap-2">
+                    <div class="relative mb-2 flex gap-2">
                         <div class="relative flex-grow">
                             <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
                             <input type="text" id="np-producto" class="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cobalto bg-white font-medium shadow-sm" placeholder="Buscar por nombre, código o SKU..." onkeyup="if(event.key === 'Enter') document.getElementById('btn-add-item').click()">
                         </div>
                         <button class="bg-gray-50 border border-gray-200 text-cobalto p-3 rounded-xl hover:bg-gray-100 transition-colors shadow-sm"><i data-lucide="barcode" class="w-5 h-5"></i></button>
                     </div>
+                    
+                    <!-- CAMPOS: MARCA Y CATEGORÍA -->
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="relative">
+                            <i data-lucide="tag" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <input type="text" id="np-marca" class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-cobalto bg-white shadow-sm" placeholder="Marca (Opcional)">
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="layers" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <input type="text" id="np-categoria" class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-cobalto bg-white shadow-sm" placeholder="Categoría (Opcional)">
+                        </div>
+                    </div>
+
                     <div class="flex flex-wrap gap-2 items-center mb-4">
                         <input type="hidden" id="np-cantidad" value="1">
                         <button type="button" onclick="setQty(1)" class="btn-qty bg-cobalto text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-transparent">1</button>
@@ -354,62 +323,51 @@
                         </button>
                     </div>
                     
-                    <div class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 flex items-center justify-between mb-4 shadow-sm">
-                        <div class="flex items-center gap-2"><i data-lucide="lightbulb" class="w-4 h-4 text-indigo-500"></i><p class="text-xs font-bold text-indigo-800">También puedes escanear un código de barras</p></div>
-                        <i data-lucide="scan-line" class="w-5 h-5 text-indigo-400"></i>
-                    </div>
-                    
-                    <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[120px] max-h-48 overflow-y-auto p-2 space-y-1 shadow-inner" id="np-lista-items">
-                        <div class="h-full flex flex-col items-center justify-center pt-6 text-gray-400">
-                            <i data-lucide="shopping-basket" class="w-8 h-8 mb-2 opacity-50"></i>
-                            <p class="text-xs font-bold uppercase tracking-wider">Lista vacía</p>
+                    <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] max-h-40 overflow-y-auto p-2 space-y-1 shadow-inner mb-4" id="np-lista-items">
+                        <div class="h-full flex flex-col items-center justify-center pt-4 text-gray-400">
+                            <i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i>
+                            <p class="text-[10px] font-bold uppercase tracking-wider">Lista vacía</p>
                         </div>
                     </div>
                 </div>
+
+                <!-- ZONA MULTIMEDIA -->
+                <div class="border-t border-gray-100 pt-5">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-xs font-bold text-gray-800">Evidencia Fotográfica (Opcional)</label>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="iniciarCamara()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"><i data-lucide="camera" class="w-3.5 h-3.5"></i> Cámara</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Dropzone -->
+                    <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors relative overflow-hidden group">
+                        <div id="dropzone-content" class="pointer-events-none">
+                            <div class="bg-cobalto/5 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                <i data-lucide="image-plus" class="w-6 h-6 text-cobalto"></i>
+                            </div>
+                            <p class="text-sm font-medium text-gray-600 mb-1">Arrastra una imagen o pégala (Ctrl+V)</p>
+                            <p class="text-xs text-gray-400">También puedes <span class="text-cobalto font-bold">hacer clic</span> para subir desde galería</p>
+                        </div>
+                        <img id="preview-image" class="absolute inset-0 w-full h-full object-contain hidden bg-black/5" />
+                        <button type="button" id="btn-remove-image" onclick="removerImagen(event)" class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-lg hidden shadow-md z-10 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <input type="file" id="file-upload" class="hidden" accept="image/*" onchange="procesarArchivoSubido(this.files[0])">
+                    </div>
+
+                    <!-- Contenedor de cámara activa -->
+                    <div id="camera-container" class="hidden bg-black rounded-xl overflow-hidden relative h-48 mt-3 shadow-inner">
+                        <video id="camera-stream" class="w-full h-full object-cover" autoplay playsinline></video>
+                        <button type="button" onclick="tomarFoto()" class="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-white text-cobalto font-bold px-4 py-2 rounded-full text-xs shadow-lg hover:scale-105 transition-transform flex items-center gap-2"><i data-lucide="camera" class="w-4 h-4"></i> Capturar</button>
+                        <button type="button" onclick="apagarCamara()" class="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-lg hover:bg-black/70 transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        <canvas id="camera-canvas" class="hidden"></canvas>
+                    </div>
+                </div>
             </div>
+            
             <div class="bg-white px-6 py-5 flex justify-end gap-3 shrink-0 border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
                 <button onclick="cerrarModalNuevoPedido()" class="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 shadow-sm">Cancelar</button>
                 <button onclick="guardarNuevoPedido()" class="px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20">
                     Siguiente <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL NUEVO PROVEEDOR -->
-    <div id="modal-nuevo-proveedor" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-[24px] shadow-2xl max-w-sm w-full overflow-hidden">
-            <div class="px-6 pt-6 pb-4 flex justify-between items-center bg-white border-b border-gray-100">
-                <div class="flex items-center gap-3"><div class="bg-indigo-100 p-2.5 rounded-xl text-indigo-600"><i data-lucide="truck" class="w-5 h-5"></i></div><h3 class="font-black text-xl text-gray-800">Añadir Proveedor</h3></div>
-            </div>
-            <div class="p-6">
-                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre del Proveedor</label>
-                <input type="text" id="input-nuevo-proveedor" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 bg-gray-50 focus:outline-none focus:border-indigo-500" placeholder="Ej. Textiles Los Andes" onkeyup="if(event.key === 'Enter') guardarProveedor()">
-            </div>
-            <div class="bg-gray-50/50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
-                <button onclick="cerrarModalProveedor()" class="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold shadow-sm">Cancelar</button>
-                <button onclick="guardarProveedor()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL GESTIONAR SUCURSALES -->
-    <div id="modal-gestionar-sucursales" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-[24px] shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 pt-6 pb-4 flex justify-between items-center bg-white border-b border-gray-100 shrink-0">
-                <div class="flex items-center gap-3">
-                    <div class="bg-gray-100 p-2.5 rounded-xl text-gray-600"><i data-lucide="store" class="w-5 h-5"></i></div>
-                    <h3 class="font-black text-xl text-gray-800 tracking-tight">Sucursales</h3>
-                </div>
-                <button onclick="cerrarModalSucursales()" class="text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto flex-grow bg-gray-50/50 space-y-3" id="lista-editar-sucursales">
-                <!-- JS inyecta -->
-            </div>
-            <div class="p-6 bg-white border-t border-gray-100 flex gap-3 items-center shrink-0">
-                <input type="text" id="input-nueva-sucursal" class="flex-grow px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:border-cobalto" placeholder="Nueva sucursal..." onkeyup="if(event.key === 'Enter') agregarSucursal()">
-                <button onclick="agregarSucursal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 shrink-0">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Añadir
                 </button>
             </div>
         </div>
@@ -426,7 +384,7 @@
         import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =========================================================
-        // ⚠️ CREDENCIALES DE FIREBASE ⚠️
+        // ⚠️ TUS CLAVES EXACTAS DE FIREBASE
         // =========================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCcHclKyeMlz6DexTM80q_zT4oMbk6WWuM",
@@ -443,10 +401,9 @@
         const PATH_PEDIDOS = 'pedidos';
         const PATH_CONFIG = 'configuracion';
 
-        // VARIABLES GLOBALES (Con valores por defecto seguros)
         let pedidosGlobales = []; 
         let listaProveedores = ["Textiles El Hilo", "Importaciones Lima", "Confecciones del Sur"];
-        let listaSucursales = ["Sucursal Centro", "Sucursal Norte", "Sucursal Sur"]; // Por defecto
+        let listaSucursales = ["Sucursal Centro", "Sucursal Norte", "Sucursal Sur"];
         
         let rolActual = 'Sin Asignar';
         let vistaPrincipal = 'operaciones';
@@ -454,21 +411,24 @@
         let proveedorSeleccionado = 'todos';
         let estadoSeleccionado = 'todos';
         let terminoBusqueda = '';
+        let fechaFiltro = ''; 
+        
         let itemsNuevoPedido = [];
+        let imagenCapturada = null;
+        let streamGlobal = null;
+        let pedidoEditandoImgId = null;
 
-        // DOM ELEMENTS
         const tbody = document.getElementById('lista-pedidos');
         const selectSucursal = document.getElementById('vista-sucursal');
-        const selectProveedor = document.getElementById('vista-proveedor');
         const inputBusqueda = document.getElementById('input-busqueda');
+        const inputFecha = document.getElementById('filtro-fecha');
+        const btnLimpiarFecha = document.getElementById('btn-limpiar-fecha');
         const sinPedidosDiv = document.getElementById('sin-pedidos');
 
-        // INICIALIZACIÓN INMEDIATA (A prueba de fallos)
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Mostrar las sucursales por defecto inmediatamente para que NADIE se quede fuera
             inicializarSucursalesUI();
+            configurarDropzone();
             
-            // 2. Conectar a Firebase en segundo plano
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
@@ -479,20 +439,14 @@
                 document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400"></span> Error Local';
             }
 
-            // 3. Eventos de los filtros
-            selectSucursal.addEventListener('change', (e) => {
-                sucursalSeleccionada = e.target.value;
-                renderizarTodo();
-            });
-
-            selectProveedor.addEventListener('change', (e) => {
-                proveedorSeleccionado = e.target.value;
-                window.sincronizarPestañasProveedor(e.target.value);
-                renderizarTodo();
-            });
-
-            inputBusqueda.addEventListener('input', (e) => {
-                terminoBusqueda = e.target.value.toLowerCase().trim();
+            selectSucursal.addEventListener('change', (e) => { sucursalSeleccionada = e.target.value; renderizarTodo(); });
+            inputBusqueda.addEventListener('input', (e) => { terminoBusqueda = e.target.value.toLowerCase().trim(); renderizarTodo(); });
+            
+            // Listener Fecha
+            inputFecha.addEventListener('change', (e) => {
+                fechaFiltro = e.target.value;
+                if(fechaFiltro) btnLimpiarFecha.classList.remove('hidden');
+                else btnLimpiarFecha.classList.add('hidden');
                 renderizarTodo();
             });
 
@@ -510,38 +464,35 @@
             });
         });
 
+        window.limpiarFecha = function() {
+            fechaFiltro = '';
+            inputFecha.value = '';
+            btnLimpiarFecha.classList.add('hidden');
+            renderizarTodo();
+        }
+
         async function conectarBaseDeDatos() {
             try {
                 await signInAnonymously(auth);
                 user = auth.currentUser;
                 document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizado';
                 if(user) iniciarEscuchas();
-            } catch(e) {
-                document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400"></span> Desconectado';
-            }
+            } catch(e) { document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400"></span> Desconectado'; }
         }
 
         function iniciarEscuchas() {
-            // Escuchar Configuración (Sucursales y Proveedores)
             onSnapshot(doc(db, PATH_CONFIG, "general"), (documento) => {
                 if (documento.exists()) {
                     const data = documento.data();
                     if (data.proveedores) listaProveedores = data.proveedores;
                     if (data.sucursales) listaSucursales = data.sucursales;
-                    
-                    // Actualizar UI con los datos reales de la BD
                     inicializarSucursalesUI();
-                    renderizarUIProveedores();
                     renderizarTodo();
                 } else {
-                    // Si no existe, lo creamos silenciosamente para la próxima vez
-                    try {
-                        setDoc(doc(db, PATH_CONFIG, "general"), { proveedores: listaProveedores, sucursales: listaSucursales });
-                    } catch (err) { console.warn("Creación de config pendiente", err); }
+                    setDoc(doc(db, PATH_CONFIG, "general"), { proveedores: listaProveedores, sucursales: listaSucursales }).catch(e=>console.log(e));
                 }
             });
 
-            // Escuchar Pedidos
             onSnapshot(collection(db, PATH_PEDIDOS), (snapshot) => {
                 pedidosGlobales = [];
                 snapshot.forEach(docSnap => { pedidosGlobales.push({ docId: docSnap.id, ...docSnap.data() }); });
@@ -550,24 +501,16 @@
             });
         }
 
-        // ================= GESTIÓN SUCURSALES (ROBUSTA) =================
         function inicializarSucursalesUI() {
-            // Inyectar botones en el Modal de Login
             const contLog = document.getElementById('botones-sucursales-login');
             contLog.innerHTML = listaSucursales.map(suc => `
                 <button onclick="seleccionarRol('${suc}')" class="w-full flex items-center justify-between p-3.5 rounded-xl border border-gray-100 bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-colors mb-2 shadow-sm group">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-gray-50 p-2 rounded-lg group-hover:bg-white transition-colors border border-gray-100"><i data-lucide="store" class="w-5 h-5 text-gray-400 group-hover:text-emerald-500"></i></div>
-                        <span class="font-bold text-gray-700 group-hover:text-emerald-700">${suc}</span>
-                    </div>
+                    <div class="flex items-center gap-3"><div class="bg-gray-50 p-2 rounded-lg group-hover:bg-white transition-colors border border-gray-100"><i data-lucide="store" class="w-5 h-5 text-gray-400 group-hover:text-emerald-500"></i></div><span class="font-bold text-gray-700 group-hover:text-emerald-700">${suc}</span></div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300 group-hover:text-emerald-500"></i>
                 </button>
             `).join('');
-            
-            // Forzar actualización de lucide icons para los nuevos botones
             lucide.createIcons();
 
-            // Selectores
             const actual = selectSucursal.value;
             selectSucursal.innerHTML = '<option value="todas">Todas las sucursales</option>' + listaSucursales.map(s => `<option value="${s}">${s}</option>`).join('');
             if(actual === 'todas' || listaSucursales.includes(actual)) selectSucursal.value = actual;
@@ -579,81 +522,17 @@
                 selectNP.innerHTML = listaSucursales.map(s => `<option value="${s}">${s}</option>`).join('');
                 if(listaSucursales.includes(actualNP)) selectNP.value = actualNP;
             }
-            
-            renderizarUIEdicionSucursales();
         }
 
-        window.abrirModalSucursales = function() { document.getElementById('modal-gestionar-sucursales').classList.remove('hidden'); }
-        window.cerrarModalSucursales = function() { document.getElementById('modal-gestionar-sucursales').classList.add('hidden'); }
-        
-        function renderizarUIEdicionSucursales() {
-            const cont = document.getElementById('lista-editar-sucursales');
-            if(!cont) return;
-            cont.innerHTML = listaSucursales.map((suc, i) => `
-                <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                    <div class="bg-gray-50 p-2 rounded-lg mr-3 border border-gray-100"><i data-lucide="store" class="w-4 h-4 text-gray-400"></i></div>
-                    <input type="text" id="edit-suc-${i}" value="${suc}" class="border-b-2 border-transparent px-2 py-1 text-sm font-bold text-gray-700 flex-grow mr-3 focus:outline-none focus:border-cobalto bg-transparent transition-colors">
-                    <button onclick="guardarEdicionSucursal('${suc}', ${i})" class="bg-gray-50 border border-gray-200 hover:bg-cobalto hover:border-cobalto hover:text-white text-gray-500 p-2 rounded-lg transition-colors shrink-0 shadow-sm" title="Guardar Cambio"><i data-lucide="save" class="w-4 h-4"></i></button>
-                </div>
-            `).join('');
-            lucide.createIcons();
-        }
-
-        window.agregarSucursal = async function() {
-            const input = document.getElementById('input-nueva-sucursal');
-            const valor = input.value.trim();
-            if(valor && !listaSucursales.includes(valor)) {
-                listaSucursales.push(valor);
-                inicializarSucursalesUI(); // UI Instantánea
-                if(user) await updateDoc(doc(db, PATH_CONFIG, "general"), { sucursales: listaSucursales });
-                input.value = '';
-                mostrarToast('Sucursal añadida', 'emerald');
-            }
-        }
-
-        window.guardarEdicionSucursal = async function(nombreAntiguo, index) {
-            const nuevoNombre = document.getElementById(`edit-suc-${index}`).value.trim();
-            if(nuevoNombre && nuevoNombre !== nombreAntiguo && !listaSucursales.includes(nuevoNombre)) {
-                listaSucursales[index] = nuevoNombre;
-                inicializarSucursalesUI(); // UI Instantánea
-                if(user) {
-                    await updateDoc(doc(db, PATH_CONFIG, "general"), { sucursales: listaSucursales });
-                    pedidosGlobales.forEach(async (p) => {
-                        if(p.sucursal === nombreAntiguo) await updateDoc(doc(db, PATH_PEDIDOS, p.docId), { sucursal: nuevoNombre });
-                    });
-                }
-                if(rolActual === nombreAntiguo) {
-                    rolActual = nuevoNombre;
-                    document.getElementById('btn-rol-actual').textContent = rolActual;
-                }
-                mostrarToast('Sucursal actualizada', 'emerald');
-            }
-        }
-
-        // ================= SEGURIDAD ADMIN =================
-        window.abrirModalPassword = function() {
-            document.getElementById('modal-login').classList.add('hidden');
-            document.getElementById('modal-password').classList.remove('hidden');
-            document.getElementById('input-password-admin').value = '';
-            document.getElementById('input-password-admin').focus();
-        }
-
-        window.cerrarModalPassword = function() {
-            document.getElementById('modal-password').classList.add('hidden');
-            document.getElementById('modal-login').classList.remove('hidden');
-        }
-
+        window.abrirModalPassword = function() { document.getElementById('modal-login').classList.add('hidden'); document.getElementById('modal-password').classList.remove('hidden'); document.getElementById('input-password-admin').focus(); }
+        window.cerrarModalPassword = function() { document.getElementById('modal-password').classList.add('hidden'); document.getElementById('modal-login').classList.remove('hidden'); }
         window.verificarPassword = function() {
-            const pass = document.getElementById('input-password-admin').value;
-            if(pass === '1234') { // PIN DE ADMIN
+            if(document.getElementById('input-password-admin').value === '1234') {
                 document.getElementById('modal-password').classList.add('hidden');
                 window.seleccionarRol('Logística');
-            } else {
-                mostrarToast('PIN incorrecto', 'amber');
-                document.getElementById('input-password-admin').value = '';
-            }
+                document.getElementById('btn-exportar').classList.remove('hidden'); 
+            } else { mostrarToast('PIN incorrecto', 'amber'); document.getElementById('input-password-admin').value = ''; }
         }
-
         window.mostrarLogin = function() { document.getElementById('modal-login').classList.remove('hidden'); }
 
         window.seleccionarRol = function(rol) {
@@ -661,184 +540,91 @@
             document.getElementById('modal-login').classList.add('hidden');
             document.getElementById('btn-rol-actual').textContent = rol;
             
-            const navCot = document.getElementById('nav-cotizaciones');
-            const navProv = document.getElementById('nav-proveedores');
-            const navConf = document.getElementById('nav-configuracion');
             const contSucursal = document.getElementById('vista-sucursal').parentElement;
-            const btnConfigSucs = document.getElementById('btn-config-sucs');
-
             if (rol === 'Logística') {
-                navCot.style.display = 'flex';
-                navProv.style.display = 'flex';
-                navConf.style.display = 'flex';
                 contSucursal.classList.remove('hidden');
-                btnConfigSucs.classList.remove('hidden');
-                sucursalSeleccionada = 'todas';
-                selectSucursal.value = 'todas';
+                document.getElementById('btn-exportar').classList.remove('hidden');
+                sucursalSeleccionada = 'todas'; selectSucursal.value = 'todas';
             } else {
-                navCot.style.display = 'none';
-                navProv.style.display = 'none';
-                navConf.style.display = 'none';
                 contSucursal.classList.add('hidden');
-                btnConfigSucs.classList.add('hidden');
-                sucursalSeleccionada = rol;
-                selectSucursal.value = rol;
-                window.cambiarVistaPrincipal('operaciones');
+                document.getElementById('btn-exportar').classList.add('hidden');
+                sucursalSeleccionada = rol; selectSucursal.value = rol;
             }
             mostrarToast(`Sesión iniciada: ${rol}`, 'emerald');
             renderizarTodo();
         }
 
-        // ================= VISTAS Y FILTROS =================
-        function renderizarUIProveedores() {
-            const tabsContainer = document.getElementById('tabs-proveedor');
-            
-            selectProveedor.innerHTML = '<option value="todos">Todos los Proveedores</option>';
-            listaProveedores.forEach(prov => { selectProveedor.innerHTML += `<option value="${prov}">${prov}</option>`; });
-            selectProveedor.value = proveedorSeleccionado;
+        window.cambiarVistaPrincipal = function(vista) { vistaPrincipal = vista; renderizarTodo(); };
 
-            const baseCls = 'btn-prov text-xs font-bold px-4 py-2 rounded-xl transition-all whitespace-nowrap';
-            let tabsHTML = `<button data-prov="todos" class="${baseCls} ${proveedorSeleccionado === 'todos' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-transparent'}">Todos</button>`;
-            
-            listaProveedores.forEach(prov => {
-                const isActive = proveedorSeleccionado === prov;
-                const clases = isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-transparent';
-                tabsHTML += `<button data-prov="${prov}" class="${baseCls} ${clases}">${prov}</button>`;
-            });
-            tabsContainer.innerHTML = tabsHTML;
-
-            document.querySelectorAll('#tabs-proveedor .btn-prov').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const prov = btn.getAttribute('data-prov');
-                    proveedorSeleccionado = prov;
-                    selectProveedor.value = prov;
-                    window.sincronizarPestañasProveedor(prov);
-                    renderizarTodo();
-                });
-            });
-        }
-
-        window.sincronizarPestañasProveedor = function(provTarget) {
-            document.querySelectorAll('#tabs-proveedor .btn-prov').forEach(b => {
-                if (b.getAttribute('data-prov') === provTarget) {
-                    b.className = 'btn-prov text-xs font-bold px-4 py-2 rounded-xl transition-all whitespace-nowrap bg-indigo-600 text-white shadow-md';
-                } else {
-                    b.className = 'btn-prov text-xs font-bold px-4 py-2 rounded-xl transition-all whitespace-nowrap bg-white text-gray-600 hover:bg-gray-100 border border-transparent';
-                }
-            });
-        }
-
-        window.cambiarVistaPrincipal = function(vista) {
-            vistaPrincipal = vista;
-            const navOps = document.getElementById('nav-operaciones');
-            const navCot = document.getElementById('nav-cotizaciones');
-            const navProv = document.getElementById('nav-proveedores');
-            const containerPedidos = document.getElementById('vista-pedidos-container');
-            const containerProv = document.getElementById('vista-proveedores-container');
-
-            const baseClass = "w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl text-sm font-medium transition-all text-emerald-100";
-            const activeClass = "w-full flex items-center gap-3 px-4 py-3 bg-cobalto rounded-xl text-sm font-bold transition-all text-white shadow-md";
-            
-            navOps.className = baseClass;
-            navCot.className = baseClass;
-            navProv.className = baseClass;
-
-            if (vista === 'operaciones') {
-                navOps.className = activeClass;
-                containerPedidos.classList.remove('hidden');
-                containerProv.classList.add('hidden');
-            } else if (vista === 'cotizaciones') {
-                navCot.className = activeClass;
-                containerPedidos.classList.remove('hidden');
-                containerProv.classList.add('hidden');
-            } else if (vista === 'proveedores') {
-                navProv.className = activeClass;
-                containerPedidos.classList.add('hidden');
-                containerProv.classList.remove('hidden');
-            }
-            renderizarTodo();
-        };
-
-        function renderizarTodo() {
-            if (vistaPrincipal === 'proveedores') {
-                renderizarListaProveedores();
-                actualizarEstadisticas();
-                return;
-            }
-
-            tbody.innerHTML = '';
-            const pedidosFiltrados = pedidosGlobales.filter(pedido => {
-                const coincideVista = vistaPrincipal === 'cotizaciones' ? pedido.tipo === 'Cotización' : pedido.tipo !== 'Cotización';
+        function obtenerPedidosFiltrados() {
+            return pedidosGlobales.filter(pedido => {
                 const evalSucursal = rolActual === 'Logística' ? sucursalSeleccionada : rolActual;
                 const coincideSucursal = evalSucursal === 'todas' || pedido.sucursal === evalSucursal;
-                const coincideProveedor = proveedorSeleccionado === 'todos' || pedido.productos.some(p => p.proveedor === proveedorSeleccionado);
                 const coincideEstado = estadoSeleccionado === 'todos' || pedido.estado === estadoSeleccionado;
-                const textoProductos = pedido.productos.map(p => `${p.nombre} ${p.sku} ${p.proveedor}`).join(' ').toLowerCase();
-                const coincideBusqueda = terminoBusqueda === '' || 
-                    pedido.id.toLowerCase().includes(terminoBusqueda) ||
-                    pedido.tipo.toLowerCase().includes(terminoBusqueda) ||
-                    pedido.sucursal.toLowerCase().includes(terminoBusqueda) ||
-                    textoProductos.includes(terminoBusqueda);
-                return coincideVista && coincideSucursal && coincideProveedor && coincideEstado && coincideBusqueda;
-            });
+                
+                let coincideFecha = true;
+                if(fechaFiltro) {
+                    const fechaPedido = pedido.timestamp ? new Date(pedido.timestamp).toISOString().split('T')[0] : '';
+                    coincideFecha = fechaPedido === fechaFiltro;
+                }
 
-            actualizarEstadisticas(pedidosFiltrados);
+                const textoBusqueda = `${pedido.id} ${pedido.tipo} ${pedido.sucursal} ` + pedido.productos.map(p => `${p.nombre} ${p.sku} ${p.proveedor} ${p.marca || ''} ${p.categoria || ''}`).join(' ');
+                const coincideBusqueda = terminoBusqueda === '' || textoBusqueda.toLowerCase().includes(terminoBusqueda);
+                
+                return coincideSucursal && coincideEstado && coincideFecha && coincideBusqueda;
+            });
+        }
+
+        function renderizarTodo() {
+            tbody.innerHTML = '';
+            const pedidosFiltrados = obtenerPedidosFiltrados();
+
+            document.getElementById('stat-total').textContent = pedidosFiltrados.length;
+            document.getElementById('stat-pendientes').textContent = pedidosFiltrados.filter(p => p.estado === 'Pendiente').length;
+            document.getElementById('stat-preparacion').textContent = pedidosFiltrados.filter(p => p.estado === 'En Preparación').length;
+            document.getElementById('stat-preparados').textContent = pedidosFiltrados.filter(p => p.estado === 'Preparado').length;
+
             sinPedidosDiv.classList.toggle('hidden', pedidosFiltrados.length > 0);
 
             pedidosFiltrados.forEach(pedido => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-gray-50/50 transition-colors border-b border-gray-100';
                 
-                const productosAMostrar = proveedorSeleccionado === 'todos' ? pedido.productos : pedido.productos.filter(p => p.proveedor === proveedorSeleccionado);
-
-                const productosHTML = productosAMostrar.map((prod) => {
-                    const indexReal = pedido.productos.indexOf(prod);
+                const productosHTML = pedido.productos.map((prod, idx) => {
+                    const tagMarca = prod.marca ? `<span class="bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded text-[9px] uppercase">${prod.marca}</span>` : '';
+                    const tagCat = prod.categoria ? `<span class="bg-purple-50 text-purple-600 border border-purple-100 px-1.5 py-0.5 rounded text-[9px] uppercase">${prod.categoria}</span>` : '';
                     return `
                     <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 py-2.5 border-b border-gray-50 last:border-none">
                         <div class="flex items-start space-x-3">
-                            <label class="cursor-pointer select-none mt-0.5">
-                                <input type="checkbox" ${prod.preparado ? 'checked' : ''} onchange="toggleCheckProducto('${pedido.id}', ${indexReal})" class="touch-checkbox">
-                            </label>
+                            <label class="cursor-pointer mt-0.5"><input type="checkbox" ${prod.preparado ? 'checked' : ''} onchange="toggleCheckProducto('${pedido.id}', ${idx})" class="touch-checkbox"></label>
                             <div class="flex flex-col">
                                 <span class="text-[13px] ${prod.preparado ? 'line-through text-gray-400 font-normal' : 'text-gray-800 font-bold'}">
                                     <b class="text-cobalto">${prod.cantidad}x</b> ${prod.nombre}
                                 </span>
-                                <div class="mt-1.5 inline-flex items-center w-fit pl-2 pr-1.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200 relative hover:bg-gray-200 transition-colors">
-                                    <i data-lucide="truck" class="w-3 h-3 mr-1.5 pointer-events-none"></i>
-                                    <select onchange="cambiarProveedor('${pedido.id}', ${indexReal}, this.value)" class="bg-transparent appearance-none outline-none cursor-pointer font-bold uppercase pr-4 w-full">
-                                        <option value="Sin Asignar" ${prod.proveedor === 'Sin Asignar' ? 'selected' : ''}>Sin Asignar</option>
-                                        ${listaProveedores.map(prov => `<option value="${prov}" ${prod.proveedor === prov ? 'selected' : ''}>${prov}</option>`).join('')}
-                                    </select>
-                                    <i data-lucide="chevron-down" class="w-2.5 h-2.5 absolute right-1.5 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400"></i>
-                                </div>
+                                <div class="flex gap-1 mt-1">${tagMarca}${tagCat}</div>
                             </div>
                         </div>
-                        <span class="text-[10px] bg-white text-gray-500 px-2 py-1 rounded-md font-mono font-bold border border-gray-200 shrink-0 mt-1 sm:mt-0 shadow-sm">Cód: ${prod.sku}</span>
                     </div>`}).join('');
 
-                const estatusBg = pedido.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                                  pedido.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800 border-sky-200' :
-                                  'bg-emerald-100 text-emerald-800 border-emerald-200';
-                                  
-                const tipoColor = pedido.tipo === 'Urgente' ? 'bg-red-50 text-red-700 border-red-200' : 
-                                  pedido.tipo === 'Programado' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                  pedido.tipo === 'Especial' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                  'bg-emerald-50 text-emerald-700 border-emerald-200';
+                const estatusBg = pedido.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800 border-amber-200' : pedido.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800 border-sky-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                const tipoColor = pedido.tipo === 'Urgente' ? 'bg-red-50 text-red-700 border-red-200' : pedido.tipo === 'Programado' ? 'bg-blue-50 text-blue-700 border-blue-200' : pedido.tipo === 'Especial' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                const fechaFormat = pedido.timestamp ? new Date(pedido.timestamp).toLocaleDateString() : '';
 
                 tr.innerHTML = `
-                    <td class="py-4 px-5 text-center">
-                        <img src="${pedido.imagen || 'https://placehold.co/100x100/005c42/ffffff?text=FOTO'}" alt="Producto" class="w-12 h-12 rounded-xl object-cover border border-gray-200 shadow-sm mx-auto cursor-pointer hover:opacity-80 transition-opacity" onclick="verDetalle('${pedido.id}')">
+                    <td class="py-4 px-3 text-center relative group">
+                        <img src="${pedido.imagen || 'https://placehold.co/100x100/005c42/ffffff?text=FOTO'}" class="w-14 h-14 rounded-xl object-cover border border-gray-200 shadow-sm mx-auto">
+                        <button onclick="solicitarCambioImagen('${pedido.id}')" class="absolute inset-0 m-auto w-8 h-8 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm" title="Editar Imagen">
+                            <i data-lucide="edit-2" class="w-4 h-4"></i>
+                        </button>
                     </td>
                     <td class="py-4 px-4 whitespace-nowrap">
                         <div class="flex flex-col items-start gap-1.5">
                             <span class="text-[13px] font-mono font-black text-gray-900">${pedido.id}</span>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border ${tipoColor}">${pedido.tipo}</span>
-                            <span class="inline-flex items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5"><i data-lucide="clock" class="w-3 h-3 mr-1"></i>${pedido.hora}</span>
+                            <span class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${tipoColor}">${pedido.tipo}</span>
+                            <span class="inline-flex text-[10px] font-bold text-gray-400 mt-0.5" title="${fechaFormat}"><i data-lucide="clock" class="w-3 h-3 mr-1"></i>${pedido.hora}</span>
                         </div>
                     </td>
-                    <td class="py-4 px-4 whitespace-nowrap">
-                        <span class="inline-flex items-center gap-1.5 text-[13px] font-bold text-gray-700"><div class="w-2 h-2 rounded-full bg-emerald-500"></div>${pedido.sucursal}</span>
-                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 text-[13px] font-bold text-gray-700"><div class="w-2 h-2 rounded-full bg-emerald-500"></div>${pedido.sucursal}</span></td>
                     <td class="py-4 px-4"><div class="space-y-1 max-w-md">${productosHTML}</div></td>
                     <td class="py-4 px-4 text-center whitespace-nowrap">
                         <div class="flex flex-col items-center gap-2.5">
@@ -847,7 +633,6 @@
                                 <option value="En Preparación" ${pedido.estado === 'En Preparación' ? 'selected' : ''}>📦 En Proceso</option>
                                 <option value="Preparado" ${pedido.estado === 'Preparado' ? 'selected' : ''}>✅ Completado</option>
                             </select>
-                            <button onclick="verDetalle('${pedido.id}')" class="text-[11px] text-cobalto hover:text-cobaltoDark font-bold flex items-center gap-1 bg-cobalto/5 hover:bg-cobalto/10 px-3 py-1.5 rounded-lg transition-colors"><i data-lucide="eye" class="w-3 h-3"></i> Ficha Completa</button>
                         </div>
                     </td>
                 `;
@@ -856,130 +641,61 @@
             lucide.createIcons();
         }
 
-        // ================= SECCIÓN COMPRAS =================
-        function renderizarListaProveedores() {
-            const container = document.getElementById('lista-tablas-proveedores');
-            container.innerHTML = '';
-            const listado = proveedorSeleccionado === 'todos' ? listaProveedores : [proveedorSeleccionado];
+        // ================= EXPORTAR EXCEL / CSV =================
+        window.exportarExcel = function() {
+            const pedidosExport = obtenerPedidosFiltrados();
+            if (pedidosExport.length === 0) return mostrarToast('No hay datos para exportar', 'amber');
 
-            listado.forEach(prov => {
-                let itemsStr = '';
-                let tieneAlgo = false;
-                
-                pedidosGlobales.forEach(pedido => {
-                    const sucMatch = (rolActual === 'Logística') ? (sucursalSeleccionada === 'todas' || pedido.sucursal === sucursalSeleccionada) : pedido.sucursal === rolActual;
-                    if(sucMatch) {
-                        pedido.productos.forEach((prod, indexReal) => {
-                            if(prod.proveedor === prov) {
-                                tieneAlgo = true;
-                                const isComprado = prod.comprado ? true : false;
-                                itemsStr += `
-                                <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                                    <td class="py-3 px-4 text-center">
-                                        <input type="checkbox" ${isComprado ? 'checked' : ''} onchange="toggleComprado('${pedido.id}', ${indexReal})" class="touch-checkbox">
-                                    </td>
-                                    <td class="py-3 px-4 text-xs font-mono font-bold text-gray-500">${prod.sku}</td>
-                                    <td class="py-3 px-4 text-sm font-bold text-gray-800 ${isComprado ? 'line-through opacity-50' : ''}">${prod.nombre}</td>
-                                    <td class="py-3 px-4 text-center font-black text-indigo-700 bg-indigo-50/50 w-16">${prod.cantidad}</td>
-                                    <td class="py-3 px-4">
-                                        <input type="text" value="${prod.lugarCompra || ''}" placeholder="Ej. Galería Guizado" onblur="guardarLugarCompra('${pedido.id}', ${indexReal}, this.value)" class="w-full text-xs font-medium px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400 bg-white">
-                                    </td>
-                                    <td class="py-3 px-4 text-xs font-bold text-gray-400">#${pedido.id}</td>
-                                </tr>`;
-                            }
-                        });
-                    }
+            let csvContent = "\uFEFF"; 
+            csvContent += "ID Pedido,Fecha,Hora,Sucursal,Tipo,Estado,Cant,Producto,Marca,Categoria\n";
+
+            pedidosExport.forEach(pedido => {
+                const fechaFormat = pedido.timestamp ? new Date(pedido.timestamp).toLocaleDateString() : '';
+                pedido.productos.forEach(prod => {
+                    const nomClean = prod.nombre.replace(/,/g, '');
+                    const marcaClean = (prod.marca || '').replace(/,/g, '');
+                    const catClean = (prod.categoria || '').replace(/,/g, '');
+                    
+                    const row = [
+                        pedido.id,
+                        fechaFormat,
+                        pedido.hora,
+                        pedido.sucursal,
+                        pedido.tipo,
+                        pedido.estado,
+                        prod.cantidad,
+                        nomClean,
+                        marcaClean,
+                        catClean
+                    ];
+                    csvContent += row.join(",") + "\n";
                 });
-
-                if(tieneAlgo) {
-                    container.innerHTML += `
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-5 hover:shadow-md transition-shadow">
-                        <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
-                            <h3 class="font-black text-indigo-900 flex items-center gap-2.5 text-lg"><div class="bg-indigo-100 p-2 rounded-xl"><i data-lucide="store" class="w-5 h-5 text-indigo-600"></i></div> ${prov}</h3>
-                            <button onclick="copiarOrdenCompra('${prov}')" class="text-xs font-bold bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2 shadow-sm">
-                                <i data-lucide="copy" class="w-4 h-4 text-gray-500"></i> Copiar Lista
-                            </button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="text-[11px] text-gray-400 bg-gray-50 uppercase tracking-widest font-bold rounded-xl">
-                                    <tr>
-                                        <th class="py-3 px-4 text-center rounded-tl-xl w-12" title="Marcar como Comprado"><i data-lucide="check-square" class="w-4 h-4 mx-auto"></i></th>
-                                        <th class="py-3 px-4">SKU</th>
-                                        <th class="py-3 px-4">Producto</th>
-                                        <th class="py-3 px-4 text-center">Cant</th>
-                                        <th class="py-3 px-4">Lugar de Compra</th>
-                                        <th class="py-3 px-4 rounded-tr-xl">Pedido Ref.</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${itemsStr}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
-                }
             });
-            lucide.createIcons();
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Reporte_Pedidos_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            mostrarToast('Reporte descargado', 'emerald');
         }
 
-        window.toggleComprado = async function(pedidoId, indexReal) {
-            if (!user) return;
-            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
-            if (pedido && pedido.productos[indexReal]) {
-                const nuevosProductos = [...pedido.productos];
-                nuevosProductos[indexReal].comprado = !nuevosProductos[indexReal].comprado;
-                try {
-                    await updateDoc(doc(db, PATH_PEDIDOS, pedido.docId), { productos: nuevosProductos });
-                    mostrarToast(nuevosProductos[indexReal].comprado ? 'Comprado' : 'Desmarcado', 'emerald');
-                } catch(e) { mostrarToast('Error', 'amber'); }
-            }
-        };
 
-        window.guardarLugarCompra = async function(pedidoId, indexReal, valor) {
-            if (!user) return;
-            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
-            if (pedido && pedido.productos[indexReal]) {
-                if (pedido.productos[indexReal].lugarCompra === valor) return;
-                const nuevosProductos = [...pedido.productos];
-                nuevosProductos[indexReal].lugarCompra = valor;
-                try {
-                    await updateDoc(doc(db, PATH_PEDIDOS, pedido.docId), { productos: nuevosProductos });
-                    mostrarToast('Lugar guardado', 'emerald');
-                } catch(e) { console.error(e); }
-            }
-        };
-
-        window.copiarOrdenCompra = function(proveedor) {
-            let txt = `*ORDEN COMPRA - ${proveedor}*\n\n`;
-            let total = 0;
-            pedidosGlobales.forEach(p => {
-                p.productos.forEach(pr => { 
-                    if(pr.proveedor === proveedor && !pr.comprado) {
-                        txt += `- ${pr.cantidad}x ${pr.nombre} (Cod: ${pr.sku})\n`; 
-                        total += parseInt(pr.cantidad);
-                    }
-                });
-            });
-            if(total === 0) txt += "No hay artículos pendientes.\n";
-            else txt += `\n*TOTAL:* ${total} u.`;
-            navigator.clipboard.writeText(txt).then(() => mostrarToast('Copiado a WhatsApp', 'cobalto'));
-        };
-
-        // ================= ACCIONES DE PEDIDOS =================
         window.toggleCheckProducto = async function(pedidoId, indexProducto) {
             if (!user) return;
             const pedido = pedidosGlobales.find(p => p.id === pedidoId);
             if (pedido && pedido.productos[indexProducto]) {
                 const nuevos = [...pedido.productos];
                 nuevos[indexProducto].preparado = !nuevos[indexProducto].preparado;
-                
                 let nuevoEst = pedido.estado;
                 const todos = nuevos.every(p => p.preparado);
                 if (todos && pedido.estado !== 'Preparado') { nuevoEst = 'Preparado'; mostrarToast(`Pedido ${pedido.id} listo`, 'emerald'); } 
                 else if (!todos && pedido.estado === 'Pendiente') { nuevoEst = 'En Preparación'; }
-
-                try {
-                    await updateDoc(doc(db, PATH_PEDIDOS, pedido.docId), { productos: nuevos, estado: nuevoEst });
-                } catch(e) { mostrarToast('Error', 'amber'); }
+                try { await updateDoc(doc(db, PATH_PEDIDOS, pedido.docId), { productos: nuevos, estado: nuevoEst }); } catch(e) { }
             }
         };
 
@@ -993,36 +709,171 @@
                 try {
                     await updateDoc(doc(db, PATH_PEDIDOS, ped.docId), { estado: nuevoEstado, productos: actualizados });
                     mostrarToast(`Estado: ${nuevoEstado}`, 'sky');
-                } catch(e) { mostrarToast('Error', 'amber'); }
+                } catch(e) {}
             }
         };
 
-        window.cambiarProveedor = async function(pedidoId, indexProducto, nuevoProv) {
-            if (!user) return;
-            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
-            if (pedido && pedido.productos[indexProducto]) {
-                const nuevos = [...pedido.productos];
-                nuevos[indexProducto].proveedor = nuevoProv;
-                try {
-                    await updateDoc(doc(db, PATH_PEDIDOS, pedido.docId), { productos: nuevos });
-                    mostrarToast('Proveedor asignado', 'sky');
-                } catch(e) { mostrarToast('Error', 'amber'); }
-            }
-        };
+        // ================= EDICIÓN DE IMAGEN =================
+        window.solicitarCambioImagen = function(pedidoId) {
+            pedidoEditandoImgId = pedidoId;
+            document.getElementById('input-edit-image').click();
+        }
 
-        // ================= NUEVO PEDIDO Y CÁMARA =================
+        window.procesarEdicionImagen = function(event) {
+            const file = event.target.files[0];
+            if(!file || !pedidoEditandoImgId || !user) return;
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const img = new Image();
+                img.onload = async function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+                    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const base64 = canvas.toDataURL("image/jpeg", 0.6);
+                    
+                    const ped = pedidosGlobales.find(p => p.id === pedidoEditandoImgId);
+                    if(ped) {
+                        try {
+                            mostrarToast('Actualizando imagen...', 'sky');
+                            await updateDoc(doc(db, PATH_PEDIDOS, ped.docId), { imagen: base64 });
+                            mostrarToast('Imagen actualizada correctamente', 'emerald');
+                        } catch (err) { mostrarToast('Error al actualizar imagen', 'amber'); }
+                    }
+                    event.target.value = ''; 
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // ================= GESTIÓN MULTIMEDIA (NUEVO PEDIDO) =================
+        function configurarDropzone() {
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('file-upload');
+            
+            dropzone.addEventListener('click', () => { if(imagenCapturada === null) fileInput.click(); });
+            
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault(); dropzone.classList.add('dropzone-active');
+            });
+            
+            dropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault(); dropzone.classList.remove('dropzone-active');
+            });
+            
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropzone.classList.remove('dropzone-active');
+                if (e.dataTransfer.files.length) window.procesarArchivoSubido(e.dataTransfer.files[0]);
+            });
+
+            document.addEventListener('paste', (e) => {
+                if (!document.getElementById('modal-nuevo-pedido').classList.contains('hidden')) {
+                    const items = e.clipboardData.items;
+                    for (let item of items) {
+                        if (item.type.indexOf('image') === 0) window.procesarArchivoSubido(item.getAsFile());
+                    }
+                }
+            });
+        }
+
+        window.procesarArchivoSubido = function(file) {
+            if (!file || file.type.indexOf('image') !== 0) return mostrarToast('Por favor, selecciona una imagen válida', 'amber');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+                    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+                    imagenCapturada = canvas.toDataURL("image/jpeg", 0.6);
+                    mostrarVistaPrevia(imagenCapturada);
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function mostrarVistaPrevia(src) {
+            document.getElementById('dropzone-content').classList.add('hidden');
+            const preview = document.getElementById('preview-image');
+            preview.src = src;
+            preview.classList.remove('hidden');
+            document.getElementById('btn-remove-image').classList.remove('hidden');
+            apagarCamara(); 
+        }
+
+        window.removerImagen = function(e) {
+            e.stopPropagation();
+            imagenCapturada = null;
+            document.getElementById('preview-image').classList.add('hidden');
+            document.getElementById('preview-image').src = '';
+            document.getElementById('btn-remove-image').classList.add('hidden');
+            document.getElementById('dropzone-content').classList.remove('hidden');
+            document.getElementById('file-upload').value = '';
+        }
+
+        window.iniciarCamara = async function() {
+            const video = document.getElementById('camera-stream');
+            const container = document.getElementById('camera-container');
+            const dropzone = document.getElementById('dropzone');
+            
+            if(imagenCapturada) window.removerImagen(new Event('click'));
+
+            try {
+                streamGlobal = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = streamGlobal;
+                dropzone.classList.add('hidden');
+                container.classList.remove('hidden');
+            } catch (err) { mostrarToast("No se pudo acceder a la cámara", "amber"); }
+        }
+
+        window.tomarFoto = function() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            canvas.width = 600;
+            canvas.height = (video.videoHeight / video.videoWidth) * 600;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            window.procesarArchivoSubido(dataURLtoFile(canvas.toDataURL('image/jpeg', 0.6), 'captura.jpg'));
+        }
+
+        window.apagarCamara = function() {
+            if (streamGlobal) { streamGlobal.getTracks().forEach(track => track.stop()); streamGlobal = null; }
+            document.getElementById('camera-container').classList.add('hidden');
+            document.getElementById('dropzone').classList.remove('hidden');
+        }
+
+        function dataURLtoFile(dataurl, filename) {
+            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+            return new File([u8arr], filename, {type:mime});
+        }
+
+        // ================= NUEVO PEDIDO LÓGICA =================
         window.abrirModalNuevoPedido = function() {
             itemsNuevoPedido = [];
-            document.getElementById('np-lista-items').innerHTML = '<div class="h-full flex flex-col items-center justify-center pt-6 text-gray-400"><i data-lucide="shopping-basket" class="w-8 h-8 mb-2 opacity-50"></i><p class="text-xs font-bold uppercase tracking-wider">Lista vacía</p></div>';
+            window.removerImagen(new Event('click'));
+            document.getElementById('np-lista-items').innerHTML = '<div class="h-full flex flex-col items-center justify-center pt-4 text-gray-400"><i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i><p class="text-[10px] font-bold uppercase tracking-wider">Lista vacía</p></div>';
+            
             document.getElementById('np-cantidad').value = '1';
             document.getElementById('np-producto').value = '';
-            document.getElementById('np-sku').value = '';
+            document.getElementById('np-marca').value = '';
+            document.getElementById('np-categoria').value = '';
+            
             document.querySelector('.btn-tipo-ped').click();
             document.getElementById('modal-nuevo-pedido').classList.remove('hidden');
             lucide.createIcons();
         };
 
         window.cerrarModalNuevoPedido = function() {
+            apagarCamara();
             document.getElementById('modal-nuevo-pedido').classList.add('hidden');
         };
 
@@ -1050,17 +901,28 @@
 
         window.agregarItemTemporal = function() {
             const cant = document.getElementById('np-cantidad').value;
-            const nombre = document.getElementById('np-producto').value.trim();
-            const sku = document.getElementById('np-sku').value.trim() || 'N/A';
-            const provStr = 'Sin Asignar'; 
+            const nombreStr = document.getElementById('np-producto').value.trim();
+            const marcaStr = document.getElementById('np-marca').value.trim();
+            const catStr = document.getElementById('np-categoria').value.trim();
 
-            if (!nombre || cant < 1) return mostrarToast('Agrega un nombre de producto', 'amber');
+            if (!nombreStr || cant < 1) return mostrarToast('Agrega el nombre del producto', 'amber');
 
-            itemsNuevoPedido.push({ cantidad: parseInt(cant), nombre, sku, proveedor: provStr, preparado: false, comprado: false, lugarCompra: '' });
+            itemsNuevoPedido.push({ 
+                cantidad: parseInt(cant), 
+                nombre: nombreStr, 
+                marca: marcaStr,
+                categoria: catStr,
+                sku: 'S/C', 
+                proveedor: 'Sin Asignar', 
+                preparado: false, 
+                comprado: false, 
+                lugarCompra: '' 
+            });
 
             document.getElementById('np-cantidad').value = '1';
             document.getElementById('np-producto').value = '';
-            document.getElementById('np-sku').value = '';
+            document.getElementById('np-marca').value = '';
+            document.getElementById('np-categoria').value = '';
             document.getElementById('np-producto').focus();
             
             document.querySelectorAll('.btn-qty').forEach(b => {
@@ -1068,21 +930,22 @@
                 b.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
             });
             document.querySelector('.btn-qty').classList.add('bg-cobalto', 'text-white', 'border-transparent');
-            document.querySelector('.btn-qty').classList.remove('bg-white', 'text-gray-600', 'border-gray-200');
             
             const contenedor = document.getElementById('np-lista-items');
-            contenedor.innerHTML = itemsNuevoPedido.map((item) => `
-                <div class="flex items-center justify-between bg-white border border-gray-100 p-3 mb-1.5 rounded-xl shadow-sm">
-                    <div class="text-[13px] font-bold text-gray-800 flex items-center gap-2">
-                        <span class="bg-gray-100 text-cobalto px-2 py-1 rounded-lg border border-gray-200">${item.cantidad}x</span> 
-                        ${item.nombre}
+            contenedor.innerHTML = itemsNuevoPedido.map((item) => {
+                const tagMarca = item.marca ? `<span class="bg-blue-50 text-blue-600 px-1 rounded text-[10px] uppercase ml-2">${item.marca}</span>` : '';
+                const tagCat = item.categoria ? `<span class="bg-purple-50 text-purple-600 px-1 rounded text-[10px] uppercase ml-1">${item.categoria}</span>` : '';
+                return `
+                <div class="flex items-center justify-between bg-white border border-gray-100 p-2 mb-1.5 rounded-lg shadow-sm">
+                    <div class="text-xs font-bold text-gray-800 flex items-center">
+                        <span class="bg-gray-100 text-cobalto px-2 py-0.5 rounded-md border border-gray-200 mr-2">${item.cantidad}x</span> 
+                        ${item.nombre} ${tagMarca} ${tagCat}
                     </div>
-                    <span class="text-[10px] font-mono font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">Cód: ${item.sku}</span>
-                </div>`).join('');
+                </div>`}).join('');
         };
 
         window.guardarNuevoPedido = async function() {
-            if (!user) return mostrarToast('Sin conexión', 'amber');
+            if (!user) return mostrarToast('Asegúrate de estar conectado a Firebase', 'amber');
             if (itemsNuevoPedido.length === 0) return mostrarToast('Agrega al menos un producto a la lista', 'amber');
             
             const sucursal = document.getElementById('np-sucursal').value;
@@ -1098,7 +961,7 @@
                 estado: 'Pendiente',
                 timestamp: Date.now(),
                 productos: itemsNuevoPedido,
-                imagen: 'https://placehold.co/400x400/005c42/ffffff?text=Prenda'
+                imagen: imagenCapturada || ''
             };
 
             try {
@@ -1107,49 +970,6 @@
                 cerrarModalNuevoPedido();
             } catch (error) { mostrarToast('Error al guardar', 'amber'); }
         };
-
-        // ================= UTILIDADES =================
-        window.verDetalle = function(id) {
-            const pedido = pedidosGlobales.find(p => p.id === id);
-            if (!pedido) return;
-            document.getElementById('modal-id').textContent = `Pedido ${pedido.id}`;
-            document.getElementById('modal-sucursal').textContent = pedido.sucursal;
-            document.getElementById('modal-tipo').textContent = pedido.tipo;
-            document.getElementById('modal-hora').textContent = pedido.hora;
-            document.getElementById('modal-estado').textContent = pedido.estado;
-            document.getElementById('modal-productos-lista').innerHTML = pedido.productos.map(p => `
-                <div class="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-xl mb-2 text-sm shadow-sm">
-                    <div><b class="text-gray-800">${p.nombre}</b> <br> <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5 inline-block">Prov: ${p.proveedor}</span></div>
-                    <div class="font-black text-cobalto bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">x${p.cantidad}</div>
-                </div>
-            `).join('');
-            document.getElementById('modal-detalle').classList.remove('hidden');
-        };
-
-        window.cerrarModal = function() { document.getElementById('modal-detalle').classList.add('hidden'); };
-        
-        window.abrirModalProveedor = function() { document.getElementById('modal-nuevo-proveedor').classList.remove('hidden'); };
-        window.cerrarModalProveedor = function() { document.getElementById('modal-nuevo-proveedor').classList.add('hidden'); };
-        
-        window.guardarProveedor = async function() {
-            const prov = document.getElementById('input-nuevo-proveedor').value.trim();
-            if(prov && !listaProveedores.includes(prov)) {
-                listaProveedores.push(prov);
-                if(user) await updateDoc(doc(db, PATH_CONFIG, "general"), { proveedores: listaProveedores });
-                document.getElementById('input-nuevo-proveedor').value = '';
-                window.cerrarModalProveedor();
-                mostrarToast('Proveedor agregado', 'emerald');
-            }
-        };
-
-        function actualizarEstadisticas(filtradosOpcional = null) {
-            const usar = filtradosOpcional || pedidosGlobales;
-            const peds = usar.filter(p => sucursalSeleccionada === 'todas' || p.sucursal === sucursalSeleccionada);
-            document.getElementById('stat-total').textContent = peds.length;
-            document.getElementById('stat-pendientes').textContent = peds.filter(p => p.estado === 'Pendiente').length;
-            document.getElementById('stat-preparacion').textContent = peds.filter(p => p.estado === 'En Preparación').length;
-            document.getElementById('stat-preparados').textContent = peds.filter(p => p.estado === 'Preparado').length;
-        }
 
         function mostrarToast(mensaje, color) {
             const container = document.getElementById('toast-container');
