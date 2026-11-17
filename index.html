@@ -20,6 +20,13 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Forzar visualización de flechas en input number */
+        input[type="number"] {
+            -webkit-appearance: auto !important;
+            -moz-appearance: auto !important;
+            appearance: auto !important;
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-gray-800">
@@ -93,7 +100,7 @@
                 </div>
                 <div class="relative w-64 hidden sm:block">
                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-                    <input type="text" id="filtro-texto" placeholder="Buscar pedidos, SKU..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cobalto/20 focus:border-cobalto transition-all font-medium">
+                    <input type="text" id="filtro-texto" placeholder="Buscar pedidos, cliente..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cobalto/20 focus:border-cobalto transition-all font-medium">
                 </div>
                 <button id="btn-exportar" onclick="exportarExcel()" class="hidden bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm">
                     <i data-lucide="download" class="w-4 h-4"></i> CSV
@@ -154,7 +161,7 @@
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
                             <th class="p-4 text-center w-20">Preview</th>
-                            <th class="p-4">ID & Fecha</th>
+                            <th class="p-4">ID & Detalles</th>
                             <th class="p-4">Destino / Tipo</th>
                             <th class="p-4 w-1/2">Productos y Detalles</th>
                             <th class="p-4 text-center">Estado</th>
@@ -175,8 +182,8 @@
 
     <!-- MODAL NUEVO PEDIDO -->
     <div id="modal-pedido" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="bg-emerald-100 text-cobalto p-2 rounded-full"><i data-lucide="plus" class="w-5 h-5 font-bold"></i></div>
                     <h2 class="text-xl font-extrabold text-gray-800">Crear Nuevo Pedido</h2>
@@ -184,33 +191,52 @@
                 <button onclick="cerrarModalPedido()" class="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-6 bg-gray-50/50">
+            <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-5 bg-gray-50/50">
                 
-                <!-- DESTINO Y TIPO -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Destino</label>
-                        <div class="relative">
-                            <i data-lucide="store" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-                            <select id="np-sucursal" class="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
-                                <option value="Sucursal Centro">Sucursal Centro</option>
-                                <option value="Sucursal Norte">Sucursal Norte</option>
-                                <option value="Sucursal Sur">Sucursal Sur</option>
-                            </select>
+                <!-- DATOS PRINCIPALES (Destino, Tipo, Cliente) -->
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Destino -->
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Destino</label>
+                            <div class="relative">
+                                <i data-lucide="store" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                                <select id="np-sucursal" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
+                                    <option value="Sucursal Centro">Sucursal Centro</option>
+                                    <option value="Sucursal Norte">Sucursal Norte</option>
+                                    <option value="Sucursal Sur">Sucursal Sur</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Pedido</label>
-                        <select id="np-tipo" onchange="toggleFechaProg(this.value)" class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
-                            <option value="Pedido">📦 Pedido</option>
-                            <option value="Consulta">💬 Consulta</option>
-                            <option value="Reposición">🔄 Reposición</option>
-                            <option value="Programado">📅 Programado</option>
-                        </select>
-                        <!-- Campo oculto para fecha programada -->
-                        <div id="container-fecha-prog" class="mt-2 hidden flex items-center bg-white border border-cobalto rounded-xl px-3 py-2">
-                            <i data-lucide="calendar-clock" class="w-4 h-4 text-cobalto mr-2"></i>
-                            <input type="date" id="np-fecha-prog" class="w-full bg-transparent text-sm font-bold text-gray-700 outline-none">
+                        <!-- Tipo Pedido -->
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Pedido</label>
+                            <select id="np-tipo" onchange="toggleFechaProg(this.value)" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
+                                <option value="Pedido">📦 Pedido</option>
+                                <option value="Consulta">💬 Consulta</option>
+                                <option value="Reposición">🔄 Reposición</option>
+                                <option value="Programado">📅 Programado</option>
+                            </select>
+                            <div id="container-fecha-prog" class="mt-2 hidden flex items-center bg-white border border-cobalto rounded-xl px-3 py-2">
+                                <i data-lucide="calendar-clock" class="w-4 h-4 text-cobalto mr-2"></i>
+                                <input type="date" id="np-fecha-prog" class="w-full bg-transparent text-sm font-bold text-gray-700 outline-none">
+                            </div>
+                        </div>
+                        
+                        <!-- Nuevos Campos: Cliente y Contacto -->
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente (Opcional)</label>
+                            <div class="relative">
+                                <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                                <input type="text" id="np-cliente" placeholder="Nombre del cliente" class="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:border-cobalto outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Contacto (Opcional)</label>
+                            <div class="relative">
+                                <i data-lucide="phone" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                                <input type="text" id="np-contacto" placeholder="Teléfono, celular o correo" class="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:border-cobalto outline-none">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -222,8 +248,8 @@
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Añadir Producto</label>
                         
                         <div class="flex gap-2">
-                            <!-- Cantidad ahora es texto libre -->
-                            <input type="text" id="np-cant" placeholder="Cant. (Ej. 2 cajas)" class="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-cobalto">
+                            <!-- Cantidad con input number forzando visualización de flechas -->
+                            <input type="number" id="np-cant" placeholder="Cant." min="0" value="1" class="w-20 px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-cobalto">
                             <input type="text" id="np-nombre" placeholder="Nombre del producto..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
                         </div>
                         
@@ -259,7 +285,7 @@
                 </div>
 
                 <!-- LISTA TEMPORAL -->
-                <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[120px] max-h-48 overflow-y-auto p-3 space-y-2" id="np-lista">
+                <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[120px] max-h-40 overflow-y-auto p-3 space-y-2" id="np-lista">
                     <div class="h-full flex flex-col items-center justify-center text-gray-400 py-6">
                         <i data-lucide="shopping-basket" class="w-8 h-8 mb-2 opacity-50"></i>
                         <p class="text-sm font-medium">No hay productos en este pedido aún</p>
@@ -280,9 +306,6 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ==========================================
-        // LA CONFIGURACIÓN CORRECTA PROPORCIONADA
-        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyCcHClKyeMlz6DexTM80q_zT4oMbk6WWuM",
             authDomain: "lista-de-pedidos-pg.firebaseapp.com",
@@ -300,14 +323,13 @@
             db = getFirestore(app);
         } catch (e) { console.error("Error init:", e); }
 
-        const PATH = 'pedidos_v3'; // Nueva tabla para soportar la nueva estructura
+        const PATH = 'pedidos_v3'; 
         let pedidos = [];
         let rolActual = null;
         let filtroEstado = 'Todos';
         let itemsTmp = [];
         let base64Img = null;
 
-        // ELEMENTOS DOM
         const tb = document.getElementById('tabla-body');
         const emptyState = document.getElementById('empty-state');
         const dz = document.getElementById('dropzone');
@@ -383,13 +405,18 @@
             const filtrados = pedidos.filter(p => {
                 const matchEst = filtroEstado === 'Todos' || p.estado === filtroEstado;
                 const matchSuc = suc === 'Todas' || p.sucursal === suc;
-                const matchTxt = p.cod.toLowerCase().includes(text) || p.productos.some(prod => prod.n.toLowerCase().includes(text) || (prod.det && prod.det.toLowerCase().includes(text)));
+                
+                const txtMatch = p.cod.toLowerCase().includes(text) || 
+                                 (p.cliente && p.cliente.toLowerCase().includes(text)) ||
+                                 (p.contacto && p.contacto.toLowerCase().includes(text)) ||
+                                 p.productos.some(prod => prod.n.toLowerCase().includes(text) || (prod.det && prod.det.toLowerCase().includes(text)));
+                
                 let matchFec = true;
                 if(fechaSeleccionada) {
                     const fechaPedido = new Date(p.timestamp).toISOString().split('T')[0];
                     matchFec = fechaPedido === fechaSeleccionada;
                 }
-                return matchEst && matchSuc && matchTxt && matchFec;
+                return matchEst && matchSuc && txtMatch && matchFec;
             });
 
             const baseKpi = pedidos.filter(p => (suc === 'Todas' || p.sucursal === suc));
@@ -407,7 +434,6 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50/50 transition-colors group";
                     
-                    // Renderizar lista de productos, cada uno con su mini foto
                     const pList = p.productos.map((pr, idx) => `
                         <div class="flex gap-3 py-3 border-b border-gray-100 last:border-0 items-start">
                             <input type="checkbox" ${pr.chk ? 'checked' : ''} onchange="chkProd('${p.id}', ${idx})" class="mt-1 w-4 h-4 accent-cobalto cursor-pointer shrink-0">
@@ -418,13 +444,14 @@
 
                             <div class="flex-grow">
                                 <p class="text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800 font-bold'}">
-                                    <span class="text-cobalto">${pr.c}</span> - ${pr.n}
+                                    <span class="text-cobalto">${pr.c === 'Cantidad no definida' ? '?' : pr.c}</span> - ${pr.n}
                                 </p>
                                 <p class="text-xs text-gray-500 font-medium leading-snug">Detalle: <span class="text-gray-700">${pr.det}</span></p>
                                 <div class="flex flex-wrap gap-1 mt-1">
                                     ${pr.s ? `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[9px] font-bold uppercase">SKU: ${pr.s}</span>` : ''}
                                     ${pr.mar ? `<span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-bold uppercase">${pr.mar}</span>` : ''}
                                     ${pr.cat ? `<span class="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[9px] font-bold uppercase">${pr.cat}</span>` : ''}
+                                    ${pr.c === 'Cantidad no definida' ? `<span class="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[9px] font-bold uppercase">Cantidad no definida</span>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -441,8 +468,16 @@
                         infoProgramado = `<p class="text-[10px] font-bold text-orange-600 flex items-center gap-1 mt-1"><i data-lucide="calendar" class="w-3 h-3"></i> Para: ${p.fechaProg}</p>`;
                     }
 
-                    // Foto principal del pedido (toma la del primer producto)
                     const mainImg = p.productos.length > 0 && p.productos[0].img ? p.productos[0].img : 'https://placehold.co/100/eeeeee/999999?text=Pedido';
+
+                    let infoCliente = '';
+                    if(p.cliente || p.contacto) {
+                        infoCliente = `
+                        <div class="mt-2 p-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                            ${p.cliente ? `<p class="text-[10px] font-bold text-blue-800 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${p.cliente}</p>` : ''}
+                            ${p.contacto ? `<p class="text-[9px] text-blue-600 font-medium flex items-center gap-1 mt-0.5"><i data-lucide="phone" class="w-3 h-3"></i> ${p.contacto}</p>` : ''}
+                        </div>`;
+                    }
 
                     tr.innerHTML = `
                         <td class="p-4 text-center align-top">
@@ -454,6 +489,7 @@
                             <p class="font-mono font-black text-sm text-gray-900">${p.cod}</p>
                             <p class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i> ${new Date(p.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>
                             <p class="text-[10px] text-gray-400 mt-0.5">${new Date(p.timestamp).toLocaleDateString()}</p>
+                            ${infoCliente}
                         </td>
                         <td class="p-4 align-top">
                             <p class="text-xs font-bold text-gray-800 flex items-center gap-1"><i data-lucide="store" class="w-3 h-3 text-cobalto"></i> ${p.sucursal}</p>
@@ -483,7 +519,9 @@
 
         // AGREGAR PRODUCTO A LISTA TEMPORAL
         window.agregarItem = () => {
-            const c = document.getElementById('np-cant').value.trim() || '1';
+            let c = document.getElementById('np-cant').value;
+            if(!c || c === '0') c = 'Cantidad no definida';
+            
             const n = document.getElementById('np-nombre').value.trim();
             const det = document.getElementById('np-detalle').value.trim();
             const s = document.getElementById('np-sku').value.trim();
@@ -493,20 +531,16 @@
             if(!n) return alert("Por favor ingresa el nombre del producto.");
             if(!det) return alert("El Detalle del producto (Talla, Medida, etc.) es obligatorio para logística.");
             
-            // Guardar producto con la foto que haya en el dropzone en este momento
             itemsTmp.push({ c, n, det, s, mar, cat, img: base64Img, chk: false });
             
-            // Limpiar inputs
-            document.getElementById('np-cant').value = '';
+            document.getElementById('np-cant').value = '1';
             document.getElementById('np-nombre').value = '';
             document.getElementById('np-detalle').value = '';
             document.getElementById('np-sku').value = '';
             document.getElementById('np-marca').value = '';
             document.getElementById('np-cat').value = '';
             
-            // Limpiar Dropzone
             dzRem.click();
-            
             document.getElementById('np-cant').focus();
             pintarItemsTmp();
         };
@@ -522,7 +556,7 @@
                             <img src="${i.img || 'https://placehold.co/100/eeeeee/999999?text=Sin+Foto'}" class="w-full h-full object-cover">
                         </div>
                         <div class="flex-grow min-w-0">
-                            <p class="text-sm font-bold text-gray-800 truncate"><span class="text-cobalto">${i.c}</span> - ${i.n}</p>
+                            <p class="text-sm font-bold text-gray-800 truncate"><span class="text-cobalto">${i.c === 'Cantidad no definida' ? '?' : i.c}</span> - ${i.n}</p>
                             <p class="text-[10px] text-gray-500 font-medium truncate">${i.det}</p>
                         </div>
                         <button onclick="itemsTmp.splice(${idx},1); pintarItemsTmp()" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -568,7 +602,7 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_W = 400; // Reducido para optimizar carga ya que son fotos por producto
+                    const MAX_W = 400; 
                     const scale = MAX_W / img.width;
                     canvas.width = MAX_W; canvas.height = img.height * scale;
                     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -590,6 +624,9 @@
             dzRem.click(); 
             document.getElementById('np-sucursal').value = rolActual === 'Logística' ? 'Sucursal Centro' : rolActual;
             document.getElementById('np-tipo').value = 'Pedido';
+            document.getElementById('np-cliente').value = '';
+            document.getElementById('np-contacto').value = '';
+            document.getElementById('np-cant').value = '1';
             toggleFechaProg('Pedido');
             document.getElementById('modal-pedido').classList.remove('hidden');
         };
@@ -605,12 +642,28 @@
                 fechaProg = document.getElementById('np-fecha-prog').value;
                 if(!fechaProg) return alert('Debes seleccionar una fecha para el pedido programado.');
             }
+            
+            const cliente = document.getElementById('np-cliente').value.trim();
+            const contacto = document.getElementById('np-contacto').value.trim();
+
+            let msg = `Resumen del Pedido:\n\n`;
+            if (cliente) msg += `👤 Cliente: ${cliente}\n`;
+            msg += `📦 Productos:\n`;
+            itemsTmp.forEach(i => {
+                const qty = i.c === 'Cantidad no definida' ? '?' : i.c;
+                msg += `  • ${qty}x ${i.n} (${i.det})\n`;
+            });
+            msg += `\n¿Confirmar y enviar pedido?`;
+            
+            if(!confirm(msg)) return;
 
             const nuevo = {
                 cod: `PED-${Math.floor(Math.random()*9000)+1000}`,
                 sucursal: document.getElementById('np-sucursal').value,
                 tipo: tipo,
                 fechaProg: fechaProg,
+                cliente: cliente,
+                contacto: contacto,
                 estado: 'Pendiente',
                 timestamp: Date.now(),
                 productos: itemsTmp
@@ -643,9 +696,12 @@
 
         window.exportarExcel = () => {
             if(pedidos.length === 0) return alert("No hay datos para exportar.");
-            let csv = "Codigo,Fecha Sistema,Sucursal,Tipo,Fecha Programada,Estado,Cantidad,Producto,Detalle,Marca,Categoria,SKU\n";
+            let csv = "Codigo,Fecha Sistema,Sucursal,Tipo,Fecha Programada,Cliente,Contacto,Estado,Cantidad,Producto,Detalle,Marca,Categoria,SKU\n";
             pedidos.forEach(p => {
                 const f = new Date(p.timestamp).toLocaleDateString();
+                const cl = (p.cliente || '').replace(/,/g, '');
+                const co = (p.contacto || '').replace(/,/g, '');
+                
                 p.productos.forEach(pr => {
                     const nom = pr.n.replace(/,/g, '');
                     const det = (pr.det || '').replace(/,/g, '');
@@ -653,7 +709,7 @@
                     const cat = (pr.cat || '').replace(/,/g, '');
                     const sku = (pr.s || '').replace(/,/g, '');
                     const cant = (pr.c || '').toString().replace(/,/g, '');
-                    csv += `${p.cod},${f},${p.sucursal},${p.tipo},${p.fechaProg||''},${p.estado},${cant},${nom},${det},${mar},${cat},${sku}\n`;
+                    csv += `${p.cod},${f},${p.sucursal},${p.tipo},${p.fechaProg||''},${cl},${co},${p.estado},${cant},${nom},${det},${mar},${cat},${sku}\n`;
                 });
             });
             const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
