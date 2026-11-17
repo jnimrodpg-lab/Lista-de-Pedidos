@@ -30,11 +30,6 @@
 </head>
 <body class="flex h-screen overflow-hidden text-gray-800">
 
-    <!-- DATALISTS PARA AUTOCOMPLETADO -->
-    <datalist id="dl-nombres"></datalist>
-    <datalist id="dl-marcas"></datalist>
-    <datalist id="dl-cats"></datalist>
-
     <!-- MODAL LOGIN -->
     <div id="modal-login" class="fixed inset-0 bg-cobalto/95 z-[100] flex items-center justify-center p-4 transition-opacity">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
@@ -211,12 +206,10 @@
                 <i data-lucide="x" class="w-6 h-6"></i>
             </button>
 
-            <!-- Sección Izquierda: Imagen Completa -->
             <div class="flex-grow md:w-2/3 bg-gray-900 flex items-center justify-center p-4 h-1/2 md:h-full relative">
                 <img id="mdi-img" src="" class="max-w-full max-h-full object-contain drop-shadow-2xl">
             </div>
 
-            <!-- Sección Derecha: Info y Productos -->
             <div class="w-full md:w-1/3 bg-white flex flex-col h-1/2 md:h-full border-t md:border-t-0 md:border-l border-gray-200 shrink-0">
                 <div class="p-6 border-b border-gray-100 bg-gray-50 shrink-0">
                     <h3 class="font-black text-2xl text-cobalto" id="mdi-cod">PED-0000</h3>
@@ -297,7 +290,7 @@
                         
                         <div class="flex gap-2">
                             <input type="number" id="np-cant" placeholder="Cant." min="0" value="1" class="w-20 px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-cobalto">
-                            <input type="text" id="np-nombre" list="dl-nombres" placeholder="Nombre del producto..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-nombre" placeholder="Nombre del producto..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
                         </div>
                         
                         <div class="relative">
@@ -310,8 +303,8 @@
 
                         <div class="flex gap-2">
                             <input type="text" id="np-sku" placeholder="SKU (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                            <input type="text" id="np-marca" list="dl-marcas" placeholder="Marca (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                            <input type="text" id="np-cat" list="dl-cats" placeholder="Categoría (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-marca" placeholder="Marca (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-cat" placeholder="Categoría (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
                         </div>
                     </div>
 
@@ -351,7 +344,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCcHClKyeMlz6DexTM80q_zT4oMbk6WWuM",
@@ -423,36 +416,16 @@
 
                 onSnapshot(collection(db, PATH), (snap) => {
                     pedidos = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.timestamp - a.timestamp);
-                    actualizarAutocompletado();
                     if(vistaActual === 'dashboard') renderTabla();
                     if(vistaActual === 'compras') renderCompras();
                 });
             } catch(e) { console.error("DB Error", e); }
         }
 
-        // AUTOCOMPLETADO
-        function actualizarAutocompletado() {
-            const nombres = new Set();
-            const marcas = new Set();
-            const cats = new Set();
-            
-            pedidos.forEach(p => {
-                p.productos.forEach(pr => {
-                    if(pr.n) nombres.add(pr.n.trim());
-                    if(pr.mar) marcas.add(pr.mar.trim());
-                    if(pr.cat) cats.add(pr.cat.trim());
-                });
-            });
-
-            document.getElementById('dl-nombres').innerHTML = [...nombres].map(n => `<option value="${n}">`).join('');
-            document.getElementById('dl-marcas').innerHTML = [...marcas].map(n => `<option value="${n}">`).join('');
-            document.getElementById('dl-cats').innerHTML = [...cats].map(n => `<option value="${n}">`).join('');
-        }
-
         // DICTADO POR VOZ
         window.iniciarDictado = () => {
             if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                return alert("Tu navegador no soporta el dictado por voz. Usa Chrome o Edge.");
+                return alert("Tu navegador no soporta el dictado por voz.");
             }
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const rc = new SpeechRecognition();
@@ -562,7 +535,6 @@
             }
         };
 
-        // GESTIÓN DE SUCURSALES (DB)
         window.agregarSucursalDB = async () => {
             const input = document.getElementById('input-nueva-sucursal');
             const val = input.value.trim();
@@ -581,14 +553,13 @@
             catch(e) { alert('Error eliminando sucursal'); }
         };
 
-        // MÓDULO DE COMPRAS INTELIGENTE
         function renderCompras() {
             const pendientes = pedidos.filter(p => p.estado !== 'Preparado');
             const porProv = {};
             
             pendientes.forEach(p => {
                 p.productos.forEach(pr => {
-                    if(pr.chk) return; // Si ya se consiguió este producto
+                    if(pr.chk) return; 
                     const prov = pr.prov || 'Sin Proveedor Asignado';
                     if(!porProv[prov]) porProv[prov] = [];
                     porProv[prov].push({ ...pr, pedidoId: p.id, sucursal: p.sucursal, cod: p.cod });
@@ -609,7 +580,6 @@
             
             let html = '';
             for(const [prov, prods] of Object.entries(porProv)) {
-                // Generar texto para WhatsApp
                 let waText = `Hola, necesito hacer el siguiente pedido:\n\n`;
                 prods.forEach(pr => { waText += `• ${pr.c === 'Cantidad no definida' ? '?' : pr.c}x ${pr.n} (${pr.det})\n`; });
                 const waLink = `https://wa.me/?text=${encodeURIComponent(waText)}`;
@@ -643,7 +613,6 @@
             lucide.createIcons();
         }
 
-        // TABLA PEDIDOS
         function renderTabla() {
             if(!rolActual) return;
             const text = document.getElementById('filtro-texto').value.toLowerCase();
@@ -745,7 +714,6 @@
             }
         }
 
-        // MODAL DETALLE DE IMAGEN Y COMPRAS
         window.abrirDetalleImagen = (id) => {
             const p = pedidos.find(x => x.id === id);
             if(!p) return;
@@ -817,7 +785,6 @@
             }
         };
 
-        // NUEVO PEDIDO
         window.toggleFechaProg = (val) => {
             const cont = document.getElementById('container-fecha-prog');
             if (val === 'Programado') cont.classList.remove('hidden');
