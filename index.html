@@ -26,9 +26,21 @@
             -moz-appearance: auto !important;
             appearance: auto !important;
         }
+
+        /* Animación de salida para completados */
+        .fade-out-row { animation: fadeOut 6s ease-in-out forwards; }
+        @keyframes fadeOut { 
+            0% { opacity: 1; } 
+            80% { opacity: 1; } 
+            100% { opacity: 0.5; filter: grayscale(100%); } 
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-gray-800">
+
+    <datalist id="dl-nombres"></datalist>
+    <datalist id="dl-marcas"></datalist>
+    <datalist id="dl-cats"></datalist>
 
     <!-- MODAL LOGIN -->
     <div id="modal-login" class="fixed inset-0 bg-cobalto/95 z-[100] flex items-center justify-center p-4 transition-opacity">
@@ -80,11 +92,11 @@
             </div>
             
             <div class="flex items-center gap-4" id="header-actions">
-                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 focus-within:border-cobalto transition-colors">
-                    <i data-lucide="calendar" class="w-4 h-4 text-gray-400 mr-2"></i>
-                    <input type="date" id="filtro-fecha" class="bg-transparent text-sm font-semibold text-gray-700 outline-none cursor-pointer">
-                    <button id="btn-limpiar-fecha" class="ml-2 text-red-400 hover:text-red-600 hidden" title="Limpiar fecha"><i data-lucide="x-circle" class="w-4 h-4"></i></button>
+                <!-- Etiqueta visual de 2 Semanas (Reemplaza al calendario) -->
+                <div class="bg-gray-100 border border-gray-200 text-gray-500 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-2" title="El sistema muestra automáticamente los datos de los últimos 14 días para mayor rapidez.">
+                    <i data-lucide="calendar" class="w-4 h-4"></i> Últimas 2 Semanas
                 </div>
+                
                 <div class="relative w-64 hidden sm:block">
                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
                     <input type="text" id="filtro-texto" placeholder="Buscar pedidos, cliente..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cobalto/20 focus:border-cobalto transition-all font-medium">
@@ -118,10 +130,10 @@
 
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                 <div class="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1 w-full sm:w-auto" id="filtros-estado">
-                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold bg-cobalto text-white transition-all" data-filter="Todos">Todos</button>
+                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold bg-cobalto text-white transition-all" data-filter="Activos">Ocultar Completados</button>
                     <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all" data-filter="Pendiente">⏳ Pendiente</button>
                     <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all" data-filter="En Preparación">📦 En Proceso</button>
-                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all" data-filter="Preparado">✅ Completado</button>
+                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all" data-filter="Preparado">✅ Completados</button>
                 </div>
                 
                 <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -155,7 +167,7 @@
                 <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center bg-white hidden">
                     <div class="bg-gray-50 p-6 rounded-3xl mb-4"><i data-lucide="package-search" class="w-12 h-12 text-gray-300"></i></div>
                     <h3 class="text-xl font-extrabold text-gray-800">Nada por aquí</h3>
-                    <p class="text-sm text-gray-500 mt-1">No se encontraron pedidos con los filtros actuales.</p>
+                    <p class="text-sm text-gray-500 mt-1">No se encontraron pedidos en los últimos 14 días con estos filtros.</p>
                 </div>
             </div>
         </div>
@@ -178,56 +190,44 @@
 
         <!-- CONFIGURATION VIEW (ADMIN) -->
         <div id="vista-configuracion" class="p-8 overflow-y-auto flex-grow hidden">
-            <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                <h3 class="text-xl font-extrabold text-gray-800 mb-2 flex items-center gap-2"><i data-lucide="store" class="w-6 h-6 text-cobalto"></i> Gestión de Sucursales</h3>
-                <p class="text-sm text-gray-500 mb-6">Administra los nombres de las sucursales habilitadas en el sistema. Los cambios se reflejarán instantáneamente para todos los usuarios.</p>
+            <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                <div class="flex gap-3 mb-6">
-                    <input type="text" id="input-nueva-sucursal" placeholder="Nombre de nueva sucursal..." class="flex-grow px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto focus:ring-2 focus:ring-cobalto/20">
-                    <button onclick="agregarSucursalDB()" class="bg-cobalto hover:bg-[#004330] text-white px-6 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Añadir
-                    </button>
+                <!-- Panel Sucursales -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-extrabold text-gray-800 mb-1 flex items-center gap-2"><i data-lucide="store" class="w-5 h-5 text-cobalto"></i> Sucursales</h3>
+                    <p class="text-xs text-gray-500 mb-4">Administra las tiendas.</p>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="input-nueva-sucursal" placeholder="Nueva sucursal..." class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-cobalto">
+                        <button onclick="agregarDatoDB('sucursales', 'input-nueva-sucursal')" class="bg-cobalto text-white px-3 py-2 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                    <ul id="lista-sucursales-admin" class="divide-y divide-gray-100 max-h-64 overflow-y-auto border border-gray-100 rounded-lg"></ul>
                 </div>
 
-                <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-                    <ul id="lista-sucursales-admin" class="divide-y divide-gray-200">
-                        <!-- JS Inyecta Aquí -->
-                    </ul>
+                <!-- Panel Proveedores -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-extrabold text-gray-800 mb-1 flex items-center gap-2"><i data-lucide="truck" class="w-5 h-5 text-cobalto"></i> Proveedores</h3>
+                    <p class="text-xs text-gray-500 mb-4">Añade marcas o mayoristas.</p>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="input-nuevo-prov" placeholder="Nuevo proveedor..." class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-cobalto">
+                        <button onclick="agregarDatoDB('proveedores', 'input-nuevo-prov')" class="bg-cobalto text-white px-3 py-2 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                    <ul id="lista-proveedores-admin" class="divide-y divide-gray-100 max-h-64 overflow-y-auto border border-gray-100 rounded-lg"></ul>
                 </div>
+
+                <!-- Panel Lugares -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-extrabold text-gray-800 mb-1 flex items-center gap-2"><i data-lucide="map-pin" class="w-5 h-5 text-cobalto"></i> Lugares de Compra</h3>
+                    <p class="text-xs text-gray-500 mb-4">Galerías o zonas físicas.</p>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="input-nuevo-lugar" placeholder="Nuevo lugar..." class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-cobalto">
+                        <button onclick="agregarDatoDB('lugares', 'input-nuevo-lugar')" class="bg-cobalto text-white px-3 py-2 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                    <ul id="lista-lugares-admin" class="divide-y divide-gray-100 max-h-64 overflow-y-auto border border-gray-100 rounded-lg"></ul>
+                </div>
+
             </div>
         </div>
     </main>
-
-    <!-- MODAL DETALLE IMAGEN Y PEDIDO -->
-    <div id="modal-detalle-imagen" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[110] flex items-center justify-center p-4 hidden">
-        <div class="w-full max-w-6xl h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
-            
-            <button onclick="cerrarDetalleImagen()" class="absolute top-4 right-4 z-20 bg-white/20 hover:bg-white/40 backdrop-blur text-white p-2 rounded-full transition-colors md:text-gray-500 md:bg-gray-100 md:hover:bg-gray-200 shadow-md">
-                <i data-lucide="x" class="w-6 h-6"></i>
-            </button>
-
-            <div class="flex-grow md:w-2/3 bg-gray-900 flex items-center justify-center p-4 h-1/2 md:h-full relative">
-                <img id="mdi-img" src="" class="max-w-full max-h-full object-contain drop-shadow-2xl">
-            </div>
-
-            <div class="w-full md:w-1/3 bg-white flex flex-col h-1/2 md:h-full border-t md:border-t-0 md:border-l border-gray-200 shrink-0">
-                <div class="p-6 border-b border-gray-100 bg-gray-50 shrink-0">
-                    <h3 class="font-black text-2xl text-cobalto" id="mdi-cod">PED-0000</h3>
-                    <p class="text-xs font-bold text-gray-500 mt-1 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> <span id="mdi-fecha">Fecha</span></p>
-                    <div class="mt-4 flex gap-2">
-                        <span id="mdi-estado" class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase border border-gray-200 bg-white">Estado</span>
-                        <span id="mdi-tipo" class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase border border-gray-200 bg-white">Tipo</span>
-                    </div>
-                </div>
-                
-                <div class="p-6 overflow-y-auto flex-grow bg-white">
-                    <div id="mdi-cliente-container"></div>
-                    <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Lista de Productos</h4>
-                    <div id="mdi-productos" class="space-y-4"></div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- MODAL NUEVO PEDIDO -->
     <div id="modal-pedido" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -248,8 +248,8 @@
                             <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Destino</label>
                             <div class="relative">
                                 <i data-lucide="store" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-                                <select id="np-sucursal" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none dynamic-sucursales">
-                                    <!-- JS Inyecta -->
+                                <!-- Bloqueado automáticamente si no es admin -->
+                                <select id="np-sucursal" class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-100 dynamic-sucursales">
                                 </select>
                             </div>
                         </div>
@@ -290,7 +290,7 @@
                         
                         <div class="flex gap-2">
                             <input type="number" id="np-cant" placeholder="Cant." min="0" value="1" class="w-20 px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-cobalto">
-                            <input type="text" id="np-nombre" placeholder="Nombre del producto..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-nombre" list="dl-nombres" placeholder="Nombre del producto..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
                         </div>
                         
                         <div class="relative">
@@ -303,8 +303,8 @@
 
                         <div class="flex gap-2">
                             <input type="text" id="np-sku" placeholder="SKU (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                            <input type="text" id="np-marca" placeholder="Marca (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                            <input type="text" id="np-cat" placeholder="Categoría (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-marca" list="dl-marcas" placeholder="Marca (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-cat" list="dl-cats" placeholder="Categoría (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
                         </div>
                     </div>
 
@@ -366,12 +366,18 @@
         const PATH = 'pedidos_v3'; 
         let pedidos = [];
         let sucursales = ['Sucursal Centro', 'Sucursal Norte', 'Sucursal Sur'];
+        let proveedores = [];
+        let lugares = [];
         
         let rolActual = null;
         let vistaActual = 'dashboard';
-        let filtroEstado = 'Todos';
+        let filtroEstado = 'Activos'; // Por defecto oculta completados
         let itemsTmp = [];
         let base64Img = null;
+        let recienCompletados = new Set(); // Para el tiempo de gracia
+
+        // CONSTANTE CONTRASEÑA ADMIN (Puedes cambiarla aquí)
+        const ADMIN_PASS = "1234";
 
         const tb = document.getElementById('tabla-body');
         const emptyState = document.getElementById('empty-state');
@@ -380,20 +386,14 @@
         const dzPrev = document.getElementById('dz-preview');
         const dzCont = document.getElementById('dz-content');
         const dzRem = document.getElementById('dz-remove');
-        const inputFecha = document.getElementById('filtro-fecha');
-        const btnLimpiarF = document.getElementById('btn-limpiar-fecha');
 
         window.onload = () => {
             lucide.createIcons();
-            document.getElementById('filtro-fecha').valueAsDate = new Date();
             configurarDropzone();
             
             document.getElementById('filtro-sucursal').addEventListener('change', renderTabla);
             document.getElementById('filtro-texto').addEventListener('input', renderTabla);
             
-            inputFecha.addEventListener('change', () => { btnLimpiarF.classList.remove('hidden'); renderTabla(); });
-            btnLimpiarF.addEventListener('click', () => { inputFecha.value = ''; btnLimpiarF.classList.add('hidden'); renderTabla(); });
-
             document.querySelectorAll('#filtros-estado button').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.querySelectorAll('#filtros-estado button').forEach(b => b.className = "flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all");
@@ -410,27 +410,45 @@
             try {
                 await signInAnonymously(auth);
                 onSnapshot(doc(db, 'config', 'general'), (docSnap) => {
-                    if (docSnap.exists() && docSnap.data().sucursales) sucursales = docSnap.data().sucursales;
-                    renderizarSucursalesUI();
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.sucursales) sucursales = data.sucursales;
+                        if (data.proveedores) proveedores = data.proveedores;
+                        if (data.lugares) lugares = data.lugares;
+                    }
+                    renderizarConfigUI();
                 });
 
                 onSnapshot(collection(db, PATH), (snap) => {
                     pedidos = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.timestamp - a.timestamp);
+                    actualizarAutocompletado();
                     if(vistaActual === 'dashboard') renderTabla();
                     if(vistaActual === 'compras') renderCompras();
                 });
             } catch(e) { console.error("DB Error", e); }
         }
 
-        // DICTADO POR VOZ
+        function actualizarAutocompletado() {
+            const nombres = new Set(); const marcas = new Set(); const cats = new Set();
+            pedidos.forEach(p => {
+                p.productos.forEach(pr => {
+                    if(pr.n) nombres.add(pr.n.trim());
+                    if(pr.mar) marcas.add(pr.mar.trim());
+                    if(pr.cat) cats.add(pr.cat.trim());
+                });
+            });
+            document.getElementById('dl-nombres').innerHTML = [...nombres].map(n => `<option value="${n}">`).join('');
+            document.getElementById('dl-marcas').innerHTML = [...marcas].map(n => `<option value="${n}">`).join('');
+            document.getElementById('dl-cats').innerHTML = [...cats].map(n => `<option value="${n}">`).join('');
+        }
+
         window.iniciarDictado = () => {
             if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 return alert("Tu navegador no soporta el dictado por voz.");
             }
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const rc = new SpeechRecognition();
-            rc.lang = 'es-ES';
-            rc.interimResults = false;
+            rc.lang = 'es-ES'; rc.interimResults = false;
             
             const btn = document.querySelector('button[title="Dictado por voz"]');
             btn.classList.add('bg-red-100', 'text-red-600', 'animate-pulse');
@@ -440,21 +458,17 @@
                 const input = document.getElementById('np-detalle');
                 input.value += (input.value ? ', ' : '') + transcript;
             };
-            
-            rc.onerror = (e) => console.error("Error dictado:", e.error);
-            rc.onend = () => {
-                btn.classList.remove('bg-red-100', 'text-red-600', 'animate-pulse');
-            };
-            
+            rc.onend = () => btn.classList.remove('bg-red-100', 'text-red-600', 'animate-pulse');
             rc.start();
         };
 
-        function renderizarSucursalesUI() {
+        // UI CONFIGURACIÓN Y LOGIN
+        function renderizarConfigUI() {
             const loginContainer = document.getElementById('login-buttons');
             let loginHTML = `
-                <button onclick="iniciarSesion('Logística')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all group">
+                <button onclick="intentarLoginAdmin()" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all group">
                     <div class="flex items-center gap-3"><i data-lucide="layout-dashboard" class="w-5 h-5 text-cobalto group-hover:scale-110 transition-transform"></i><span class="font-bold text-gray-700">Logística / Compras</span></div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+                    <i data-lucide="lock" class="w-4 h-4 text-gray-400"></i>
                 </button>
             `;
             sucursales.forEach(suc => {
@@ -470,20 +484,44 @@
                 const valActual = select.value;
                 select.innerHTML = isFiltro ? '<option value="Todas">Todas las sucursales</option>' : '';
                 sucursales.forEach(suc => select.innerHTML += `<option value="${suc}">${suc}</option>`);
-                if(valActual && (sucursales.includes(valActual) || (isFiltro && valActual === 'Todas'))) select.value = valActual;
+                
+                if (isFiltro && (!valActual || valActual === 'Todas')) {
+                    select.value = 'Todas';
+                } else if (valActual && sucursales.includes(valActual)) {
+                    select.value = valActual;
+                } else if (sucursales.length > 0) {
+                    select.value = sucursales[0];
+                }
             });
 
-            const adminLista = document.getElementById('lista-sucursales-admin');
-            if(adminLista) {
-                adminLista.innerHTML = sucursales.map((suc, i) => `
-                    <li class="p-4 flex justify-between items-center bg-white hover:bg-gray-50">
-                        <span class="font-bold text-gray-700 flex items-center gap-2"><i data-lucide="store" class="w-4 h-4 text-gray-400"></i> ${suc}</span>
-                        <button onclick="eliminarSucursal(${i})" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </li>
-                `).join('');
-            }
+            // Pintar Listas Admin
+            pintarListaAdmin('sucursales', sucursales, 'store');
+            pintarListaAdmin('proveedores', proveedores, 'truck');
+            pintarListaAdmin('lugares', lugares, 'map-pin');
+            
             lucide.createIcons();
         }
+
+        function pintarListaAdmin(coleccion, datos, icon) {
+            const ul = document.getElementById(`lista-${coleccion}-admin`);
+            if(!ul) return;
+            ul.innerHTML = datos.map((item, i) => `
+                <li class="p-3 flex justify-between items-center bg-white hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                    <span class="font-bold text-sm text-gray-700 flex items-center gap-2"><i data-lucide="${icon}" class="w-4 h-4 text-gray-400"></i> ${item}</span>
+                    <div class="flex items-center gap-1">
+                        <button onclick="editarDatoDB('${coleccion}', ${i})" class="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                        <button onclick="eliminarDatoDB('${coleccion}', ${i})" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        window.intentarLoginAdmin = () => {
+            const pass = prompt("Ingrese la contraseña de Administrador (Por defecto es 1234):");
+            if(pass === null) return;
+            if(pass === ADMIN_PASS) iniciarSesion('Logística');
+            else alert("Contraseña incorrecta.");
+        };
 
         window.iniciarSesion = (rol) => {
             rolActual = rol;
@@ -506,8 +544,7 @@
         window.cambiarVista = (vista) => {
             vistaActual = vista;
             document.querySelectorAll('.nav-btn').forEach(b => {
-                b.classList.remove('bg-white/10', 'text-white');
-                b.classList.add('text-white/70');
+                b.classList.remove('bg-white/10', 'text-white'); b.classList.add('text-white/70');
             });
             document.getElementById('vista-dashboard').classList.add('hidden');
             document.getElementById('vista-compras').classList.add('hidden');
@@ -518,41 +555,213 @@
                 document.getElementById('nav-dashboard').classList.add('bg-white/10', 'text-white');
                 document.getElementById('vista-dashboard').classList.remove('hidden');
                 document.getElementById('header-actions').classList.remove('hidden');
-                document.getElementById('header-title').textContent = "Panel de Pedidos";
-                document.getElementById('header-subtitle').textContent = "Gestión Rápida y Sencilla";
                 renderTabla();
             } else if (vista === 'compras') {
                 document.getElementById('nav-compras').classList.add('bg-white/10', 'text-white');
                 document.getElementById('vista-compras').classList.remove('hidden');
-                document.getElementById('header-title').textContent = "Módulo de Compras";
-                document.getElementById('header-subtitle').textContent = "Abastecimiento Agrupado";
                 renderCompras();
             } else if (vista === 'configuracion') {
                 document.getElementById('nav-configuracion').classList.add('bg-white/10', 'text-white');
                 document.getElementById('vista-configuracion').classList.remove('hidden');
-                document.getElementById('header-title').textContent = "Configuración";
-                document.getElementById('header-subtitle').textContent = "Administración del Sistema";
             }
         };
 
-        window.agregarSucursalDB = async () => {
-            const input = document.getElementById('input-nueva-sucursal');
+        // GESTIÓN GENÉRICA (Sucursales, Proveedores, Lugares)
+        window.agregarDatoDB = async (coleccion, inputId) => {
+            const input = document.getElementById(inputId);
             const val = input.value.trim();
             if(!val) return;
-            if(sucursales.includes(val)) return alert('La sucursal ya existe.');
             
-            const nuevas = [...sucursales, val];
-            try { await setDoc(doc(db, 'config', 'general'), { sucursales: nuevas }, { merge: true }); input.value = ''; } 
-            catch(e) { alert('Error guardando sucursal'); }
+            let arrayRef = coleccion === 'sucursales' ? sucursales : coleccion === 'proveedores' ? proveedores : lugares;
+            if(arrayRef.includes(val)) return alert('Ya existe.');
+            
+            const nuevas = [...arrayRef, val];
+            try { await setDoc(doc(db, 'config', 'general'), { [coleccion]: nuevas }, { merge: true }); input.value = ''; } 
+            catch(e) { alert('Error guardando'); }
         };
 
-        window.eliminarSucursal = async (index) => {
-            if(!confirm(`¿Seguro que deseas eliminar "${sucursales[index]}"?`)) return;
-            const nuevas = [...sucursales]; nuevas.splice(index, 1);
-            try { await setDoc(doc(db, 'config', 'general'), { sucursales: nuevas }, { merge: true }); } 
-            catch(e) { alert('Error eliminando sucursal'); }
+        window.editarDatoDB = async (coleccion, index) => {
+            let arrayRef = coleccion === 'sucursales' ? sucursales : coleccion === 'proveedores' ? proveedores : lugares;
+            const nuevo = prompt("Modificar nombre:", arrayRef[index]);
+            if (nuevo && nuevo.trim() !== "") {
+                const nombreLimpio = nuevo.trim();
+                if (arrayRef.includes(nombreLimpio) && nombreLimpio !== arrayRef[index]) {
+                    return alert("El nombre ya existe.");
+                }
+                const nuevas = [...arrayRef];
+                nuevas[index] = nombreLimpio;
+                try { await setDoc(doc(db, 'config', 'general'), { [coleccion]: nuevas }, { merge: true }); } 
+                catch(e) { alert('Error modificando'); }
+            }
         };
 
+        window.eliminarDatoDB = async (coleccion, index) => {
+            let arrayRef = coleccion === 'sucursales' ? sucursales : coleccion === 'proveedores' ? proveedores : lugares;
+            if(!confirm(`¿Seguro que deseas eliminar "${arrayRef[index]}"?`)) return;
+            const nuevas = [...arrayRef]; nuevas.splice(index, 1);
+            try { await setDoc(doc(db, 'config', 'general'), { [coleccion]: nuevas }, { merge: true }); } 
+            catch(e) { alert('Error eliminando'); }
+        };
+
+
+        // TABLA PEDIDOS (CON FILTRO DE 2 SEMANAS Y OCULTAMIENTO RETRASADO)
+        function renderTabla() {
+            if(!rolActual) return;
+            const text = document.getElementById('filtro-texto').value.toLowerCase();
+            const suc = rolActual === 'Logística' ? document.getElementById('filtro-sucursal').value : rolActual;
+            
+            const DOS_SEMANAS_MS = 14 * 24 * 60 * 60 * 1000;
+            const limiteFecha = Date.now() - DOS_SEMANAS_MS;
+
+            const filtrados = pedidos.filter(p => {
+                // Filtro Estado Inteligente (Activos / Completados / etc)
+                let matchEst = false;
+                if(filtroEstado === 'Activos') {
+                    // Muestra si NO es preparado, O si fue preparado recién (hace unos segundos)
+                    matchEst = (p.estado !== 'Preparado') || recienCompletados.has(p.id);
+                } else if (filtroEstado === 'Preparado') {
+                    matchEst = p.estado === 'Preparado'; // Historial Completados
+                } else {
+                    matchEst = p.estado === filtroEstado;
+                }
+
+                const matchSuc = suc === 'Todas' || p.sucursal === suc;
+                const txtMatch = p.cod.toLowerCase().includes(text) || (p.cliente && p.cliente.toLowerCase().includes(text)) || (p.contacto && p.contacto.toLowerCase().includes(text)) || p.productos.some(prod => prod.n.toLowerCase().includes(text) || (prod.det && prod.det.toLowerCase().includes(text)));
+                const matchFec = p.timestamp >= limiteFecha; // Filtro estricto de últimas 2 semanas
+                
+                return matchEst && matchSuc && txtMatch && matchFec;
+            });
+
+            // KPIs siempre calculan sobre las 2 semanas en la sucursal actual
+            const baseKpi = pedidos.filter(p => (suc === 'Todas' || p.sucursal === suc) && p.timestamp >= limiteFecha);
+            document.getElementById('count-total').textContent = baseKpi.length;
+            document.getElementById('count-pendientes').textContent = baseKpi.filter(p=>p.estado==='Pendiente').length;
+            document.getElementById('count-proceso').textContent = baseKpi.filter(p=>p.estado==='En Preparación').length;
+            document.getElementById('count-completados').textContent = baseKpi.filter(p=>p.estado==='Preparado').length;
+
+            tb.innerHTML = '';
+            if(filtrados.length === 0) { emptyState.classList.remove('hidden'); } 
+            else {
+                emptyState.classList.add('hidden');
+                filtrados.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.className = `hover:bg-gray-50/50 transition-all group ${recienCompletados.has(p.id) ? 'fade-out-row' : ''}`;
+                    
+                    const pList = p.productos.map((pr, idx) => {
+                        let htmlInlineAdmin = '';
+                        if(rolActual === 'Logística') {
+                            htmlInlineAdmin = `
+                            <div class="mt-2 flex flex-wrap gap-2 w-full">
+                                <select onchange="actDatoCompra('${p.id}', ${idx}, 'prov', this.value)" class="text-[10px] p-1.5 bg-gray-50 border border-gray-200 rounded text-gray-700 outline-none focus:border-cobalto max-w-[140px]">
+                                    <option value="">Proveedor...</option>
+                                    ${proveedores.map(prov => `<option value="${prov}" ${pr.prov===prov?'selected':''}>${prov}</option>`).join('')}
+                                </select>
+                                <select onchange="actDatoCompra('${p.id}', ${idx}, 'lugar', this.value)" class="text-[10px] p-1.5 bg-gray-50 border border-gray-200 rounded text-gray-700 outline-none focus:border-cobalto max-w-[140px]">
+                                    <option value="">Lugar de Compra...</option>
+                                    ${lugares.map(lug => `<option value="${lug}" ${pr.lugar===lug?'selected':''}>${lug}</option>`).join('')}
+                                </select>
+                            </div>`;
+                        }
+
+                        return `
+                        <div class="flex gap-3 py-3 border-b border-gray-100 last:border-0 items-start">
+                            <input type="checkbox" ${pr.chk ? 'checked' : ''} onchange="chkProd('${p.id}', ${idx})" class="mt-1 w-4 h-4 accent-cobalto cursor-pointer shrink-0">
+                            <div class="w-10 h-10 rounded bg-gray-200 shrink-0 border border-gray-200 overflow-hidden relative">
+                                <img src="${pr.img || 'https://placehold.co/100/eeeeee/999999?text=No+Foto'}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-grow">
+                                <p class="text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800 font-bold'}">
+                                    <span class="text-cobalto">${pr.c === 'Cantidad no definida' ? '?' : pr.c}</span> - ${pr.n}
+                                </p>
+                                <p class="text-xs text-gray-500 font-medium leading-snug">Detalle: <span class="text-gray-700">${pr.det}</span></p>
+                                ${htmlInlineAdmin}
+                            </div>
+                        </div>`
+                    }).join('');
+
+                    const selColor = p.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800' : p.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800';
+                    let tipoColor = 'bg-gray-100 text-gray-600';
+                    let infoProgramado = '';
+                    
+                    if (p.tipo === 'Consulta') tipoColor = 'bg-purple-100 text-purple-600';
+                    if (p.tipo === 'Reposición') tipoColor = 'bg-blue-100 text-blue-600';
+                    if (p.tipo === 'Programado') {
+                        tipoColor = 'bg-orange-100 text-orange-600';
+                        infoProgramado = `<p class="text-[10px] font-bold text-orange-600 flex items-center gap-1 mt-1"><i data-lucide="calendar" class="w-3 h-3"></i> Para: ${p.fechaProg}</p>`;
+                    }
+
+                    const mainImg = p.productos.length > 0 && p.productos[0].img ? p.productos[0].img : 'https://placehold.co/100/eeeeee/999999?text=Pedido';
+
+                    let infoCliente = '';
+                    if(p.cliente || p.contacto) {
+                        infoCliente = `
+                        <div class="mt-2 p-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                            ${p.cliente ? `<p class="text-[10px] font-bold text-blue-800 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${p.cliente}</p>` : ''}
+                            ${p.contacto ? `<p class="text-[9px] text-blue-600 font-medium flex items-center gap-1 mt-0.5"><i data-lucide="phone" class="w-3 h-3"></i> ${p.contacto}</p>` : ''}
+                        </div>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="p-4 text-center align-top">
+                            <div class="w-14 h-14 rounded-xl border border-gray-200 overflow-hidden mx-auto bg-gray-50 mt-1 cursor-default shadow-sm">
+                                <img src="${mainImg}" class="w-full h-full object-cover">
+                            </div>
+                        </td>
+                        <td class="p-4 align-top">
+                            <p class="font-mono font-black text-sm text-gray-900">${p.cod}</p>
+                            <p class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i> ${new Date(p.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5">${new Date(p.timestamp).toLocaleDateString()}</p>
+                            ${infoCliente}
+                        </td>
+                        <td class="p-4 align-top">
+                            <p class="text-xs font-bold text-gray-800 flex items-center gap-1"><i data-lucide="store" class="w-3 h-3 text-cobalto"></i> ${p.sucursal}</p>
+                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-2 ${tipoColor}">${p.tipo}</span>
+                            ${infoProgramado}
+                        </td>
+                        <td class="p-2 align-top"><div class="max-w-xl">${pList}</div></td>
+                        <td class="p-4 text-center align-top">
+                            <select onchange="cambiarEstado('${p.id}', this.value)" class="mt-1 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer ${selColor} w-full text-center">
+                                <option value="Pendiente" ${p.estado==='Pendiente'?'selected':''}>⏳ Pendiente</option>
+                                <option value="En Preparación" ${p.estado==='En Preparación'?'selected':''}>📦 En Proceso</option>
+                                <option value="Preparado" ${p.estado==='Preparado'?'selected':''}>✅ Completado</option>
+                            </select>
+                        </td>
+                    `;
+                    tb.appendChild(tr);
+                });
+                lucide.createIcons();
+            }
+        }
+
+        window.cambiarEstado = async (id, est) => {
+            if (est === 'Preparado' && filtroEstado === 'Activos') {
+                // Dar 6 segundos de tiempo de gracia antes de ocultarlo visualmente
+                recienCompletados.add(id);
+                setTimeout(() => {
+                    recienCompletados.delete(id);
+                    if(vistaActual === 'dashboard') renderTabla();
+                }, 6000);
+            } else {
+                recienCompletados.delete(id);
+            }
+
+            const p = pedidos.find(x=>x.id===id);
+            if(p) {
+                const prods = p.productos.map(pr => ({...pr, chk: est==='Preparado'?true:pr.chk}));
+                await updateDoc(doc(db, PATH, id), { estado: est, productos: prods });
+            }
+        };
+
+        window.actDatoCompra = async (id, index, campo, valor) => {
+            const p = pedidos.find(x => x.id === id);
+            if(p && p.productos[index]) {
+                p.productos[index][campo] = valor.trim();
+                try { await updateDoc(doc(db, PATH, id), { productos: p.productos }); } 
+                catch(e) { console.error(e); alert('Error actualizando dato de compra'); }
+            }
+        };
+
+        // VISTA COMPRAS
         function renderCompras() {
             const pendientes = pedidos.filter(p => p.estado !== 'Preparado');
             const porProv = {};
@@ -613,176 +822,59 @@
             lucide.createIcons();
         }
 
-        function renderTabla() {
-            if(!rolActual) return;
-            const text = document.getElementById('filtro-texto').value.toLowerCase();
-            const suc = rolActual === 'Logística' ? document.getElementById('filtro-sucursal').value : rolActual;
-            const fechaSeleccionada = inputFecha.value;
-
-            const filtrados = pedidos.filter(p => {
-                const matchEst = filtroEstado === 'Todos' || p.estado === filtroEstado;
-                const matchSuc = suc === 'Todas' || p.sucursal === suc;
-                const txtMatch = p.cod.toLowerCase().includes(text) || (p.cliente && p.cliente.toLowerCase().includes(text)) || (p.contacto && p.contacto.toLowerCase().includes(text)) || p.productos.some(prod => prod.n.toLowerCase().includes(text) || (prod.det && prod.det.toLowerCase().includes(text)));
-                let matchFec = true;
-                if(fechaSeleccionada) {
-                    const fechaPedido = new Date(p.timestamp).toISOString().split('T')[0];
-                    matchFec = fechaPedido === fechaSeleccionada;
-                }
-                return matchEst && matchSuc && txtMatch && matchFec;
-            });
-
-            const baseKpi = pedidos.filter(p => (suc === 'Todas' || p.sucursal === suc));
-            document.getElementById('count-total').textContent = baseKpi.length;
-            document.getElementById('count-pendientes').textContent = baseKpi.filter(p=>p.estado==='Pendiente').length;
-            document.getElementById('count-proceso').textContent = baseKpi.filter(p=>p.estado==='En Preparación').length;
-            document.getElementById('count-completados').textContent = baseKpi.filter(p=>p.estado==='Preparado').length;
-
-            tb.innerHTML = '';
-            if(filtrados.length === 0) { emptyState.classList.remove('hidden'); } 
-            else {
-                emptyState.classList.add('hidden');
-                filtrados.forEach(p => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-50/50 transition-colors group";
-                    
-                    const pList = p.productos.map((pr, idx) => `
-                        <div class="flex gap-3 py-3 border-b border-gray-100 last:border-0 items-start">
-                            <input type="checkbox" ${pr.chk ? 'checked' : ''} onchange="chkProd('${p.id}', ${idx})" class="mt-1 w-4 h-4 accent-cobalto cursor-pointer shrink-0">
-                            <div class="w-10 h-10 rounded bg-gray-200 shrink-0 border border-gray-200 overflow-hidden relative">
-                                <img src="${pr.img || 'https://placehold.co/100/eeeeee/999999?text=No+Foto'}" class="w-full h-full object-cover">
-                            </div>
-                            <div class="flex-grow">
-                                <p class="text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800 font-bold'}">
-                                    <span class="text-cobalto">${pr.c === 'Cantidad no definida' ? '?' : pr.c}</span> - ${pr.n}
-                                </p>
-                                <p class="text-xs text-gray-500 font-medium leading-snug">Detalle: <span class="text-gray-700">${pr.det}</span></p>
-                            </div>
-                        </div>
-                    `).join('');
-
-                    const selColor = p.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800' : p.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800';
-                    let tipoColor = 'bg-gray-100 text-gray-600';
-                    let infoProgramado = '';
-                    
-                    if (p.tipo === 'Consulta') tipoColor = 'bg-purple-100 text-purple-600';
-                    if (p.tipo === 'Reposición') tipoColor = 'bg-blue-100 text-blue-600';
-                    if (p.tipo === 'Programado') {
-                        tipoColor = 'bg-orange-100 text-orange-600';
-                        infoProgramado = `<p class="text-[10px] font-bold text-orange-600 flex items-center gap-1 mt-1"><i data-lucide="calendar" class="w-3 h-3"></i> Para: ${p.fechaProg}</p>`;
-                    }
-
-                    const mainImg = p.productos.length > 0 && p.productos[0].img ? p.productos[0].img : 'https://placehold.co/100/eeeeee/999999?text=Pedido';
-
-                    let infoCliente = '';
-                    if(p.cliente || p.contacto) {
-                        infoCliente = `
-                        <div class="mt-2 p-1.5 bg-blue-50 rounded-lg border border-blue-100">
-                            ${p.cliente ? `<p class="text-[10px] font-bold text-blue-800 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${p.cliente}</p>` : ''}
-                            ${p.contacto ? `<p class="text-[9px] text-blue-600 font-medium flex items-center gap-1 mt-0.5"><i data-lucide="phone" class="w-3 h-3"></i> ${p.contacto}</p>` : ''}
-                        </div>`;
-                    }
-
-                    tr.innerHTML = `
-                        <td class="p-4 text-center align-top">
-                            <div onclick="abrirDetalleImagen('${p.id}')" class="w-14 h-14 rounded-xl border border-gray-200 overflow-hidden mx-auto bg-gray-50 mt-1 cursor-pointer hover:ring-2 hover:ring-cobalto transition-all shadow-sm" title="Ver imagen completa y detalles">
-                                <img src="${mainImg}" class="w-full h-full object-cover">
-                            </div>
-                        </td>
-                        <td class="p-4 align-top">
-                            <p class="font-mono font-black text-sm text-gray-900">${p.cod}</p>
-                            <p class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i> ${new Date(p.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>
-                            <p class="text-[10px] text-gray-400 mt-0.5">${new Date(p.timestamp).toLocaleDateString()}</p>
-                            ${infoCliente}
-                        </td>
-                        <td class="p-4 align-top">
-                            <p class="text-xs font-bold text-gray-800 flex items-center gap-1"><i data-lucide="store" class="w-3 h-3 text-cobalto"></i> ${p.sucursal}</p>
-                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-2 ${tipoColor}">${p.tipo}</span>
-                            ${infoProgramado}
-                        </td>
-                        <td class="p-2 align-top"><div class="max-w-xl">${pList}</div></td>
-                        <td class="p-4 text-center align-top">
-                            <select onchange="cambiarEstado('${p.id}', this.value)" class="mt-1 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer ${selColor} w-full text-center">
-                                <option value="Pendiente" ${p.estado==='Pendiente'?'selected':''}>⏳ Pendiente</option>
-                                <option value="En Preparación" ${p.estado==='En Preparación'?'selected':''}>📦 En Proceso</option>
-                                <option value="Preparado" ${p.estado==='Preparado'?'selected':''}>✅ Completado</option>
-                            </select>
-                        </td>
-                    `;
-                    tb.appendChild(tr);
-                });
-                lucide.createIcons();
+        // CREAR PEDIDOS (Bloqueo de Sucursal integrado)
+        window.abrirModalPedido = () => {
+            itemsTmp = []; pintarItemsTmp(); dzRem.click(); 
+            
+            const selectDestino = document.getElementById('np-sucursal');
+            if(rolActual === 'Logística') {
+                selectDestino.value = sucursales.length > 0 ? sucursales[0] : '';
+                selectDestino.disabled = false;
+            } else {
+                selectDestino.value = rolActual;
+                selectDestino.disabled = true; // Bloquea la sucursal para que no se equivoquen
             }
-        }
-
-        window.abrirDetalleImagen = (id) => {
-            const p = pedidos.find(x => x.id === id);
-            if(!p) return;
             
-            const mainImg = p.productos.length > 0 && p.productos[0].img ? p.productos[0].img : 'https://placehold.co/100/eeeeee/999999?text=Pedido';
-            document.getElementById('mdi-img').src = mainImg;
-            document.getElementById('mdi-cod').textContent = p.cod;
-            
-            const estBg = p.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800' : p.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800';
-            const mdiEst = document.getElementById('mdi-estado');
-            mdiEst.textContent = p.estado;
-            mdiEst.className = `px-3 py-1.5 rounded-lg text-xs font-bold uppercase border border-gray-200 ${estBg}`;
-            
-            document.getElementById('mdi-tipo').textContent = p.tipo;
-            document.getElementById('mdi-fecha').textContent = new Date(p.timestamp).toLocaleString();
-            
-            let htmlCliente = '';
-            if(p.cliente || p.contacto){
-                htmlCliente = `<div class="bg-blue-50 p-4 rounded-xl mb-6 border border-blue-100 shadow-sm">
-                    ${p.cliente ? `<p class="font-bold text-blue-900 flex items-center gap-2"><i data-lucide="user" class="w-4 h-4"></i> ${p.cliente}</p>`:''}
-                    ${p.contacto ? `<p class="text-sm text-blue-700 font-medium flex items-center gap-2 mt-1.5"><i data-lucide="phone" class="w-4 h-4"></i> ${p.contacto}</p>`:''}
-                </div>`;
-            }
-            document.getElementById('mdi-cliente-container').innerHTML = htmlCliente;
-            
-            const htmlProds = p.productos.map((pr, idx) => {
-                let inputsAdmin = '';
-                if(rolActual === 'Logística') {
-                    inputsAdmin = `
-                        <div class="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[9px] font-bold text-gray-400 uppercase">Proveedor</label>
-                                <input type="text" value="${pr.prov || ''}" onchange="actDatoCompra('${p.id}', ${idx}, 'prov', this.value)" class="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 focus:border-cobalto outline-none mt-1" placeholder="Ej. Textil XYZ">
-                            </div>
-                            <div>
-                                <label class="text-[9px] font-bold text-gray-400 uppercase">Lugar / Galería</label>
-                                <input type="text" value="${pr.lugar || ''}" onchange="actDatoCompra('${p.id}', ${idx}, 'lugar', this.value)" class="w-full bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs text-gray-700 focus:border-cobalto outline-none mt-1" placeholder="Ej. Galería Guizado">
-                            </div>
-                        </div>
-                    `;
-                }
-
-                return `
-                <div class="flex flex-col bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                    <div class="flex items-start gap-4">
-                        <img src="${pr.img || 'https://placehold.co/100/eeeeee/999999?text=No+Foto'}" class="w-16 h-16 rounded-xl object-cover border border-gray-200 shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onclick="document.getElementById('mdi-img').src=this.src" title="Click para ver en grande">
-                        <div class="flex-grow">
-                            <p class="font-bold text-sm text-gray-800"><span class="text-cobalto">${pr.c === 'Cantidad no definida' ? '?' : pr.c}x</span> ${pr.n}</p>
-                            <p class="text-xs text-gray-500 font-medium mt-1 leading-relaxed">${pr.det}</p>
-                        </div>
-                    </div>
-                    ${inputsAdmin}
-                </div>`;
-            }).join('');
-            
-            document.getElementById('mdi-productos').innerHTML = htmlProds;
-            document.getElementById('modal-detalle-imagen').classList.remove('hidden');
-            lucide.createIcons();
-        }
+            document.getElementById('np-tipo').value = 'Pedido';
+            document.getElementById('np-cliente').value = '';
+            document.getElementById('np-contacto').value = '';
+            document.getElementById('np-cant').value = '1';
+            toggleFechaProg('Pedido'); 
+            document.getElementById('modal-pedido').classList.remove('hidden');
+        };
         
-        window.cerrarDetalleImagen = () => document.getElementById('modal-detalle-imagen').classList.add('hidden');
+        window.cerrarModalPedido = () => document.getElementById('modal-pedido').classList.add('hidden');
 
-        window.actDatoCompra = async (id, index, campo, valor) => {
-            const p = pedidos.find(x => x.id === id);
-            if(p && p.productos[index]) {
-                p.productos[index][campo] = valor.trim();
-                try { await updateDoc(doc(db, PATH, id), { productos: p.productos }); } 
-                catch(e) { console.error(e); alert('Error actualizando dato de compra'); }
+        window.guardarPedido = async () => {
+            if(itemsTmp.length === 0) return alert('Debes agregar al menos un producto a la lista.');
+            const tipo = document.getElementById('np-tipo').value;
+            let fechaProg = '';
+            if (tipo === 'Programado') {
+                fechaProg = document.getElementById('np-fecha-prog').value;
+                if(!fechaProg) return alert('Debes seleccionar una fecha para el pedido programado.');
             }
+            const cliente = document.getElementById('np-cliente').value.trim();
+            const contacto = document.getElementById('np-contacto').value.trim();
+
+            let msg = `Resumen del Pedido:\n\n`;
+            if (cliente) msg += `👤 Cliente: ${cliente}\n`;
+            msg += `📦 Productos:\n`;
+            itemsTmp.forEach(i => { const qty = i.c === 'Cantidad no definida' ? '?' : i.c; msg += `  • ${qty}x ${i.n} (${i.det})\n`; });
+            msg += `\n¿Confirmar y enviar pedido?`;
+            
+            if(!confirm(msg)) return;
+
+            const destinoFinal = document.getElementById('np-sucursal').value; // Toma el valor aunque esté disabled
+
+            const nuevo = {
+                cod: `PED-${Math.floor(Math.random()*9000)+1000}`, 
+                sucursal: destinoFinal,
+                tipo: tipo, fechaProg: fechaProg, cliente: cliente, contacto: contacto, estado: 'Pendiente',
+                timestamp: Date.now(), productos: itemsTmp
+            };
+            
+            try { await addDoc(collection(db, PATH), nuevo); cerrarModalPedido(); } 
+            catch(e) { alert('Error conectando a la base de datos.'); }
         };
 
         window.toggleFechaProg = (val) => {
@@ -839,6 +931,7 @@
             lucide.createIcons();
         }
 
+        // IMÁGENES Y EXCEL
         function configurarDropzone() {
             dz.addEventListener('click', () => fi.click());
             dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
@@ -880,66 +973,6 @@
             };
             r.readAsDataURL(file);
         }
-
-        window.abrirModalPedido = () => {
-            itemsTmp = []; pintarItemsTmp(); dzRem.click(); 
-            document.getElementById('np-sucursal').value = rolActual === 'Logística' ? sucursales[0] : rolActual;
-            document.getElementById('np-tipo').value = 'Pedido';
-            document.getElementById('np-cliente').value = '';
-            document.getElementById('np-contacto').value = '';
-            document.getElementById('np-cant').value = '1';
-            toggleFechaProg('Pedido'); document.getElementById('modal-pedido').classList.remove('hidden');
-        };
-        
-        window.cerrarModalPedido = () => document.getElementById('modal-pedido').classList.add('hidden');
-
-        window.guardarPedido = async () => {
-            if(itemsTmp.length === 0) return alert('Debes agregar al menos un producto a la lista.');
-            const tipo = document.getElementById('np-tipo').value;
-            let fechaProg = '';
-            if (tipo === 'Programado') {
-                fechaProg = document.getElementById('np-fecha-prog').value;
-                if(!fechaProg) return alert('Debes seleccionar una fecha para el pedido programado.');
-            }
-            const cliente = document.getElementById('np-cliente').value.trim();
-            const contacto = document.getElementById('np-contacto').value.trim();
-
-            let msg = `Resumen del Pedido:\n\n`;
-            if (cliente) msg += `👤 Cliente: ${cliente}\n`;
-            msg += `📦 Productos:\n`;
-            itemsTmp.forEach(i => { const qty = i.c === 'Cantidad no definida' ? '?' : i.c; msg += `  • ${qty}x ${i.n} (${i.det})\n`; });
-            msg += `\n¿Confirmar y enviar pedido?`;
-            
-            if(!confirm(msg)) return;
-
-            const nuevo = {
-                cod: `PED-${Math.floor(Math.random()*9000)+1000}`, sucursal: document.getElementById('np-sucursal').value,
-                tipo: tipo, fechaProg: fechaProg, cliente: cliente, contacto: contacto, estado: 'Pendiente',
-                timestamp: Date.now(), productos: itemsTmp
-            };
-            
-            try { await addDoc(collection(db, PATH), nuevo); cerrarModalPedido(); } 
-            catch(e) { alert('Error conectando a la base de datos.'); }
-        };
-
-        window.cambiarEstado = async (id, est) => {
-            const p = pedidos.find(x=>x.id===id);
-            if(p) {
-                const prods = p.productos.map(pr => ({...pr, chk: est==='Preparado'?true:pr.chk}));
-                await updateDoc(doc(db, PATH, id), { estado: est, productos: prods });
-            }
-        };
-
-        window.chkProd = async (id, idx) => {
-            const p = pedidos.find(x=>x.id===id);
-            if(p) {
-                p.productos[idx].chk = !p.productos[idx].chk;
-                let nuevoEst = p.estado;
-                if(p.productos.every(x=>x.chk)) nuevoEst = 'Preparado';
-                else if(p.estado === 'Pendiente') nuevoEst = 'En Preparación';
-                await updateDoc(doc(db, PATH, id), { productos: p.productos, estado: nuevoEst });
-            }
-        };
 
         window.exportarExcel = () => {
             if(pedidos.length === 0) return alert("No hay datos para exportar.");
