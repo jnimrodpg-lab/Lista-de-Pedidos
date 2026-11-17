@@ -3,985 +3,663 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Pedidos SaaS</title>
-    <!-- Tailwind CSS -->
+    <title>PG Store - Panel de Pedidos SaaS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        cobalto: '#005c42',
-                        cobaltoDark: '#004a35',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; }
+        .bg-cobalto { background-color: #005c42; }
+        .text-cobalto { color: #005c42; }
+        .border-cobalto { border-color: #005c42; }
         
+        /* Zona de arrastre de imagen */
+        .dropzone { border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
+        .dropzone.dragover { border-color: #005c42; background-color: #ecfdf5; }
+        
+        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        .touch-checkbox { width: 1.35rem; height: 1.35rem; cursor: pointer; accent-color: #005c42; }
-
-        .dropzone-active {
-            border-color: #005c42 !important;
-            background-color: #ecfdf5 !important;
-        }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
 </head>
-<body class="h-screen flex bg-[#f4f7f6] text-gray-800 font-sans overflow-hidden">
+<body class="flex h-screen overflow-hidden text-gray-800">
 
-    <!-- MODAL DE LOGIN -->
-    <div id="modal-login" class="fixed inset-0 bg-cobalto/95 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-        <div class="bg-white rounded-[24px] shadow-2xl max-w-sm w-full p-8 text-center">
-            <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5 rotate-3">
+    <!-- MODAL LOGIN -->
+    <div id="modal-login" class="fixed inset-0 bg-cobalto/95 z-[100] flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+            <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
                 <i data-lucide="shield-check" class="w-8 h-8 text-emerald-600"></i>
             </div>
-            <h2 class="text-2xl font-black text-gray-800 mb-2">Bienvenido</h2>
+            <h2 class="text-2xl font-extrabold text-gray-800 mb-1">Bienvenido</h2>
             <p class="text-sm text-gray-500 mb-6">Selecciona tu rol para ingresar</p>
-            
-            <div class="space-y-3 text-left">
-                <button onclick="abrirModalPassword()" class="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-gray-100 hover:border-cobalto hover:bg-emerald-50 transition-colors mb-4 shadow-sm group">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-cobalto/10 p-2 rounded-lg group-hover:bg-cobalto transition-colors"><i data-lucide="layout-dashboard" class="w-5 h-5 text-cobalto group-hover:text-white transition-colors"></i></div>
-                        <span class="font-bold text-gray-700 group-hover:text-cobalto">Logística / Compras</span>
-                    </div>
+            <div class="space-y-3">
+                <button onclick="iniciarSesion('Logística')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all group">
+                    <div class="flex items-center gap-3"><i data-lucide="layout-dashboard" class="w-5 h-5 text-cobalto group-hover:scale-110 transition-transform"></i><span class="font-bold text-gray-700">Logística / Compras</span></div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
                 </button>
-                <div class="border-t border-gray-100 pt-4" id="botones-sucursales-login">
-                    <!-- JS inyecta botones aquí -->
-                </div>
+                <button onclick="iniciarSesion('Sucursal Centro')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all">
+                    <div class="flex items-center gap-3"><i data-lucide="store" class="w-5 h-5 text-gray-400"></i><span class="font-semibold text-gray-700">Sucursal Centro</span></div>
+                </button>
+                <button onclick="iniciarSesion('Sucursal Norte')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all">
+                    <div class="flex items-center gap-3"><i data-lucide="store" class="w-5 h-5 text-gray-400"></i><span class="font-semibold text-gray-700">Sucursal Norte</span></div>
+                </button>
+                <button onclick="iniciarSesion('Sucursal Sur')" class="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all">
+                    <div class="flex items-center gap-3"><i data-lucide="store" class="w-5 h-5 text-gray-400"></i><span class="font-semibold text-gray-700">Sucursal Sur</span></div>
+                </button>
             </div>
         </div>
     </div>
-
-    <!-- MODAL CONTRASEÑA ADMIN -->
-    <div id="modal-password" class="fixed inset-0 bg-cobaltoDark/90 backdrop-blur-sm z-[110] flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-[24px] shadow-2xl max-w-sm w-full p-8 text-center border-t-4 border-cobalto">
-            <div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-gray-100">
-                <i data-lucide="lock" class="w-6 h-6 text-gray-400"></i>
-            </div>
-            <h3 class="font-black text-2xl mb-1 text-gray-800">Acceso Seguro</h3>
-            <p class="text-sm text-gray-500 mb-6 font-medium">Ingresa el PIN de logística</p>
-            <input type="password" id="input-password-admin" class="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-center text-xl font-black tracking-[0.5em] mb-6 focus:outline-none focus:border-cobalto focus:ring-2 focus:ring-cobalto/20 text-gray-700" placeholder="••••" onkeyup="if(event.key === 'Enter') verificarPassword()">
-            <div class="flex gap-3">
-                <button onclick="cerrarModalPassword()" class="flex-1 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 font-bold rounded-xl transition-colors text-sm shadow-sm">Cancelar</button>
-                <button onclick="verificarPassword()" class="flex-1 py-3 bg-cobalto hover:bg-cobaltoDark text-white font-bold rounded-xl transition-colors text-sm shadow-md">Ingresar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- INPUT INVISIBLE PARA EDITAR IMAGEN POSTERIORMENTE -->
-    <input type="file" id="input-edit-image" class="hidden" accept="image/*" onchange="procesarEdicionImagen(event)">
 
     <!-- SIDEBAR -->
-    <aside class="w-64 bg-cobaltoDark text-white flex-col shrink-0 hidden md:flex shadow-2xl z-20 relative">
-        <div class="h-20 flex items-center px-6 border-b border-white/10">
-            <div class="bg-white/10 p-2.5 rounded-xl mr-3 backdrop-blur-sm shadow-inner">
-                <i data-lucide="leaf" class="w-6 h-6 text-emerald-400"></i>
-            </div>
+    <aside class="w-64 bg-cobalto text-white flex flex-col shrink-0 transition-all shadow-xl z-20 hidden md:flex">
+        <div class="p-6 flex items-center gap-3 border-b border-white/10">
+            <div class="bg-white/20 p-2 rounded-lg"><i data-lucide="leaf" class="w-6 h-6 text-emerald-200"></i></div>
             <div>
-                <h1 class="font-black text-2xl tracking-tight leading-none text-white">PG Store</h1>
-                <span class="text-[10px] text-emerald-300/80 font-bold uppercase tracking-widest">Panel Central</span>
+                <h1 class="font-black text-lg tracking-tight leading-none">PG Store</h1>
+                <p class="text-[10px] text-emerald-200 uppercase font-bold tracking-widest mt-1">Panel Central</p>
             </div>
         </div>
-        
-        <nav class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
-            <p class="text-[11px] font-bold text-white/40 uppercase tracking-wider mb-3 px-2">Menú Principal</p>
-            
-            <button id="nav-operaciones" onclick="cambiarVistaPrincipal('operaciones')" class="w-full flex items-center gap-3 px-4 py-3 bg-cobalto rounded-xl text-sm font-bold transition-all text-white shadow-md">
-                <i data-lucide="shopping-cart" class="w-5 h-5"></i> Pedidos
-            </button>
-            <button id="nav-cotizaciones" onclick="cambiarVistaPrincipal('cotizaciones')" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl text-sm font-medium transition-all text-emerald-100 hidden">
-                <i data-lucide="file-text" class="w-5 h-5"></i> Cotizaciones
-            </button>
-            <button id="nav-proveedores" onclick="cambiarVistaPrincipal('proveedores')" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl text-sm font-medium transition-all text-emerald-100 hidden">
-                <i data-lucide="truck" class="w-5 h-5"></i> Compras
-            </button>
-            <button id="nav-configuracion" onclick="abrirModalSucursales()" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 rounded-xl text-sm font-medium transition-all text-emerald-100 hidden mt-auto">
-                <i data-lucide="settings" class="w-5 h-5"></i> Configuración
-            </button>
+        <nav class="flex-grow p-4 space-y-2">
+            <p class="text-[11px] text-white/50 font-bold uppercase tracking-wider mb-2 px-2">Menú Principal</p>
+            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-bold transition-all"><i data-lucide="shopping-cart" class="w-5 h-5"></i> Pedidos</button>
+            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white font-semibold transition-all"><i data-lucide="file-text" class="w-5 h-5"></i> Cotizaciones</button>
+            <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white font-semibold transition-all"><i data-lucide="truck" class="w-5 h-5"></i> Compras</button>
         </nav>
-
-        <div class="p-4 border-t border-white/10 bg-black/20 cursor-pointer hover:bg-black/30 transition-colors" onclick="mostrarLogin()">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-white shadow-inner border border-emerald-400/30">
-                    <i data-lucide="user" class="w-5 h-5"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-white truncate" id="btn-rol-actual">Sin Asignar</p>
-                    <p class="text-[11px] text-emerald-300 flex items-center gap-1.5 mt-0.5" id="db-status">
-                        <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> Conectando...
-                    </p>
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"><i data-lucide="user" class="w-5 h-5"></i></div>
+                <div>
+                    <p class="text-sm font-bold" id="ui-rol">Cargando...</p>
+                    <p class="text-xs flex items-center gap-1 mt-0.5" id="ui-status"><span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> Conectando...</p>
                 </div>
             </div>
         </div>
     </aside>
 
-    <!-- MAIN CONTENT WRAPPER -->
-    <div class="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
-        
+    <!-- MAIN CONTENT -->
+    <main class="flex-grow flex flex-col h-screen overflow-hidden bg-[#f8fafc] relative">
         <!-- TOPBAR -->
-        <header class="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
-            <div class="flex items-center gap-4">
-                <button class="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg" onclick="document.querySelector('aside').classList.toggle('hidden')"><i data-lucide="menu" class="w-6 h-6"></i></button>
-                <div>
-                    <h2 class="text-2xl font-black text-gray-800 tracking-tight hidden sm:block">Panel de Pedidos</h2>
-                    <p class="text-xs font-semibold text-gray-400 hidden sm:block uppercase tracking-wider mt-1">Gestión rápida y sencilla</p>
-                </div>
+        <header class="bg-white h-20 px-8 flex items-center justify-between border-b border-gray-200 shrink-0 z-10">
+            <div>
+                <h2 class="text-2xl font-extrabold text-gray-800">Panel de Pedidos</h2>
+                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Gestión Rápida y Sencilla</p>
             </div>
             
-            <div class="flex items-center gap-4 w-full sm:w-auto justify-end">
-                <div class="relative hidden md:block w-72">
-                    <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2"></i>
-                    <input type="text" id="input-busqueda" placeholder="Buscar pedidos, SKU..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cobalto/20 focus:border-cobalto transition-all text-gray-700">
+            <div class="flex items-center gap-4">
+                <!-- Filtro de Fecha (NUEVO) -->
+                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 focus-within:border-cobalto transition-colors">
+                    <i data-lucide="calendar" class="w-4 h-4 text-gray-400 mr-2"></i>
+                    <input type="date" id="filtro-fecha" class="bg-transparent text-sm font-semibold text-gray-700 outline-none cursor-pointer">
+                    <button id="btn-limpiar-fecha" class="ml-2 text-red-400 hover:text-red-600 hidden" title="Limpiar fecha"><i data-lucide="x-circle" class="w-4 h-4"></i></button>
+                </div>
+
+                <div class="relative w-64 hidden sm:block">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                    <input type="text" id="filtro-texto" placeholder="Buscar pedidos, SKU..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cobalto/20 focus:border-cobalto transition-all font-medium">
                 </div>
                 
-                <!-- BOTÓN: EXPORTAR EXCEL -->
-                <button id="btn-exportar" onclick="exportarExcel()" class="hidden bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 shrink-0">
-                    <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden sm:inline">Exportar CSV</span>
+                <!-- Botón Exportar (NUEVO - Solo Admin) -->
+                <button id="btn-exportar" onclick="exportarExcel()" class="hidden bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm">
+                    <i data-lucide="download" class="w-4 h-4"></i> Exportar CSV
                 </button>
-
-                <div class="flex items-center gap-3 border-l border-gray-200 pl-5">
-                    <button class="p-2 text-gray-400 hover:bg-gray-50 rounded-full relative transition-colors">
-                        <i data-lucide="bell" class="w-5 h-5"></i>
-                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                    </button>
-                </div>
+                
+                <div class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center bg-white cursor-pointer hover:bg-gray-50"><i data-lucide="bell" class="w-5 h-5 text-gray-500"></i></div>
             </div>
         </header>
 
-        <!-- SCROLLABLE AREA -->
-        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full relative">
+        <!-- DASHBOARD CONTENT -->
+        <div class="p-8 overflow-y-auto flex-grow">
             
-            <!-- CONTENEDOR VISTA PEDIDOS -->
-            <div id="vista-pedidos-container" class="flex flex-col h-full">
-                <!-- TARJETAS KPI -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                        <div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Pedidos</p><h3 class="text-3xl font-black text-cobalto" id="stat-total">0</h3></div>
-                        <div class="w-12 h-12 rounded-xl bg-cobalto/10 flex items-center justify-center"><i data-lucide="shopping-cart" class="w-6 h-6 text-cobalto"></i></div>
-                    </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                        <div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Pendientes</p><h3 class="text-3xl font-black text-amber-500" id="stat-pendientes">0</h3></div>
-                        <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center"><i data-lucide="clock" class="w-6 h-6 text-amber-500"></i></div>
-                    </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                        <div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">En Proceso</p><h3 class="text-3xl font-black text-sky-500" id="stat-preparacion">0</h3></div>
-                        <div class="w-12 h-12 rounded-xl bg-sky-50 flex items-center justify-center"><i data-lucide="package-open" class="w-6 h-6 text-sky-500"></i></div>
-                    </div>
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-                        <div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Completados</p><h3 class="text-3xl font-black text-emerald-500" id="stat-preparados">0</h3></div>
-                        <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center"><i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-500"></i></div>
-                    </div>
+            <!-- CONTADORES -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex justify-between items-center">
+                    <div><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Pedidos</p><h3 class="text-3xl font-black text-cobalto" id="count-total">0</h3></div>
+                    <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center"><i data-lucide="shopping-cart" class="w-6 h-6 text-cobalto"></i></div>
                 </div>
-
-                <!-- FILTROS Y ACCIONES -->
-                <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-                    <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto" id="tabs-estado">
-                        <button data-estado="todos" class="btn-tab bg-cobalto text-white px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shadow-md transition-all">Todos</button>
-                        <button data-estado="Pendiente" class="btn-tab bg-white text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border border-gray-200 transition-all">⏳ Pendiente</button>
-                        <button data-estado="En Preparación" class="btn-tab bg-white text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border border-gray-200 transition-all">📦 En Proceso</button>
-                        <button data-estado="Preparado" class="btn-tab bg-white text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border border-gray-200 transition-all">✅ Completado</button>
-                    </div>
-
-                    <div class="flex items-center gap-3">
-                        
-                        <!-- FILTRO: FECHA -->
-                        <div class="relative hidden sm:block">
-                            <i data-lucide="calendar" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
-                            <input type="date" id="filtro-fecha" class="pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 focus:outline-none focus:border-cobalto cursor-pointer shadow-sm" title="Filtrar por fecha">
-                            <button id="btn-limpiar-fecha" class="absolute -right-2 -top-2 bg-red-500 text-white rounded-full p-0.5 hidden hover:bg-red-600" title="Borrar fecha" onclick="limpiarFecha()">
-                                <i data-lucide="x" class="w-3 h-3"></i>
-                            </button>
-                        </div>
-
-                        <div class="relative hidden lg:block">
-                            <i data-lucide="store" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
-                            <select id="vista-sucursal" class="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:border-cobalto appearance-none cursor-pointer shadow-sm">
-                                <option value="todas">Todas las sucursales</option>
-                            </select>
-                        </div>
-                        <button id="btn-config-sucs" onclick="abrirModalSucursales()" class="hidden shrink-0 bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 font-bold p-2 rounded-xl transition-colors shadow-sm" title="Gestionar Sucursales">
-                            <i data-lucide="settings" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="abrirModalNuevoPedido()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 shrink-0">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Pedido
-                        </button>
-                    </div>
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex justify-between items-center">
+                    <div><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pendientes</p><h3 class="text-3xl font-black text-amber-500" id="count-pendientes">0</h3></div>
+                    <div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center"><i data-lucide="clock" class="w-6 h-6 text-amber-500"></i></div>
                 </div>
-
-                <!-- TABLA -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex-grow relative overflow-hidden flex flex-col">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse min-w-[800px]">
-                            <thead class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wider font-bold">
-                                <tr>
-                                    <th class="py-4 px-5 text-center w-28">Evidencia</th>
-                                    <th class="py-4 px-4 w-48">ID Pedido</th>
-                                    <th class="py-4 px-4 w-40">Destino</th>
-                                    <th class="py-4 px-4 min-w-[250px]">Productos</th>
-                                    <th class="py-4 px-4 text-center w-48">Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lista-pedidos" class="text-sm text-gray-700 bg-white">
-                                <!-- JS inyecta -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- VACÍO -->
-                    <div id="sin-pedidos" class="hidden absolute inset-0 bg-white/95 backdrop-blur flex flex-col items-center justify-center p-8 text-center z-10">
-                        <div class="bg-gray-50 p-5 rounded-3xl mb-4 border border-gray-100 shadow-inner">
-                            <i data-lucide="package-search" class="w-12 h-12 text-gray-400"></i>
-                        </div>
-                        <h3 class="text-xl font-black text-gray-800 mb-1">Nada por aquí</h3>
-                        <p class="text-gray-500 text-sm max-w-sm">No se encontraron pedidos con los filtros actuales.</p>
-                    </div>
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex justify-between items-center">
+                    <div><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">En Proceso</p><h3 class="text-3xl font-black text-sky-500" id="count-proceso">0</h3></div>
+                    <div class="w-12 h-12 rounded-full bg-sky-50 flex items-center justify-center"><i data-lucide="package-open" class="w-6 h-6 text-sky-500"></i></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex justify-between items-center">
+                    <div><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Completados</p><h3 class="text-3xl font-black text-emerald-500" id="count-completados">0</h3></div>
+                    <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center"><i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-500"></i></div>
                 </div>
             </div>
-        </main>
-    </div>
+
+            <!-- CONTROLES TABLA -->
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+                <div class="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1 w-full sm:w-auto" id="filtros-estado">
+                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold bg-cobalto text-white transition-all" data-filter="Todos">Todos</button>
+                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all" data-filter="Pendiente">⏳ Pendiente</button>
+                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all" data-filter="En Preparación">📦 En Proceso</button>
+                    <button class="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all" data-filter="Preparado">✅ Completado</button>
+                </div>
+                
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <div class="relative hidden admin-only bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                        <i data-lucide="store" class="w-4 h-4 text-gray-400"></i>
+                        <select id="filtro-sucursal" class="bg-transparent text-sm font-bold text-gray-700 outline-none cursor-pointer">
+                            <option value="Todas">Todas las sucursales</option>
+                            <option value="Sucursal Centro">Sucursal Centro</option>
+                            <option value="Sucursal Norte">Sucursal Norte</option>
+                            <option value="Sucursal Sur">Sucursal Sur</option>
+                        </select>
+                    </div>
+                    <button onclick="abrirModalPedido()" class="w-full sm:w-auto bg-cobalto hover:bg-[#004330] text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Pedido
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABLA -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative min-h-[400px]">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            <th class="p-4 text-center w-20">Foto</th>
+                            <th class="p-4">Info Pedido</th>
+                            <th class="p-4">Destino / Tipo</th>
+                            <th class="p-4 w-1/2">Productos</th>
+                            <th class="p-4 text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-body" class="divide-y divide-gray-100">
+                        <!-- JS Inyecta Aquí -->
+                    </tbody>
+                </table>
+                
+                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center bg-white hidden">
+                    <div class="bg-gray-50 p-6 rounded-3xl mb-4"><i data-lucide="package-search" class="w-12 h-12 text-gray-300"></i></div>
+                    <h3 class="text-xl font-extrabold text-gray-800">Nada por aquí</h3>
+                    <p class="text-sm text-gray-500 mt-1">No se encontraron pedidos con los filtros actuales.</p>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <!-- MODAL NUEVO PEDIDO -->
-    <div id="modal-nuevo-pedido" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-[24px] shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[95vh]">
-            <div class="px-6 pt-6 pb-4 flex justify-between items-center bg-white border-b border-gray-100 shrink-0">
+    <div id="modal-pedido" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100">
                 <div class="flex items-center gap-3">
-                    <div class="bg-emerald-100 p-2.5 rounded-full text-emerald-600"><i data-lucide="plus" class="w-5 h-5"></i></div>
-                    <h3 class="font-black text-xl text-gray-800 tracking-tight">Crear Nuevo Pedido</h3>
+                    <div class="bg-emerald-100 text-cobalto p-2 rounded-full"><i data-lucide="plus" class="w-5 h-5 font-bold"></i></div>
+                    <h2 class="text-xl font-extrabold text-gray-800">Crear Nuevo Pedido</h2>
                 </div>
-                <button onclick="cerrarModalNuevoPedido()" class="text-gray-400 hover:bg-gray-100 p-2 rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="cerrarModalPedido()" class="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <div class="p-6 overflow-y-auto flex-grow bg-white flex flex-col gap-6">
-                <!-- Selectores Principales -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-6 bg-gray-50/50">
+                
+                <!-- DESTINO Y TIPO -->
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-gray-800 mb-2">Destino</label>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Destino</label>
                         <div class="relative">
-                            <i data-lucide="store" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
-                            <select id="np-sucursal" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm bg-white font-bold text-gray-700 focus:outline-none focus:border-cobalto focus:ring-2 focus:ring-cobalto/10 shadow-sm appearance-none cursor-pointer"></select>
-                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
+                            <i data-lucide="store" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <select id="np-sucursal" class="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
+                                <option value="Sucursal Centro">Sucursal Centro</option>
+                                <option value="Sucursal Norte">Sucursal Norte</option>
+                                <option value="Sucursal Sur">Sucursal Sur</option>
+                            </select>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-800 mb-2">Tipo de Pedido</label>
-                        <input type="hidden" id="np-tipo" value="Pedido">
-                        <div class="grid grid-cols-2 gap-2">
-                            <button type="button" onclick="seleccionarTipoPedido('Pedido', this)" class="btn-tipo-ped border-2 border-emerald-500 bg-emerald-50 text-emerald-700 px-3 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"><i data-lucide="zap" class="w-4 h-4"></i> Normal</button>
-                            <button type="button" onclick="seleccionarTipoPedido('Urgente', this)" class="btn-tipo-ped border-2 border-transparent bg-red-50 text-red-600 hover:border-red-200 px-3 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all"><i data-lucide="alert-circle" class="w-4 h-4"></i> Urgente</button>
-                            <button type="button" onclick="seleccionarTipoPedido('Programado', this)" class="btn-tipo-ped border-2 border-transparent bg-blue-50 text-blue-600 hover:border-blue-200 px-3 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all"><i data-lucide="calendar" class="w-4 h-4"></i> Programado</button>
-                            <button type="button" onclick="seleccionarTipoPedido('Especial', this)" class="btn-tipo-ped border-2 border-transparent bg-purple-50 text-purple-600 hover:border-purple-200 px-3 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all"><i data-lucide="star" class="w-4 h-4"></i> Especial</button>
-                        </div>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Pedido</label>
+                        <select id="np-tipo" class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
+                            <option value="Normal">⚡ Normal</option>
+                            <option value="Urgente">🚨 Urgente</option>
+                            <option value="Programado">📅 Programado</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Zona de Productos -->
-                <div class="border-t border-gray-100 pt-5">
-                    <label class="block text-xs font-bold text-gray-800 mb-3">Agregar Productos</label>
-                    <div class="relative mb-2 flex gap-2">
-                        <div class="relative flex-grow">
-                            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
-                            <input type="text" id="np-producto" class="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cobalto bg-white font-medium shadow-sm" placeholder="Buscar por nombre, código o SKU..." onkeyup="if(event.key === 'Enter') document.getElementById('btn-add-item').click()">
-                        </div>
-                        <button class="bg-gray-50 border border-gray-200 text-cobalto p-3 rounded-xl hover:bg-gray-100 transition-colors shadow-sm"><i data-lucide="barcode" class="w-5 h-5"></i></button>
+                <!-- AGREGAR PRODUCTOS -->
+                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">Agregar Productos</label>
+                    <div class="flex gap-2 mb-3">
+                        <input type="number" id="np-cant" value="1" min="1" class="w-16 px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-center outline-none focus:border-cobalto">
+                        <input type="text" id="np-nombre" placeholder="Buscar por nombre o descripción..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto" onkeypress="if(event.key === 'Enter') agregarItem()">
+                    </div>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="np-sku" placeholder="SKU (Opcional)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                        <input type="text" id="np-marca" placeholder="Marca (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                        <input type="text" id="np-cat" placeholder="Categoría (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                        <button onclick="agregarItem()" class="shrink-0 bg-cobalto text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#004330] transition-colors flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i> Añadir</button>
                     </div>
                     
-                    <!-- CAMPOS: MARCA Y CATEGORÍA -->
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div class="relative">
-                            <i data-lucide="tag" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
-                            <input type="text" id="np-marca" class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-cobalto bg-white shadow-sm" placeholder="Marca (Opcional)">
-                        </div>
-                        <div class="relative">
-                            <i data-lucide="layers" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
-                            <input type="text" id="np-categoria" class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-cobalto bg-white shadow-sm" placeholder="Categoría (Opcional)">
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2 items-center mb-4">
-                        <input type="hidden" id="np-cantidad" value="1">
-                        <button type="button" onclick="setQty(1)" class="btn-qty bg-cobalto text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors border border-transparent">1</button>
-                        <button type="button" onclick="setQty(5)" class="btn-qty bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold transition-colors">5</button>
-                        <button type="button" onclick="setQty(10)" class="btn-qty bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold transition-colors">10</button>
-                        <button type="button" onclick="setQty(20)" class="btn-qty bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-bold transition-colors">20</button>
-                        <div class="h-6 w-px bg-gray-200 mx-1"></div>
-                        <button type="button" id="btn-add-item" onclick="agregarItemTemporal()" class="bg-white text-cobalto border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1.5 transition-colors">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Añadir a la lista
-                        </button>
-                    </div>
-                    
-                    <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[100px] max-h-40 overflow-y-auto p-2 space-y-1 shadow-inner mb-4" id="np-lista-items">
-                        <div class="h-full flex flex-col items-center justify-center pt-4 text-gray-400">
-                            <i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i>
-                            <p class="text-[10px] font-bold uppercase tracking-wider">Lista vacía</p>
-                        </div>
+                    <div class="bg-gray-50 rounded-xl border border-gray-100 min-h-[100px] max-h-32 overflow-y-auto p-2 space-y-1" id="np-lista">
+                        <div class="h-full flex flex-col items-center justify-center text-gray-400 py-4"><i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i><p class="text-xs font-medium">Lista vacía</p></div>
                     </div>
                 </div>
 
-                <!-- ZONA MULTIMEDIA -->
-                <div class="border-t border-gray-100 pt-5">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="block text-xs font-bold text-gray-800">Evidencia Fotográfica (Opcional)</label>
-                        <div class="flex gap-2">
-                            <button type="button" onclick="iniciarCamara()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"><i data-lucide="camera" class="w-3.5 h-3.5"></i> Cámara</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Dropzone -->
-                    <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors relative overflow-hidden group">
-                        <div id="dropzone-content" class="pointer-events-none">
-                            <div class="bg-cobalto/5 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                                <i data-lucide="image-plus" class="w-6 h-6 text-cobalto"></i>
+                <!-- IMAGEN DROPZONE (MEJORA) -->
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Evidencia (Arrastra, Pega o Clic)</label>
+                    <div id="dropzone" class="dropzone bg-white rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer relative overflow-hidden h-32">
+                        <input type="file" id="file-input" class="hidden" accept="image/*">
+                        <div id="dz-content" class="pointer-events-none flex flex-col items-center">
+                            <div class="flex gap-3 mb-2">
+                                <div class="p-2 bg-blue-50 text-blue-500 rounded-lg"><i data-lucide="image" class="w-5 h-5"></i></div>
+                                <div class="p-2 bg-purple-50 text-purple-500 rounded-lg"><i data-lucide="clipboard-paste" class="w-5 h-5"></i></div>
                             </div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Arrastra una imagen o pégala (Ctrl+V)</p>
-                            <p class="text-xs text-gray-400">También puedes <span class="text-cobalto font-bold">hacer clic</span> para subir desde galería</p>
+                            <p class="text-sm font-bold text-gray-700">Clic, arrastra imagen o presiona Ctrl+V</p>
                         </div>
-                        <img id="preview-image" class="absolute inset-0 w-full h-full object-contain hidden bg-black/5" />
-                        <button type="button" id="btn-remove-image" onclick="removerImagen(event)" class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-lg hidden shadow-md z-10 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        <input type="file" id="file-upload" class="hidden" accept="image/*" onchange="procesarArchivoSubido(this.files[0])">
-                    </div>
-
-                    <!-- Contenedor de cámara activa -->
-                    <div id="camera-container" class="hidden bg-black rounded-xl overflow-hidden relative h-48 mt-3 shadow-inner">
-                        <video id="camera-stream" class="w-full h-full object-cover" autoplay playsinline></video>
-                        <button type="button" onclick="tomarFoto()" class="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-white text-cobalto font-bold px-4 py-2 rounded-full text-xs shadow-lg hover:scale-105 transition-transform flex items-center gap-2"><i data-lucide="camera" class="w-4 h-4"></i> Capturar</button>
-                        <button type="button" onclick="apagarCamara()" class="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-lg hover:bg-black/70 transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
-                        <canvas id="camera-canvas" class="hidden"></canvas>
+                        <img id="dz-preview" class="absolute inset-0 w-full h-full object-contain bg-black/5 hidden" />
+                        <button id="dz-remove" class="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hidden hover:bg-red-600 z-10"><i data-lucide="x" class="w-4 h-4"></i></button>
                     </div>
                 </div>
+
             </div>
-            
-            <div class="bg-white px-6 py-5 flex justify-end gap-3 shrink-0 border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
-                <button onclick="cerrarModalNuevoPedido()" class="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 shadow-sm">Cancelar</button>
-                <button onclick="guardarNuevoPedido()" class="px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-600/20">
-                    Siguiente <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
+            <div class="p-6 bg-white border-t border-gray-100 flex justify-end gap-3 shrink-0">
+                <button onclick="cerrarModalPedido()" class="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors">Cancelar</button>
+                <button onclick="guardarPedido()" class="px-6 py-2.5 rounded-xl bg-cobalto text-white font-bold text-sm hover:bg-[#004330] transition-colors shadow-lg flex items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Guardar Pedido</button>
             </div>
         </div>
     </div>
 
-    <!-- NOTIFICACIONES TOAST -->
-    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
-
     <!-- SCRIPT PRINCIPAL -->
     <script type="module">
-        lucide.createIcons();
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, addDoc, updateDoc, onSnapshot, collection, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =========================================================
-        // ⚠️ TUS CLAVES EXACTAS DE FIREBASE
-        // =========================================================
+        // ==========================================
+        // TUS NUEVAS CLAVES DE FIREBASE (IMAGEN 20)
+        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyCcHclKyeMlz6DexTM80q_zT4oMbk6WWuM",
             authDomain: "lista-de-pedidos-pg.firebaseapp.com",
             projectId: "lista-de-pedidos-pg",
             storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
             messagingSenderId: "640372061129",
-            appId: "1:640372061129:web:c7a3bbfcc30b0ce3aeee18",
-            measurementId: "G-P1T09TSQ1D"
+            appId: "1:640372061129:web:24ca2a267f46c466aeee18",
+            measurementId: "G-5W3MZZ9MRM"
         };
-        // =========================================================
 
-        let app, auth, db, user;
-        const PATH_PEDIDOS = 'pedidos';
-        const PATH_CONFIG = 'configuracion';
+        let app, auth, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (e) { console.error("Error init:", e); }
 
-        let pedidosGlobales = []; 
-        let listaProveedores = ["Textiles El Hilo", "Importaciones Lima", "Confecciones del Sur"];
-        let listaSucursales = ["Sucursal Centro", "Sucursal Norte", "Sucursal Sur"];
-        
-        let rolActual = 'Sin Asignar';
-        let vistaPrincipal = 'operaciones';
-        let sucursalSeleccionada = 'todas';
-        let proveedorSeleccionado = 'todos';
-        let estadoSeleccionado = 'todos';
-        let terminoBusqueda = '';
-        let fechaFiltro = ''; 
-        
-        let itemsNuevoPedido = [];
-        let imagenCapturada = null;
-        let streamGlobal = null;
-        let pedidoEditandoImgId = null;
+        const PATH = 'pedidos_v2';
+        let pedidos = [];
+        let rolActual = null;
+        let filtroEstado = 'Todos';
+        let itemsTmp = [];
+        let base64Img = null;
 
-        const tbody = document.getElementById('lista-pedidos');
-        const selectSucursal = document.getElementById('vista-sucursal');
-        const inputBusqueda = document.getElementById('input-busqueda');
+        // ELEMENTOS DOM
+        const tb = document.getElementById('tabla-body');
+        const emptyState = document.getElementById('empty-state');
+        const dz = document.getElementById('dropzone');
+        const fi = document.getElementById('file-input');
+        const dzPrev = document.getElementById('dz-preview');
+        const dzCont = document.getElementById('dz-content');
+        const dzRem = document.getElementById('dz-remove');
         const inputFecha = document.getElementById('filtro-fecha');
-        const btnLimpiarFecha = document.getElementById('btn-limpiar-fecha');
-        const sinPedidosDiv = document.getElementById('sin-pedidos');
+        const btnLimpiarF = document.getElementById('btn-limpiar-fecha');
+        const btnExportar = document.getElementById('btn-exportar');
 
-        document.addEventListener('DOMContentLoaded', () => {
-            inicializarSucursalesUI();
+        window.onload = () => {
+            lucide.createIcons();
+            document.getElementById('filtro-fecha').valueAsDate = new Date(); // Por defecto hoy
             configurarDropzone();
             
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                conectarBaseDeDatos();
-            } catch (e) {
-                console.warn("Firebase Init Error:", e);
-                document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400"></span> Error Local';
-            }
-
-            selectSucursal.addEventListener('change', (e) => { sucursalSeleccionada = e.target.value; renderizarTodo(); });
-            inputBusqueda.addEventListener('input', (e) => { terminoBusqueda = e.target.value.toLowerCase().trim(); renderizarTodo(); });
+            // Listeners Filtros
+            document.getElementById('filtro-sucursal').addEventListener('change', renderTabla);
+            document.getElementById('filtro-texto').addEventListener('input', renderTabla);
             
-            // Listener Fecha
-            inputFecha.addEventListener('change', (e) => {
-                fechaFiltro = e.target.value;
-                if(fechaFiltro) btnLimpiarFecha.classList.remove('hidden');
-                else btnLimpiarFecha.classList.add('hidden');
-                renderizarTodo();
+            inputFecha.addEventListener('change', () => {
+                btnLimpiarF.classList.remove('hidden');
+                renderTabla();
+            });
+            btnLimpiarF.addEventListener('click', () => {
+                inputFecha.value = '';
+                btnLimpiarF.classList.add('hidden');
+                renderTabla();
             });
 
-            document.querySelectorAll('#tabs-estado .btn-tab').forEach(btn => {
+            document.querySelectorAll('#filtros-estado button').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('#tabs-estado .btn-tab').forEach(b => {
-                        b.classList.remove('bg-cobalto', 'text-white', 'shadow-md');
-                        b.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200');
+                    document.querySelectorAll('#filtros-estado button').forEach(b => {
+                        b.className = "flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all";
                     });
-                    e.target.classList.add('bg-cobalto', 'text-white', 'shadow-md');
-                    e.target.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200');
-                    estadoSeleccionado = e.target.getAttribute('data-estado');
-                    renderizarTodo();
+                    e.target.className = "flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold bg-cobalto text-white transition-all";
+                    filtroEstado = e.target.getAttribute('data-filter');
+                    renderTabla();
                 });
             });
-        });
+        };
 
-        window.limpiarFecha = function() {
-            fechaFiltro = '';
-            inputFecha.value = '';
-            btnLimpiarFecha.classList.add('hidden');
-            renderizarTodo();
-        }
+        window.iniciarSesion = async (rol) => {
+            rolActual = rol;
+            document.getElementById('modal-login').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => document.getElementById('modal-login').classList.add('hidden'), 300);
+            
+            document.getElementById('ui-rol').textContent = rol;
+            if(rol === 'Logística') {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+                btnExportar.classList.remove('hidden');
+                document.getElementById('filtro-sucursal').value = 'Todas';
+            } else {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+                btnExportar.classList.add('hidden');
+            }
 
-        async function conectarBaseDeDatos() {
             try {
                 await signInAnonymously(auth);
-                user = auth.currentUser;
-                document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizado';
-                if(user) iniciarEscuchas();
-            } catch(e) { document.getElementById('db-status').innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-red-400"></span> Desconectado'; }
-        }
-
-        function iniciarEscuchas() {
-            onSnapshot(doc(db, PATH_CONFIG, "general"), (documento) => {
-                if (documento.exists()) {
-                    const data = documento.data();
-                    if (data.proveedores) listaProveedores = data.proveedores;
-                    if (data.sucursales) listaSucursales = data.sucursales;
-                    inicializarSucursalesUI();
-                    renderizarTodo();
-                } else {
-                    setDoc(doc(db, PATH_CONFIG, "general"), { proveedores: listaProveedores, sucursales: listaSucursales }).catch(e=>console.log(e));
-                }
-            });
-
-            onSnapshot(collection(db, PATH_PEDIDOS), (snapshot) => {
-                pedidosGlobales = [];
-                snapshot.forEach(docSnap => { pedidosGlobales.push({ docId: docSnap.id, ...docSnap.data() }); });
-                pedidosGlobales.sort((a, b) => b.id.localeCompare(a.id));
-                renderizarTodo();
-            });
-        }
-
-        function inicializarSucursalesUI() {
-            const contLog = document.getElementById('botones-sucursales-login');
-            contLog.innerHTML = listaSucursales.map(suc => `
-                <button onclick="seleccionarRol('${suc}')" class="w-full flex items-center justify-between p-3.5 rounded-xl border border-gray-100 bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-colors mb-2 shadow-sm group">
-                    <div class="flex items-center gap-3"><div class="bg-gray-50 p-2 rounded-lg group-hover:bg-white transition-colors border border-gray-100"><i data-lucide="store" class="w-5 h-5 text-gray-400 group-hover:text-emerald-500"></i></div><span class="font-bold text-gray-700 group-hover:text-emerald-700">${suc}</span></div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300 group-hover:text-emerald-500"></i>
-                </button>
-            `).join('');
-            lucide.createIcons();
-
-            const actual = selectSucursal.value;
-            selectSucursal.innerHTML = '<option value="todas">Todas las sucursales</option>' + listaSucursales.map(s => `<option value="${s}">${s}</option>`).join('');
-            if(actual === 'todas' || listaSucursales.includes(actual)) selectSucursal.value = actual;
-            else selectSucursal.value = 'todas';
-            
-            const selectNP = document.getElementById('np-sucursal');
-            if(selectNP) {
-                const actualNP = selectNP.value;
-                selectNP.innerHTML = listaSucursales.map(s => `<option value="${s}">${s}</option>`).join('');
-                if(listaSucursales.includes(actualNP)) selectNP.value = actualNP;
+                document.getElementById('ui-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Conectado';
+                onSnapshot(collection(db, PATH), (snap) => {
+                    pedidos = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.timestamp - a.timestamp);
+                    renderTabla();
+                });
+            } catch(e) {
+                console.error("Auth error", e);
+                document.getElementById('ui-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> Error Firebase';
             }
-        }
+        };
 
-        window.abrirModalPassword = function() { document.getElementById('modal-login').classList.add('hidden'); document.getElementById('modal-password').classList.remove('hidden'); document.getElementById('input-password-admin').focus(); }
-        window.cerrarModalPassword = function() { document.getElementById('modal-password').classList.add('hidden'); document.getElementById('modal-login').classList.remove('hidden'); }
-        window.verificarPassword = function() {
-            if(document.getElementById('input-password-admin').value === '1234') {
-                document.getElementById('modal-password').classList.add('hidden');
-                window.seleccionarRol('Logística');
-                document.getElementById('btn-exportar').classList.remove('hidden'); 
-            } else { mostrarToast('PIN incorrecto', 'amber'); document.getElementById('input-password-admin').value = ''; }
-        }
-        window.mostrarLogin = function() { document.getElementById('modal-login').classList.remove('hidden'); }
+        function renderTabla() {
+            if(!rolActual) return;
+            const text = document.getElementById('filtro-texto').value.toLowerCase();
+            const suc = rolActual === 'Logística' ? document.getElementById('filtro-sucursal').value : rolActual;
+            const fechaSeleccionada = inputFecha.value;
 
-        window.seleccionarRol = function(rol) {
-            rolActual = rol;
-            document.getElementById('modal-login').classList.add('hidden');
-            document.getElementById('btn-rol-actual').textContent = rol;
-            
-            const contSucursal = document.getElementById('vista-sucursal').parentElement;
-            if (rol === 'Logística') {
-                contSucursal.classList.remove('hidden');
-                document.getElementById('btn-exportar').classList.remove('hidden');
-                sucursalSeleccionada = 'todas'; selectSucursal.value = 'todas';
+            const filtrados = pedidos.filter(p => {
+                const matchEst = filtroEstado === 'Todos' || p.estado === filtroEstado;
+                const matchSuc = suc === 'Todas' || p.sucursal === suc;
+                const matchTxt = p.cod.toLowerCase().includes(text) || p.productos.some(prod => prod.n.toLowerCase().includes(text));
+                
+                let matchFec = true;
+                if(fechaSeleccionada) {
+                    // Comparar solo la fecha (YYYY-MM-DD)
+                    const fechaPedido = new Date(p.timestamp).toISOString().split('T')[0];
+                    matchFec = fechaPedido === fechaSeleccionada;
+                }
+
+                return matchEst && matchSuc && matchTxt && matchFec;
+            });
+
+            // Actualizar contadores base (ignorando texto y fecha para el KPI general de la vista)
+            const baseKpi = pedidos.filter(p => (suc === 'Todas' || p.sucursal === suc));
+            document.getElementById('count-total').textContent = baseKpi.length;
+            document.getElementById('count-pendientes').textContent = baseKpi.filter(p=>p.estado==='Pendiente').length;
+            document.getElementById('count-proceso').textContent = baseKpi.filter(p=>p.estado==='En Preparación').length;
+            document.getElementById('count-completados').textContent = baseKpi.filter(p=>p.estado==='Preparado').length;
+
+            tb.innerHTML = '';
+            if(filtrados.length === 0) {
+                emptyState.classList.remove('hidden');
             } else {
-                contSucursal.classList.add('hidden');
-                document.getElementById('btn-exportar').classList.add('hidden');
-                sucursalSeleccionada = rol; selectSucursal.value = rol;
-            }
-            mostrarToast(`Sesión iniciada: ${rol}`, 'emerald');
-            renderizarTodo();
-        }
+                emptyState.classList.add('hidden');
+                filtrados.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50/50 transition-colors group";
+                    
+                    const pList = p.productos.map((pr, idx) => `
+                        <div class="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
+                            <input type="checkbox" ${pr.chk ? 'checked' : ''} onchange="chkProd('${p.id}', ${idx})" class="w-4 h-4 accent-cobalto cursor-pointer shrink-0">
+                            <span class="text-xs ${pr.chk ? 'line-through text-gray-400' : 'text-gray-700 font-medium'}"><b class="text-cobalto">${pr.c}x</b> ${pr.n}</span>
+                            ${pr.mar ? `<span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-bold uppercase shrink-0">${pr.mar}</span>` : ''}
+                            ${pr.cat ? `<span class="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[9px] font-bold uppercase shrink-0">${pr.cat}</span>` : ''}
+                        </div>
+                    `).join('');
 
-        window.cambiarVistaPrincipal = function(vista) { vistaPrincipal = vista; renderizarTodo(); };
+                    const selColor = p.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800' : p.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800';
+                    const tipoColor = p.tipo === 'Urgente' ? 'bg-red-100 text-red-600' : p.tipo === 'Programado' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600';
 
-        function obtenerPedidosFiltrados() {
-            return pedidosGlobales.filter(pedido => {
-                const evalSucursal = rolActual === 'Logística' ? sucursalSeleccionada : rolActual;
-                const coincideSucursal = evalSucursal === 'todas' || pedido.sucursal === evalSucursal;
-                const coincideEstado = estadoSeleccionado === 'todos' || pedido.estado === estadoSeleccionado;
-                
-                let coincideFecha = true;
-                if(fechaFiltro) {
-                    const fechaPedido = pedido.timestamp ? new Date(pedido.timestamp).toISOString().split('T')[0] : '';
-                    coincideFecha = fechaPedido === fechaFiltro;
-                }
-
-                const textoBusqueda = `${pedido.id} ${pedido.tipo} ${pedido.sucursal} ` + pedido.productos.map(p => `${p.nombre} ${p.sku} ${p.proveedor} ${p.marca || ''} ${p.categoria || ''}`).join(' ');
-                const coincideBusqueda = terminoBusqueda === '' || textoBusqueda.toLowerCase().includes(terminoBusqueda);
-                
-                return coincideSucursal && coincideEstado && coincideFecha && coincideBusqueda;
-            });
-        }
-
-        function renderizarTodo() {
-            tbody.innerHTML = '';
-            const pedidosFiltrados = obtenerPedidosFiltrados();
-
-            document.getElementById('stat-total').textContent = pedidosFiltrados.length;
-            document.getElementById('stat-pendientes').textContent = pedidosFiltrados.filter(p => p.estado === 'Pendiente').length;
-            document.getElementById('stat-preparacion').textContent = pedidosFiltrados.filter(p => p.estado === 'En Preparación').length;
-            document.getElementById('stat-preparados').textContent = pedidosFiltrados.filter(p => p.estado === 'Preparado').length;
-
-            sinPedidosDiv.classList.toggle('hidden', pedidosFiltrados.length > 0);
-
-            pedidosFiltrados.forEach(pedido => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-50/50 transition-colors border-b border-gray-100';
-                
-                const productosHTML = pedido.productos.map((prod, idx) => {
-                    const tagMarca = prod.marca ? `<span class="bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded text-[9px] uppercase">${prod.marca}</span>` : '';
-                    const tagCat = prod.categoria ? `<span class="bg-purple-50 text-purple-600 border border-purple-100 px-1.5 py-0.5 rounded text-[9px] uppercase">${prod.categoria}</span>` : '';
-                    return `
-                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 py-2.5 border-b border-gray-50 last:border-none">
-                        <div class="flex items-start space-x-3">
-                            <label class="cursor-pointer mt-0.5"><input type="checkbox" ${prod.preparado ? 'checked' : ''} onchange="toggleCheckProducto('${pedido.id}', ${idx})" class="touch-checkbox"></label>
-                            <div class="flex flex-col">
-                                <span class="text-[13px] ${prod.preparado ? 'line-through text-gray-400 font-normal' : 'text-gray-800 font-bold'}">
-                                    <b class="text-cobalto">${prod.cantidad}x</b> ${prod.nombre}
-                                </span>
-                                <div class="flex gap-1 mt-1">${tagMarca}${tagCat}</div>
+                    tr.innerHTML = `
+                        <td class="p-4 relative">
+                            <div class="w-14 h-14 rounded-xl border border-gray-200 overflow-hidden relative mx-auto bg-gray-50">
+                                <img src="${p.img || 'https://placehold.co/100/eeeeee/999999?text=No+Foto'}" class="w-full h-full object-cover">
+                                <!-- Botón editar foto -->
+                                <label class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity text-white" title="Cambiar foto">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                    <input type="file" class="hidden" accept="image/*" onchange="cambiarFoto('${p.id}', event)">
+                                </label>
                             </div>
-                        </div>
-                    </div>`}).join('');
-
-                const estatusBg = pedido.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800 border-amber-200' : pedido.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800 border-sky-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200';
-                const tipoColor = pedido.tipo === 'Urgente' ? 'bg-red-50 text-red-700 border-red-200' : pedido.tipo === 'Programado' ? 'bg-blue-50 text-blue-700 border-blue-200' : pedido.tipo === 'Especial' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                const fechaFormat = pedido.timestamp ? new Date(pedido.timestamp).toLocaleDateString() : '';
-
-                tr.innerHTML = `
-                    <td class="py-4 px-3 text-center relative group">
-                        <img src="${pedido.imagen || 'https://placehold.co/100x100/005c42/ffffff?text=FOTO'}" class="w-14 h-14 rounded-xl object-cover border border-gray-200 shadow-sm mx-auto">
-                        <button onclick="solicitarCambioImagen('${pedido.id}')" class="absolute inset-0 m-auto w-8 h-8 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm" title="Editar Imagen">
-                            <i data-lucide="edit-2" class="w-4 h-4"></i>
-                        </button>
-                    </td>
-                    <td class="py-4 px-4 whitespace-nowrap">
-                        <div class="flex flex-col items-start gap-1.5">
-                            <span class="text-[13px] font-mono font-black text-gray-900">${pedido.id}</span>
-                            <span class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${tipoColor}">${pedido.tipo}</span>
-                            <span class="inline-flex text-[10px] font-bold text-gray-400 mt-0.5" title="${fechaFormat}"><i data-lucide="clock" class="w-3 h-3 mr-1"></i>${pedido.hora}</span>
-                        </div>
-                    </td>
-                    <td class="py-4 px-4 whitespace-nowrap"><span class="inline-flex items-center gap-1.5 text-[13px] font-bold text-gray-700"><div class="w-2 h-2 rounded-full bg-emerald-500"></div>${pedido.sucursal}</span></td>
-                    <td class="py-4 px-4"><div class="space-y-1 max-w-md">${productosHTML}</div></td>
-                    <td class="py-4 px-4 text-center whitespace-nowrap">
-                        <div class="flex flex-col items-center gap-2.5">
-                            <select onchange="cambiarEstadoDirecto('${pedido.id}', this.value)" class="text-xs font-bold px-4 py-2 rounded-xl border cursor-pointer focus:outline-none transition-colors shadow-sm appearance-none text-center ${estatusBg}">
-                                <option value="Pendiente" ${pedido.estado === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
-                                <option value="En Preparación" ${pedido.estado === 'En Preparación' ? 'selected' : ''}>📦 En Proceso</option>
-                                <option value="Preparado" ${pedido.estado === 'Preparado' ? 'selected' : ''}>✅ Completado</option>
+                        </td>
+                        <td class="p-4">
+                            <p class="font-mono font-bold text-sm text-gray-900">${p.cod}</p>
+                            <p class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i> ${new Date(p.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>
+                        </td>
+                        <td class="p-4">
+                            <p class="text-xs font-bold text-gray-800 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-cobalto"></i> ${p.sucursal}</p>
+                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-1 ${tipoColor}">${p.tipo}</span>
+                        </td>
+                        <td class="p-4"><div class="max-w-md">${pList}</div></td>
+                        <td class="p-4 text-center">
+                            <select onchange="cambiarEstado('${p.id}', this.value)" class="text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer ${selColor}">
+                                <option value="Pendiente" ${p.estado==='Pendiente'?'selected':''}>⏳ Pendiente</option>
+                                <option value="En Preparación" ${p.estado==='En Preparación'?'selected':''}>📦 En Proceso</option>
+                                <option value="Preparado" ${p.estado==='Preparado'?'selected':''}>✅ Completado</option>
                             </select>
+                        </td>
+                    `;
+                    tb.appendChild(tr);
+                });
+                lucide.createIcons();
+            }
+        }
+
+        // AGREGAR PRODUCTOS TEMPORALMENTE
+        window.agregarItem = () => {
+            const c = document.getElementById('np-cant').value;
+            const n = document.getElementById('np-nombre').value.trim();
+            const s = document.getElementById('np-sku').value.trim();
+            const mar = document.getElementById('np-marca').value.trim();
+            const cat = document.getElementById('np-cat').value.trim();
+            
+            if(!n) return alert("Ingresa el nombre del producto");
+            
+            itemsTmp.push({ c: parseInt(c)||1, n, s, mar, cat, chk: false });
+            
+            document.getElementById('np-cant').value = '1';
+            document.getElementById('np-nombre').value = '';
+            document.getElementById('np-sku').value = '';
+            document.getElementById('np-marca').value = '';
+            document.getElementById('np-cat').value = '';
+            document.getElementById('np-nombre').focus();
+            
+            pintarItemsTmp();
+        };
+
+        function pintarItemsTmp() {
+            const list = document.getElementById('np-lista');
+            if(itemsTmp.length === 0) {
+                list.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-400 py-4"><i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i><p class="text-xs font-medium">Lista vacía</p></div>`;
+            } else {
+                list.innerHTML = itemsTmp.map((i, idx) => `
+                    <div class="flex items-center justify-between bg-white border border-gray-100 p-2 rounded-lg text-sm">
+                        <div>
+                            <span class="font-bold text-cobalto">${i.c}x</span> <span class="font-medium text-gray-700">${i.n}</span>
+                            ${i.mar ? `<span class="text-[9px] bg-gray-100 ml-1 px-1 rounded">${i.mar}</span>`:''}
                         </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+                        <button onclick="itemsTmp.splice(${idx},1); pintarItemsTmp()" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `).join('');
+            }
             lucide.createIcons();
         }
 
-        // ================= EXPORTAR EXCEL / CSV =================
-        window.exportarExcel = function() {
-            const pedidosExport = obtenerPedidosFiltrados();
-            if (pedidosExport.length === 0) return mostrarToast('No hay datos para exportar', 'amber');
+        // FUNCIONES DROPZONE (IMAGEN)
+        function configurarDropzone() {
+            dz.addEventListener('click', () => fi.click());
+            dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+            dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+            dz.addEventListener('drop', (e) => {
+                e.preventDefault(); dz.classList.remove('dragover');
+                if(e.dataTransfer.files[0]) procesarFile(e.dataTransfer.files[0]);
+            });
+            fi.addEventListener('change', (e) => {
+                if(e.target.files[0]) procesarFile(e.target.files[0]);
+            });
+            // Pegar con Ctrl+V
+            window.addEventListener('paste', (e) => {
+                if(!document.getElementById('modal-pedido').classList.contains('hidden')) {
+                    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                    for (let index in items) {
+                        const item = items[index];
+                        if (item.kind === 'file') {
+                            const blob = item.getAsFile();
+                            procesarFile(blob);
+                        }
+                    }
+                }
+            });
+            dzRem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                base64Img = null;
+                dzPrev.src = ''; dzPrev.classList.add('hidden');
+                dzCont.classList.remove('hidden'); dzRem.classList.add('hidden');
+                fi.value = '';
+            });
+        }
 
-            let csvContent = "\uFEFF"; 
-            csvContent += "ID Pedido,Fecha,Hora,Sucursal,Tipo,Estado,Cant,Producto,Marca,Categoria\n";
-
-            pedidosExport.forEach(pedido => {
-                const fechaFormat = pedido.timestamp ? new Date(pedido.timestamp).toLocaleDateString() : '';
-                pedido.productos.forEach(prod => {
-                    const nomClean = prod.nombre.replace(/,/g, '');
-                    const marcaClean = (prod.marca || '').replace(/,/g, '');
-                    const catClean = (prod.categoria || '').replace(/,/g, '');
+        function procesarFile(file) {
+            if(!file.type.startsWith('image/')) return;
+            const r = new FileReader();
+            r.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_W = 500;
+                    const scale = MAX_W / img.width;
+                    canvas.width = MAX_W;
+                    canvas.height = img.height * scale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    base64Img = canvas.toDataURL('image/jpeg', 0.6);
                     
-                    const row = [
-                        pedido.id,
-                        fechaFormat,
-                        pedido.hora,
-                        pedido.sucursal,
-                        pedido.tipo,
-                        pedido.estado,
-                        prod.cantidad,
-                        nomClean,
-                        marcaClean,
-                        catClean
-                    ];
-                    csvContent += row.join(",") + "\n";
+                    dzPrev.src = base64Img;
+                    dzPrev.classList.remove('hidden');
+                    dzCont.classList.add('hidden');
+                    dzRem.classList.remove('hidden');
+                };
+                img.src = e.target.result;
+            };
+            r.readAsDataURL(file);
+        }
+
+        // GUARDAR Y MODALES
+        window.abrirModalPedido = () => {
+            itemsTmp = []; pintarItemsTmp();
+            dzRem.click(); // limpia imagen
+            document.getElementById('np-sucursal').value = rolActual === 'Logística' ? 'Sucursal Centro' : rolActual;
+            document.getElementById('modal-pedido').classList.remove('hidden');
+        };
+        
+        window.cerrarModalPedido = () => document.getElementById('modal-pedido').classList.add('hidden');
+
+        window.guardarPedido = async () => {
+            if(itemsTmp.length === 0) return alert('Agrega productos');
+            const nuevo = {
+                cod: `PED-${Math.floor(Math.random()*9000)+1000}`,
+                sucursal: document.getElementById('np-sucursal').value,
+                tipo: document.getElementById('np-tipo').value,
+                estado: 'Pendiente',
+                timestamp: Date.now(),
+                img: base64Img,
+                productos: itemsTmp
+            };
+            try {
+                await addDoc(collection(db, PATH), nuevo);
+                cerrarModalPedido();
+            } catch(e) { alert('Error guardando'); }
+        };
+
+        window.cambiarEstado = async (id, est) => {
+            const p = pedidos.find(x=>x.id===id);
+            if(p) {
+                const prods = p.productos.map(pr => ({...pr, chk: est==='Preparado'?true:pr.chk}));
+                await updateDoc(doc(db, PATH, id), { estado: est, productos: prods });
+            }
+        };
+
+        window.chkProd = async (id, idx) => {
+            const p = pedidos.find(x=>x.id===id);
+            if(p) {
+                p.productos[idx].chk = !p.productos[idx].chk;
+                let nuevoEst = p.estado;
+                if(p.productos.every(x=>x.chk)) nuevoEst = 'Preparado';
+                else if(p.estado === 'Pendiente') nuevoEst = 'En Preparación';
+                await updateDoc(doc(db, PATH, id), { productos: p.productos, estado: nuevoEst });
+            }
+        };
+
+        window.cambiarFoto = async (id, event) => {
+            const file = event.target.files[0];
+            if(!file) return;
+            const r = new FileReader();
+            r.onload = (e) => {
+                const img = new Image();
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 400;
+                    const scale = MAX / img.width;
+                    canvas.width = MAX; canvas.height = img.height * scale;
+                    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+                    try {
+                        await updateDoc(doc(db, PATH, id), { img: canvas.toDataURL('image/jpeg', 0.6) });
+                    } catch(err) { alert('Error actualizando foto'); }
+                };
+                img.src = e.target.result;
+            };
+            r.readAsDataURL(file);
+        };
+
+        // EXPORTAR A EXCEL (CSV) (MEJORA)
+        window.exportarExcel = () => {
+            // Obtenemos los mismos pedidos que se están mostrando en la tabla ahora
+            const text = document.getElementById('filtro-texto').value.toLowerCase();
+            const suc = document.getElementById('filtro-sucursal').value;
+            const fechaSeleccionada = inputFecha.value;
+
+            const filtrados = pedidos.filter(p => {
+                const matchEst = filtroEstado === 'Todos' || p.estado === filtroEstado;
+                const matchSuc = suc === 'Todas' || p.sucursal === suc;
+                const matchTxt = p.cod.toLowerCase().includes(text) || p.productos.some(prod => prod.n.toLowerCase().includes(text));
+                let matchFec = true;
+                if(fechaSeleccionada) {
+                    const fechaPedido = new Date(p.timestamp).toISOString().split('T')[0];
+                    matchFec = fechaPedido === fechaSeleccionada;
+                }
+                return matchEst && matchSuc && matchTxt && matchFec;
+            });
+
+            if(filtrados.length === 0) return alert("No hay datos para exportar con estos filtros.");
+
+            let csv = "Codigo,Fecha,Hora,Sucursal,Tipo,Estado,Cant,Producto,Marca,Categoria,SKU\n";
+            filtrados.forEach(p => {
+                const f = new Date(p.timestamp);
+                const fecha = f.toLocaleDateString();
+                const hora = f.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+                p.productos.forEach(pr => {
+                    // Limpiamos comas para que no rompan el CSV
+                    const nom = pr.n.replace(/,/g, '');
+                    const mar = (pr.mar || '').replace(/,/g, '');
+                    const cat = (pr.cat || '').replace(/,/g, '');
+                    const sku = (pr.s || '').replace(/,/g, '');
+                    csv += `${p.cod},${fecha},${hora},${p.sucursal},${p.tipo},${p.estado},${pr.c},${nom},${mar},${cat},${sku}\n`;
                 });
             });
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Reporte_Pedidos_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Reporte_Pedidos_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
-            mostrarToast('Reporte descargado', 'emerald');
-        }
-
-
-        window.toggleCheckProducto = async function(pedidoId, indexProducto) {
-            if (!user) return;
-            const pedido = pedidosGlobales.find(p => p.id === pedidoId);
-            if (pedido && pedido.productos[indexProducto]) {
-                const nuevos = [...pedido.productos];
-                nuevos[indexProducto].preparado = !nuevos[indexProducto].preparado;
-                let nuevoEst = pedido.estado;
-                const todos = nuevos.every(p => p.preparado);
-                if (todos && pedido.estado !== 'Preparado') { nuevoEst = 'Preparado'; mostrarToast(`Pedido ${pedido.id} listo`, 'emerald'); } 
-                else if (!todos && pedido.estado === 'Pendiente') { nuevoEst = 'En Preparación'; }
-                try { await updateDoc(doc(db, PATH_PEDIDOS, pedido.docId), { productos: nuevos, estado: nuevoEst }); } catch(e) { }
-            }
         };
-
-        window.cambiarEstadoDirecto = async function(pedidoId, nuevoEstado) {
-            if (!user) return;
-            const ped = pedidosGlobales.find(p => p.id === pedidoId);
-            if (ped) {
-                const actualizados = [...ped.productos];
-                if (nuevoEstado === 'Preparado') actualizados.forEach(p => p.preparado = true);
-                if (nuevoEstado === 'Pendiente') actualizados.forEach(p => p.preparado = false);
-                try {
-                    await updateDoc(doc(db, PATH_PEDIDOS, ped.docId), { estado: nuevoEstado, productos: actualizados });
-                    mostrarToast(`Estado: ${nuevoEstado}`, 'sky');
-                } catch(e) {}
-            }
-        };
-
-        // ================= EDICIÓN DE IMAGEN =================
-        window.solicitarCambioImagen = function(pedidoId) {
-            pedidoEditandoImgId = pedidoId;
-            document.getElementById('input-edit-image').click();
-        }
-
-        window.procesarEdicionImagen = function(event) {
-            const file = event.target.files[0];
-            if(!file || !pedidoEditandoImgId || !user) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const img = new Image();
-                img.onload = async function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const scaleSize = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scaleSize;
-                    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-                    const base64 = canvas.toDataURL("image/jpeg", 0.6);
-                    
-                    const ped = pedidosGlobales.find(p => p.id === pedidoEditandoImgId);
-                    if(ped) {
-                        try {
-                            mostrarToast('Actualizando imagen...', 'sky');
-                            await updateDoc(doc(db, PATH_PEDIDOS, ped.docId), { imagen: base64 });
-                            mostrarToast('Imagen actualizada correctamente', 'emerald');
-                        } catch (err) { mostrarToast('Error al actualizar imagen', 'amber'); }
-                    }
-                    event.target.value = ''; 
-                }
-                img.src = e.target.result;
-            }
-            reader.readAsDataURL(file);
-        }
-
-        // ================= GESTIÓN MULTIMEDIA (NUEVO PEDIDO) =================
-        function configurarDropzone() {
-            const dropzone = document.getElementById('dropzone');
-            const fileInput = document.getElementById('file-upload');
-            
-            dropzone.addEventListener('click', () => { if(imagenCapturada === null) fileInput.click(); });
-            
-            dropzone.addEventListener('dragover', (e) => {
-                e.preventDefault(); dropzone.classList.add('dropzone-active');
-            });
-            
-            dropzone.addEventListener('dragleave', (e) => {
-                e.preventDefault(); dropzone.classList.remove('dropzone-active');
-            });
-            
-            dropzone.addEventListener('drop', (e) => {
-                e.preventDefault(); dropzone.classList.remove('dropzone-active');
-                if (e.dataTransfer.files.length) window.procesarArchivoSubido(e.dataTransfer.files[0]);
-            });
-
-            document.addEventListener('paste', (e) => {
-                if (!document.getElementById('modal-nuevo-pedido').classList.contains('hidden')) {
-                    const items = e.clipboardData.items;
-                    for (let item of items) {
-                        if (item.type.indexOf('image') === 0) window.procesarArchivoSubido(item.getAsFile());
-                    }
-                }
-            });
-        }
-
-        window.procesarArchivoSubido = function(file) {
-            if (!file || file.type.indexOf('image') !== 0) return mostrarToast('Por favor, selecciona una imagen válida', 'amber');
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const scaleSize = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scaleSize;
-                    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-                    imagenCapturada = canvas.toDataURL("image/jpeg", 0.6);
-                    mostrarVistaPrevia(imagenCapturada);
-                }
-                img.src = e.target.result;
-            }
-            reader.readAsDataURL(file);
-        }
-
-        function mostrarVistaPrevia(src) {
-            document.getElementById('dropzone-content').classList.add('hidden');
-            const preview = document.getElementById('preview-image');
-            preview.src = src;
-            preview.classList.remove('hidden');
-            document.getElementById('btn-remove-image').classList.remove('hidden');
-            apagarCamara(); 
-        }
-
-        window.removerImagen = function(e) {
-            e.stopPropagation();
-            imagenCapturada = null;
-            document.getElementById('preview-image').classList.add('hidden');
-            document.getElementById('preview-image').src = '';
-            document.getElementById('btn-remove-image').classList.add('hidden');
-            document.getElementById('dropzone-content').classList.remove('hidden');
-            document.getElementById('file-upload').value = '';
-        }
-
-        window.iniciarCamara = async function() {
-            const video = document.getElementById('camera-stream');
-            const container = document.getElementById('camera-container');
-            const dropzone = document.getElementById('dropzone');
-            
-            if(imagenCapturada) window.removerImagen(new Event('click'));
-
-            try {
-                streamGlobal = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                video.srcObject = streamGlobal;
-                dropzone.classList.add('hidden');
-                container.classList.remove('hidden');
-            } catch (err) { mostrarToast("No se pudo acceder a la cámara", "amber"); }
-        }
-
-        window.tomarFoto = function() {
-            const video = document.getElementById('camera-stream');
-            const canvas = document.getElementById('camera-canvas');
-            canvas.width = 600;
-            canvas.height = (video.videoHeight / video.videoWidth) * 600;
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            window.procesarArchivoSubido(dataURLtoFile(canvas.toDataURL('image/jpeg', 0.6), 'captura.jpg'));
-        }
-
-        window.apagarCamara = function() {
-            if (streamGlobal) { streamGlobal.getTracks().forEach(track => track.stop()); streamGlobal = null; }
-            document.getElementById('camera-container').classList.add('hidden');
-            document.getElementById('dropzone').classList.remove('hidden');
-        }
-
-        function dataURLtoFile(dataurl, filename) {
-            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-            while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-            return new File([u8arr], filename, {type:mime});
-        }
-
-        // ================= NUEVO PEDIDO LÓGICA =================
-        window.abrirModalNuevoPedido = function() {
-            itemsNuevoPedido = [];
-            window.removerImagen(new Event('click'));
-            document.getElementById('np-lista-items').innerHTML = '<div class="h-full flex flex-col items-center justify-center pt-4 text-gray-400"><i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i><p class="text-[10px] font-bold uppercase tracking-wider">Lista vacía</p></div>';
-            
-            document.getElementById('np-cantidad').value = '1';
-            document.getElementById('np-producto').value = '';
-            document.getElementById('np-marca').value = '';
-            document.getElementById('np-categoria').value = '';
-            
-            document.querySelector('.btn-tipo-ped').click();
-            document.getElementById('modal-nuevo-pedido').classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        window.cerrarModalNuevoPedido = function() {
-            apagarCamara();
-            document.getElementById('modal-nuevo-pedido').classList.add('hidden');
-        };
-
-        window.seleccionarTipoPedido = function(tipo, botonHtml) {
-            document.getElementById('np-tipo').value = tipo;
-            document.querySelectorAll('.btn-tipo-ped').forEach(btn => {
-                btn.classList.remove('border-emerald-500', 'border-red-500', 'border-blue-500', 'border-purple-500', 'shadow-sm');
-                btn.classList.add('border-transparent');
-            });
-            if(tipo === 'Pedido') { botonHtml.classList.add('border-emerald-500', 'shadow-sm'); botonHtml.classList.remove('border-transparent'); }
-            else if(tipo === 'Urgente') { botonHtml.classList.add('border-red-500', 'shadow-sm'); botonHtml.classList.remove('border-transparent'); }
-            else if(tipo === 'Programado') { botonHtml.classList.add('border-blue-500', 'shadow-sm'); botonHtml.classList.remove('border-transparent'); }
-            else if(tipo === 'Especial') { botonHtml.classList.add('border-purple-500', 'shadow-sm'); botonHtml.classList.remove('border-transparent'); }
-        }
-
-        window.setQty = function(cant) {
-            document.getElementById('np-cantidad').value = cant;
-            document.querySelectorAll('.btn-qty').forEach(b => {
-                b.classList.remove('bg-cobalto', 'text-white', 'border-transparent');
-                b.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
-            });
-            event.target.classList.add('bg-cobalto', 'text-white', 'border-transparent');
-            event.target.classList.remove('bg-white', 'text-gray-600', 'border-gray-200');
-        }
-
-        window.agregarItemTemporal = function() {
-            const cant = document.getElementById('np-cantidad').value;
-            const nombreStr = document.getElementById('np-producto').value.trim();
-            const marcaStr = document.getElementById('np-marca').value.trim();
-            const catStr = document.getElementById('np-categoria').value.trim();
-
-            if (!nombreStr || cant < 1) return mostrarToast('Agrega el nombre del producto', 'amber');
-
-            itemsNuevoPedido.push({ 
-                cantidad: parseInt(cant), 
-                nombre: nombreStr, 
-                marca: marcaStr,
-                categoria: catStr,
-                sku: 'S/C', 
-                proveedor: 'Sin Asignar', 
-                preparado: false, 
-                comprado: false, 
-                lugarCompra: '' 
-            });
-
-            document.getElementById('np-cantidad').value = '1';
-            document.getElementById('np-producto').value = '';
-            document.getElementById('np-marca').value = '';
-            document.getElementById('np-categoria').value = '';
-            document.getElementById('np-producto').focus();
-            
-            document.querySelectorAll('.btn-qty').forEach(b => {
-                b.classList.remove('bg-cobalto', 'text-white', 'border-transparent');
-                b.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
-            });
-            document.querySelector('.btn-qty').classList.add('bg-cobalto', 'text-white', 'border-transparent');
-            
-            const contenedor = document.getElementById('np-lista-items');
-            contenedor.innerHTML = itemsNuevoPedido.map((item) => {
-                const tagMarca = item.marca ? `<span class="bg-blue-50 text-blue-600 px-1 rounded text-[10px] uppercase ml-2">${item.marca}</span>` : '';
-                const tagCat = item.categoria ? `<span class="bg-purple-50 text-purple-600 px-1 rounded text-[10px] uppercase ml-1">${item.categoria}</span>` : '';
-                return `
-                <div class="flex items-center justify-between bg-white border border-gray-100 p-2 mb-1.5 rounded-lg shadow-sm">
-                    <div class="text-xs font-bold text-gray-800 flex items-center">
-                        <span class="bg-gray-100 text-cobalto px-2 py-0.5 rounded-md border border-gray-200 mr-2">${item.cantidad}x</span> 
-                        ${item.nombre} ${tagMarca} ${tagCat}
-                    </div>
-                </div>`}).join('');
-        };
-
-        window.guardarNuevoPedido = async function() {
-            if (!user) return mostrarToast('Asegúrate de estar conectado a Firebase', 'amber');
-            if (itemsNuevoPedido.length === 0) return mostrarToast('Agrega al menos un producto a la lista', 'amber');
-            
-            const sucursal = document.getElementById('np-sucursal').value;
-            const tipo = document.getElementById('np-tipo').value;
-            const ahora = new Date();
-            const idPed = `PED-${ahora.getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
-            
-            const nuevoPedido = {
-                id: idPed,
-                sucursal: sucursal,
-                tipo: tipo,
-                hora: ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                estado: 'Pendiente',
-                timestamp: Date.now(),
-                productos: itemsNuevoPedido,
-                imagen: imagenCapturada || ''
-            };
-
-            try {
-                await addDoc(collection(db, PATH_PEDIDOS), nuevoPedido);
-                mostrarToast('Pedido Registrado Exitosamente', 'emerald');
-                cerrarModalNuevoPedido();
-            } catch (error) { mostrarToast('Error al guardar', 'amber'); }
-        };
-
-        function mostrarToast(mensaje, color) {
-            const container = document.getElementById('toast-container');
-            const t = document.createElement('div');
-            const bg = color === 'emerald' ? 'bg-emerald-600' : color === 'amber' ? 'bg-amber-500' : color === 'sky' ? 'bg-sky-500' : color === 'cobalto' ? 'bg-cobalto' : 'bg-gray-800';
-            t.className = `${bg} text-white text-sm font-bold px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 transform transition-all duration-300 opacity-0 translate-y-4`;
-            t.innerHTML = `<i data-lucide="info" class="w-4 h-4"></i> ${mensaje}`;
-            container.appendChild(t);
-            lucide.createIcons();
-            setTimeout(() => { t.classList.remove('opacity-0', 'translate-y-4'); }, 10);
-            setTimeout(() => { t.classList.add('opacity-0', 'translate-y-4'); setTimeout(() => t.remove(), 300); }, 3000);
-        }
     </script>
 </body>
 </html>
