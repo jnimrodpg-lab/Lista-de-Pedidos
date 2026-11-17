@@ -318,6 +318,14 @@
             </div>
 
             <div class="p-4 md:p-6 overflow-y-auto flex-grow flex flex-col gap-5 bg-gray-50/50">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div class="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1 self-start" id="np-modo">
+                        <button type="button" data-action="modo-pedido" data-modo="individual" class="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><i data-lucide="package" class="w-4 h-4"></i> Individual</button>
+                        <button type="button" data-action="modo-pedido" data-modo="lista" class="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4"></i> Lista</button>
+                    </div>
+                    <p class="text-xs text-gray-500 font-medium" id="np-modo-ayuda"></p>
+                </div>
+
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -357,9 +365,9 @@
                     </div>
                 </div>
 
-                <div class="bg-white p-4 md:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4">
+                <div id="np-card-producto" class="bg-white p-4 md:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 transition-all">
                     <div class="flex-grow space-y-3">
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Añadir Producto</label>
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider" id="np-label-producto">Añadir Producto</label>
                         <div class="flex gap-2">
                             <input type="number" id="np-cant" placeholder="Cant." min="0" step="1" inputmode="numeric" value="1" title="Deja vacío o 0 si no sabes la cantidad" class="w-20 px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-cobalto">
                             <input type="text" id="np-nombre" list="dl-nombres" maxlength="120" placeholder="Nombre del producto…" class="flex-grow min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
@@ -385,18 +393,35 @@
                             <img id="dz-preview" alt="" class="absolute inset-0 w-full h-full object-cover bg-black/5 hidden">
                             <button type="button" id="dz-remove" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hidden hover:bg-red-600 z-10"><i data-lucide="x" class="w-3 h-3"></i></button>
                         </div>
-                        <button type="button" data-action="agregar-item" class="w-full bg-cobalto text-white px-3 py-2.5 rounded-xl text-sm font-bold hover:bg-cobalto-oscuro flex items-center justify-center gap-1 shadow-md">
-                            <i data-lucide="plus" class="w-4 h-4"></i> Añadir a Lista
-                        </button>
+                        <input type="file" id="file-camara" class="hidden" accept="image/*" capture="environment">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" data-action="camara" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="camera" class="w-4 h-4"></i> Cámara</button>
+                            <button type="button" data-action="galeria" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="images" class="w-4 h-4"></i> Galería</button>
+                        </div>
+                        <button type="button" data-action="agregar-item" id="btn-agregar-item" class="w-full bg-cobalto text-white px-3 py-2.5 rounded-xl text-sm font-bold hover:bg-cobalto-oscuro flex items-center justify-center gap-1 shadow-md"></button>
+                        <button type="button" data-action="cancelar-edicion-item" id="btn-cancelar-edicion" class="hidden w-full text-gray-500 hover:text-gray-800 text-xs font-bold py-1">Cancelar edición</button>
                     </div>
                 </div>
 
-                <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[120px] max-h-56 overflow-y-auto p-3 space-y-2" id="np-lista"></div>
+                <div id="np-lista-wrap">
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2" id="np-lista-titulo">Productos del pedido</p>
+                    <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[120px] max-h-64 overflow-y-auto p-3 space-y-2" id="np-lista"></div>
+                </div>
             </div>
             <div class="p-4 md:p-6 bg-white border-t border-gray-100 flex justify-end gap-3 shrink-0">
                 <button type="button" data-action="cerrar-pedido" class="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50">Cancelar</button>
                 <button type="button" data-action="guardar-pedido" id="btn-guardar-pedido" class="px-6 py-2.5 rounded-xl bg-cobalto text-white font-bold text-sm hover:bg-cobalto-oscuro shadow-lg flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"><i data-lucide="send" class="w-4 h-4"></i> <span>Enviar Pedido</span></button>
             </div>
+        </div>
+    </div>
+
+    <!-- CÁMARA (computadoras; en celular se usa la cámara del teléfono) -->
+    <div id="modal-camara" class="fixed inset-0 bg-black z-[130] hidden flex-col">
+        <video id="cam-video" autoplay playsinline muted class="flex-grow w-full min-h-0 object-contain bg-black"></video>
+        <div class="p-4 flex justify-center items-center gap-8 bg-black pb-safe">
+            <button type="button" data-action="camara-cerrar" class="text-white px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold text-sm">Cancelar</button>
+            <button type="button" data-action="camara-capturar" class="w-16 h-16 rounded-full bg-white border-4 border-gray-400 hover:scale-105 transition-transform" title="Tomar foto"></button>
+            <button type="button" data-action="camara-girar" class="text-white p-3 rounded-xl bg-white/10 hover:bg-white/20" title="Cambiar de cámara"><i data-lucide="switch-camera" class="w-5 h-5"></i></button>
         </div>
     </div>
 
@@ -454,7 +479,7 @@
             estadoPrevio: new Map(), conocidos: new Set(), cargado: { act: false, ran: false },
             unsubs: [], unsubPedidos: [],
             vista: 'dashboard', filtroEstado: 'Activos', rangoDias: 14, orden: 'recientes', comprasModo: 'prov',
-            items: [], editId: null, imgTmp: null, guardando: false,
+            items: [], editId: null, imgTmp: null, guardando: false, modo: 'individual', editItemIdx: null,
             detalle: null, recienCompletados: new Set(), textosCompra: new Map(),
             avisos: leerPref('avisos', true)
         };
@@ -983,6 +1008,7 @@
                             ${extrasProducto(pr)}
                             ${esLog() ? '' : chipsCompra(pr)}
                         </div>
+                        ${editable ? `<button type="button" data-action="editar-producto" data-id="${esc(p.id)}" data-idx="${i}" class="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg shrink-0" title="Editar este producto">${icono('pencil')}</button>` : ''}
                     </div>
                     ${esLog() ? selectsCompra(p, pr, i, true) : ''}
                 </div>`).join('');
@@ -1063,11 +1089,13 @@
         }
 
         // ================== NUEVO / EDITAR PEDIDO ==================
-        function abrirModalPedido(p = null) {
+        function abrirModalPedido(p = null, idxProducto = null) {
             if (p && !puedeEditar(p)) return toast('Solo se puede editar mientras está Pendiente.', 'warn');
             cerrarDetalleSiAbierto();
             S.editId = p?.id || null;
             S.items = p ? (p.productos || []).map(pr => ({ ...pr })) : [];
+            S.editItemIdx = null;
+            S.modo = p ? (S.items.length > 1 ? 'lista' : 'individual') : leerPref('modoPedido', 'individual');
             $('np-titulo').textContent = p ? `Editar ${p.cod}` : 'Crear Nuevo Pedido';
             $('btn-guardar-pedido').querySelector('span').textContent = p ? 'Guardar cambios' : 'Enviar Pedido';
 
@@ -1084,10 +1112,80 @@
             $('np-contacto').value = p?.contacto || '';
             limpiarCamposProducto();
             toggleFechaProg();
-            pintarItems();
             $('modal-pedido').classList.remove('hidden');
-            pintarIconos();
+            if (S.modo === 'individual' && S.items.length === 1) cargarItem(0);
+            else if (idxProducto !== null && S.items[idxProducto]) cargarItem(idxProducto);
+            aplicarModo();
+            pintarItems();
             setTimeout(() => $('np-nombre').focus(), 50);
+        }
+
+        // ---- Modo Individual / Lista ----
+        function aplicarModo() {
+            const ind = S.modo === 'individual';
+            const editando = S.editItemIdx !== null;
+            document.querySelectorAll('#np-modo button').forEach(b => {
+                const on = b.dataset.modo === S.modo;
+                b.classList.toggle('bg-cobalto', on); b.classList.toggle('text-white', on); b.classList.toggle('text-gray-500', !on);
+            });
+            $('np-modo-ayuda').textContent = ind ? 'Un solo producto: llénalo y envía.' : 'Varios productos: añade cada uno a la lista y luego envía.';
+            $('np-lista-wrap').classList.toggle('hidden', ind);
+            $('btn-agregar-item').classList.toggle('hidden', ind);
+            $('btn-cancelar-edicion').classList.toggle('hidden', ind || !editando);
+            $('btn-agregar-item').innerHTML = editando ? `${icono('check')} Guardar producto` : `${icono('plus')} Añadir a Lista`;
+            $('np-label-producto').textContent = ind ? 'Producto' : (editando ? `Editando producto ${S.editItemIdx + 1}` : 'Añadir producto');
+            const card = $('np-card-producto');
+            card.classList.toggle('ring-2', !ind && editando); card.classList.toggle('ring-amber-300', !ind && editando);
+            $('np-lista-titulo').textContent = `Productos del pedido (${S.items.length})`;
+            pintarIconos();
+        }
+
+        function hayProductoEscrito() { return !!($('np-nombre').value.trim() || $('np-detalle').value.trim()); }
+
+        function cambiarModo(m) {
+            if (m === S.modo) return;
+            if (m === 'individual') {
+                const total = S.items.length + (hayProductoEscrito() && S.editItemIdx === null ? 1 : 0);
+                if (total > 1) return toast('Este pedido tiene varios productos. Déjalo en Lista, o quita productos hasta dejar uno.', 'warn', 6000);
+                if (S.items.length === 1 && S.editItemIdx === null) cargarItem(0);
+            }
+            S.modo = m;
+            if (!S.editId) guardarPref('modoPedido', m);
+            aplicarModo();
+            pintarItems();
+        }
+
+        // Carga un producto de la lista en el formulario para editarlo.
+        function cargarItem(idx) {
+            const it = S.items[idx];
+            if (!it) return;
+            if (S.modo === 'lista' && S.editItemIdx === null && hayProductoEscrito()
+                && !confirm('Tienes un producto escrito sin añadir. ¿Descartarlo para editar este?')) return;
+            S.editItemIdx = idx;
+            $('np-cant').value = toCant(it.c) ?? '';
+            $('np-nombre').value = it.n || '';
+            $('np-detalle').value = it.det || '';
+            $('np-sku').value = it.s || '';
+            $('np-marca').value = it.mar || '';
+            $('np-cat').value = it.cat || '';
+            soltarFoto();
+            const prev = it._preview || safeUrl(it.img);
+            if (prev) {
+                const nueva = !!(it._dataUrl || it._blob);
+                S.imgTmp = { dataUrl: it._dataUrl || null, blob: it._blob || null, preview: prev, img: nueva ? null : (it.img || null), deItem: true };
+                mostrarPreviewFoto(prev);
+            }
+            aplicarModo();
+            pintarItems();
+            if (S.modo === 'lista') $('np-nombre').focus();
+        }
+
+        function cancelarEdicionItem() {
+            S.editItemIdx = null;
+            soltarFoto();
+            limpiarCamposProducto();
+            aplicarModo();
+            pintarItems();
         }
 
         function limpiarCamposProducto() {
@@ -1107,15 +1205,23 @@
             if (!det) { toast('El detalle (talla, medida, etc.) es obligatorio para logística.', 'warn'); $('np-detalle').focus(); return false; }
             const img = S.imgTmp;
             S.imgTmp = null; // la foto pasa al producto
-            S.items.push({
+            const editando = S.editItemIdx !== null;
+            const base = editando ? S.items[S.editItemIdx] : { prov: '', lugar: '', chk: false, chkAuto: false };
+            const nuevo = {
+                ...base,
                 c: toCant($('np-cant').value), n, det,
                 s: $('np-sku').value.trim(), mar: $('np-marca').value.trim(), cat: $('np-cat').value.trim(),
-                prov: '', lugar: '', img: null, chk: false, chkAuto: false,
+                img: img?.img || null,
                 _blob: img?.blob || null, _dataUrl: img?.dataUrl || null, _preview: img?.preview || null
-            });
+            };
+            if (editando) S.items[S.editItemIdx] = nuevo;
+            else if (S.modo === 'individual') S.items = [nuevo];
+            else S.items.push(nuevo);
+            S.editItemIdx = null;
             limpiarCamposProducto();
+            aplicarModo();
             pintarItems();
-            $('np-cant').focus();
+            if (S.modo === 'lista') { $('np-cant').focus(); if (editando) toast('Producto actualizado', 'ok', 2000); }
             return true;
         }
 
@@ -1125,12 +1231,13 @@
                 list.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-400 py-6">${icono('shopping-basket', 'w-8 h-8 mb-2 opacity-50')}<p class="text-sm font-medium">No hay productos en este pedido aún</p></div>`;
             } else {
                 list.innerHTML = S.items.map((i, idx) => `
-                    <div class="flex items-center gap-3 bg-white border border-gray-100 p-2 rounded-xl shadow-sm">
+                    <div class="flex items-center gap-3 bg-white border ${idx === S.editItemIdx ? 'border-amber-300 ring-2 ring-amber-200' : 'border-gray-100'} p-2 rounded-xl shadow-sm">
                         <div class="w-12 h-12 rounded bg-gray-100 shrink-0 overflow-hidden border border-gray-200">${miniatura(i._preview || i.img, 'w-full h-full')}</div>
                         <div class="flex-grow min-w-0">
                             <p class="text-sm font-bold text-gray-800 truncate"><span class="text-cobalto">${esc(fmtCant(i.c))}</span> × ${esc(i.n)}</p>
                             <p class="text-[10px] text-gray-500 font-medium truncate">${esc(i.det)}</p>
                         </div>
+                        <button type="button" data-action="editar-item" data-idx="${idx}" class="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg shrink-0" title="Editar">${icono('pencil')}</button>
                         <button type="button" data-action="quitar-item" data-idx="${idx}" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0" title="Quitar">${icono('trash-2')}</button>
                     </div>`).join('');
             }
@@ -1138,9 +1245,12 @@
         }
 
         function quitarItem(idx) {
+            if (S.editItemIdx === idx) { S.editItemIdx = null; soltarFoto(); limpiarCamposProducto(); }
+            else if (S.editItemIdx !== null && idx < S.editItemIdx) S.editItemIdx--;
             const it = S.items[idx];
             if (it?._preview?.startsWith('blob:')) URL.revokeObjectURL(it._preview);
             S.items.splice(idx, 1);
+            aplicarModo();
             pintarItems();
         }
 
@@ -1174,9 +1284,12 @@
 
         async function guardarPedido() {
             if (S.guardando) return;
-            // Si dejó un producto escrito sin presionar "Añadir a lista", se agrega solo.
-            if ($('np-nombre').value.trim() || $('np-detalle').value.trim()) { if (!agregarItem()) return; }
-            if (!S.items.length) return toast('Agrega al menos un producto a la lista.', 'warn');
+            // Individual: el producto del formulario es el pedido. Lista: si dejó uno escrito sin añadir, se agrega solo.
+            if (hayProductoEscrito()) {
+                if (!agregarItem()) return;
+                if (S.modo === 'individual') cargarItem(0); // mantiene el formulario lleno si luego cancela o falla
+            }
+            if (!S.items.length) return toast(S.modo === 'individual' ? 'Escribe el producto.' : 'Agrega al menos un producto a la lista.', 'warn');
 
             const tipo = $('np-tipo').value;
             const fechaProg = tipo === 'Programado' ? $('np-fecha-prog').value : '';
@@ -1211,7 +1324,8 @@
                     toast(`Pedido ${cod} enviado`, 'ok');
                 }
                 S.items.forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); });
-                S.items = []; S.editId = null;
+                S.items = []; S.editId = null; S.editItemIdx = null;
+                limpiarCamposProducto();
                 $('modal-pedido').classList.add('hidden');
             } catch (e) {
                 console.error(e);
@@ -1270,14 +1384,19 @@
                 const blob = USAR_STORAGE ? await new Promise(r => dibujar(img, 1200).toBlob(r, 'image/jpeg', 0.8)) : null;
                 quitarFoto();
                 S.imgTmp = { dataUrl, blob, preview: blob ? URL.createObjectURL(blob) : dataUrl };
-                $('dz-preview').src = S.imgTmp.preview;
-                $('dz-preview').classList.remove('hidden');
-                $('dz-content').classList.add('hidden');
-                $('dz-remove').classList.remove('hidden');
+                mostrarPreviewFoto(S.imgTmp.preview);
             } catch { toast('No se pudo leer la imagen.', 'error'); }
         }
+        function mostrarPreviewFoto(src) {
+            $('dz-preview').src = src;
+            $('dz-preview').classList.remove('hidden');
+            $('dz-content').classList.add('hidden');
+            $('dz-remove').classList.remove('hidden');
+        }
+        // Suelta la foto del formulario sin liberar la que pertenece a un producto de la lista.
+        function soltarFoto() { S.imgTmp = null; quitarFoto(); }
         function quitarFoto() {
-            if (S.imgTmp?.preview?.startsWith('blob:')) URL.revokeObjectURL(S.imgTmp.preview);
+            if (S.imgTmp && !S.imgTmp.deItem && S.imgTmp.preview?.startsWith('blob:')) URL.revokeObjectURL(S.imgTmp.preview);
             S.imgTmp = null;
             $('dz-preview').removeAttribute('src');
             $('dz-preview').classList.add('hidden');
@@ -1294,6 +1413,50 @@
         dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
         dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); if (e.dataTransfer.files[0]) procesarFile(e.dataTransfer.files[0]); });
         fi.addEventListener('change', (e) => { if (e.target.files[0]) procesarFile(e.target.files[0]); });
+        $('file-camara').addEventListener('change', (e) => { if (e.target.files[0]) procesarFile(e.target.files[0]); e.target.value = ''; });
+
+        // ---- Cámara ----
+        let camStream = null, camFrente = 'environment';
+        const esMovil = () => window.matchMedia('(pointer: coarse)').matches;
+        function abrirCamara() {
+            // En celular se abre la cámara del teléfono (mejor calidad y enfoque).
+            if (esMovil() || !navigator.mediaDevices?.getUserMedia) { $('file-camara').click(); return; }
+            iniciarCamara();
+        }
+        async function iniciarCamara() {
+            detenerCamara(false);
+            try {
+                camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFrente, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+                $('cam-video').srcObject = camStream;
+                $('modal-camara').classList.remove('hidden');
+                $('modal-camara').classList.add('flex');
+                pintarIconos();
+            } catch (e) {
+                console.warn(e);
+                detenerCamara();
+                toast(e.name === 'NotAllowedError' ? 'No hay permiso para usar la cámara. Actívalo con el candado junto a la dirección de la página.'
+                    : e.name === 'NotFoundError' ? 'No se encontró ninguna cámara en este equipo.'
+                    : e.name === 'NotReadableError' ? 'La cámara está siendo usada por otro programa.'
+                    : 'No se pudo abrir la cámara.', 'warn', 7000);
+            }
+        }
+        function detenerCamara(ocultar = true) {
+            camStream?.getTracks().forEach(t => t.stop());
+            camStream = null;
+            if (ocultar) {
+                $('cam-video').srcObject = null;
+                $('modal-camara').classList.add('hidden');
+                $('modal-camara').classList.remove('flex');
+            }
+        }
+        function capturarFoto() {
+            const v = $('cam-video');
+            if (!v.videoWidth) return toast('La cámara aún no está lista.', 'warn');
+            const c = document.createElement('canvas');
+            c.width = v.videoWidth; c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            c.toBlob(b => { detenerCamara(); if (b) procesarFile(new File([b], 'foto.jpg', { type: 'image/jpeg' })); }, 'image/jpeg', 0.9);
+        }
         window.addEventListener('paste', (e) => {
             if ($('modal-pedido').classList.contains('hidden')) return;
             for (const it of Array.from(e.clipboardData?.items || [])) {
@@ -1654,7 +1817,9 @@
             $('modal-pedido').classList.add('hidden');
         }
         function cerrarModalPedido() {
-            if (S.items.length && !S.editId && !confirm('¿Descartar este pedido sin enviar?')) return;
+            if ((S.items.length || hayProductoEscrito()) && !S.editId && !confirm('¿Descartar este pedido sin enviar?')) return;
+            detenerCamara();
+            S.editItemIdx = null;
             S.items.forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); });
             S.items = []; S.editId = null;
             $('modal-pedido').classList.add('hidden');
@@ -1680,6 +1845,15 @@
             'guardar-pedido': () => guardarPedido(),
             'agregar-item': () => agregarItem(),
             'quitar-item': el => quitarItem(Number(el.dataset.idx)),
+            'editar-item': el => cargarItem(Number(el.dataset.idx)),
+            'cancelar-edicion-item': () => cancelarEdicionItem(),
+            'modo-pedido': el => cambiarModo(el.dataset.modo),
+            'editar-producto': el => { const p = pedidoPorId(el.dataset.id); if (p) abrirModalPedido(p, Number(el.dataset.idx)); },
+            'camara': () => abrirCamara(),
+            'galeria': () => fi.click(),
+            'camara-capturar': () => capturarFoto(),
+            'camara-cerrar': () => detenerCamara(),
+            'camara-girar': () => { camFrente = camFrente === 'environment' ? 'user' : 'environment'; iniciarCamara(); },
             'dictado': () => iniciarDictado(),
             'exportar': () => exportar(),
             'compras-modo': el => { S.comprasModo = el.dataset.modo; marcarModoCompras(); renderCompras(); },
@@ -1718,10 +1892,11 @@
         ['cfg-input-sucursales', 'cfg-input-proveedores', 'cfg-tel-proveedores', 'cfg-input-lugares'].forEach(id => {
             $(id).addEventListener('keydown', e => { if (e.key === 'Enter') cfgAgregar(id.includes('lugares') ? 'lugares' : id.includes('proveedores') ? 'proveedores' : 'sucursales'); });
         });
-        $('np-detalle').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); agregarItem(); } });
+        $('np-detalle').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (S.modo === 'lista') agregarItem(); } });
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
-            if (!$('modal-detalle').classList.contains('hidden')) cerrarDetalleSiAbierto();
+            if (!$('modal-camara').classList.contains('hidden')) detenerCamara();
+            else if (!$('modal-detalle').classList.contains('hidden')) cerrarDetalleSiAbierto();
             else if (!$('modal-pedido').classList.contains('hidden')) cerrarModalPedido();
         });
 
