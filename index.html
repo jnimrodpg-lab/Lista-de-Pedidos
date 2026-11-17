@@ -13,11 +13,9 @@
         .text-cobalto { color: #005c42; }
         .border-cobalto { border-color: #005c42; }
         
-        /* Zona de arrastre de imagen */
         .dropzone { border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
         .dropzone.dragover { border-color: #005c42; background-color: #ecfdf5; }
         
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
@@ -88,34 +86,27 @@
             </div>
             
             <div class="flex items-center gap-4">
-                <!-- Filtro de Fecha (NUEVO) -->
                 <div class="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 focus-within:border-cobalto transition-colors">
                     <i data-lucide="calendar" class="w-4 h-4 text-gray-400 mr-2"></i>
                     <input type="date" id="filtro-fecha" class="bg-transparent text-sm font-semibold text-gray-700 outline-none cursor-pointer">
                     <button id="btn-limpiar-fecha" class="ml-2 text-red-400 hover:text-red-600 hidden" title="Limpiar fecha"><i data-lucide="x-circle" class="w-4 h-4"></i></button>
                 </div>
-
                 <div class="relative w-64 hidden sm:block">
                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
                     <input type="text" id="filtro-texto" placeholder="Buscar pedidos, SKU..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cobalto/20 focus:border-cobalto transition-all font-medium">
                 </div>
-                
-                <!-- Botón Exportar (NUEVO - Solo Admin) -->
                 <button id="btn-exportar" onclick="exportarExcel()" class="hidden bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm">
-                    <i data-lucide="download" class="w-4 h-4"></i> Exportar CSV
+                    <i data-lucide="download" class="w-4 h-4"></i> CSV
                 </button>
-                
-                <div class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center bg-white cursor-pointer hover:bg-gray-50"><i data-lucide="bell" class="w-5 h-5 text-gray-500"></i></div>
             </div>
         </header>
 
         <!-- DASHBOARD CONTENT -->
         <div class="p-8 overflow-y-auto flex-grow">
-            
             <!-- CONTADORES -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex justify-between items-center">
-                    <div><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Pedidos</p><h3 class="text-3xl font-black text-cobalto" id="count-total">0</h3></div>
+                    <div><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total</p><h3 class="text-3xl font-black text-cobalto" id="count-total">0</h3></div>
                     <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center"><i data-lucide="shopping-cart" class="w-6 h-6 text-cobalto"></i></div>
                 </div>
                 <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] flex justify-between items-center">
@@ -162,10 +153,10 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                            <th class="p-4 text-center w-20">Foto</th>
-                            <th class="p-4">Info Pedido</th>
+                            <th class="p-4 text-center w-20">Preview</th>
+                            <th class="p-4">ID & Fecha</th>
                             <th class="p-4">Destino / Tipo</th>
-                            <th class="p-4 w-1/2">Productos</th>
+                            <th class="p-4 w-1/2">Productos y Detalles</th>
                             <th class="p-4 text-center">Estado</th>
                         </tr>
                     </thead>
@@ -173,7 +164,6 @@
                         <!-- JS Inyecta Aquí -->
                     </tbody>
                 </table>
-                
                 <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center bg-white hidden">
                     <div class="bg-gray-50 p-6 rounded-3xl mb-4"><i data-lucide="package-search" class="w-12 h-12 text-gray-300"></i></div>
                     <h3 class="text-xl font-extrabold text-gray-800">Nada por aquí</h3>
@@ -185,8 +175,8 @@
 
     <!-- MODAL NUEVO PEDIDO -->
     <div id="modal-pedido" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white">
                 <div class="flex items-center gap-3">
                     <div class="bg-emerald-100 text-cobalto p-2 rounded-full"><i data-lucide="plus" class="w-5 h-5 font-bold"></i></div>
                     <h2 class="text-xl font-extrabold text-gray-800">Crear Nuevo Pedido</h2>
@@ -197,7 +187,7 @@
             <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-6 bg-gray-50/50">
                 
                 <!-- DESTINO Y TIPO -->
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Destino</label>
                         <div class="relative">
@@ -211,54 +201,75 @@
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Pedido</label>
-                        <select id="np-tipo" class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
-                            <option value="Normal">⚡ Normal</option>
-                            <option value="Urgente">🚨 Urgente</option>
+                        <select id="np-tipo" onchange="toggleFechaProg(this.value)" class="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:border-cobalto outline-none">
+                            <option value="Pedido">📦 Pedido</option>
+                            <option value="Consulta">💬 Consulta</option>
+                            <option value="Reposición">🔄 Reposición</option>
                             <option value="Programado">📅 Programado</option>
                         </select>
-                    </div>
-                </div>
-
-                <!-- AGREGAR PRODUCTOS -->
-                <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3">Agregar Productos</label>
-                    <div class="flex gap-2 mb-3">
-                        <input type="number" id="np-cant" value="1" min="1" class="w-16 px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-center outline-none focus:border-cobalto">
-                        <input type="text" id="np-nombre" placeholder="Buscar por nombre o descripción..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto" onkeypress="if(event.key === 'Enter') agregarItem()">
-                    </div>
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="np-sku" placeholder="SKU (Opcional)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                        <input type="text" id="np-marca" placeholder="Marca (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                        <input type="text" id="np-cat" placeholder="Categoría (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                        <button onclick="agregarItem()" class="shrink-0 bg-cobalto text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#004330] transition-colors flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i> Añadir</button>
-                    </div>
-                    
-                    <div class="bg-gray-50 rounded-xl border border-gray-100 min-h-[100px] max-h-32 overflow-y-auto p-2 space-y-1" id="np-lista">
-                        <div class="h-full flex flex-col items-center justify-center text-gray-400 py-4"><i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i><p class="text-xs font-medium">Lista vacía</p></div>
-                    </div>
-                </div>
-
-                <!-- IMAGEN DROPZONE (MEJORA) -->
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Evidencia (Arrastra, Pega o Clic)</label>
-                    <div id="dropzone" class="dropzone bg-white rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer relative overflow-hidden h-32">
-                        <input type="file" id="file-input" class="hidden" accept="image/*">
-                        <div id="dz-content" class="pointer-events-none flex flex-col items-center">
-                            <div class="flex gap-3 mb-2">
-                                <div class="p-2 bg-blue-50 text-blue-500 rounded-lg"><i data-lucide="image" class="w-5 h-5"></i></div>
-                                <div class="p-2 bg-purple-50 text-purple-500 rounded-lg"><i data-lucide="clipboard-paste" class="w-5 h-5"></i></div>
-                            </div>
-                            <p class="text-sm font-bold text-gray-700">Clic, arrastra imagen o presiona Ctrl+V</p>
+                        <!-- Campo oculto para fecha programada -->
+                        <div id="container-fecha-prog" class="mt-2 hidden flex items-center bg-white border border-cobalto rounded-xl px-3 py-2">
+                            <i data-lucide="calendar-clock" class="w-4 h-4 text-cobalto mr-2"></i>
+                            <input type="date" id="np-fecha-prog" class="w-full bg-transparent text-sm font-bold text-gray-700 outline-none">
                         </div>
-                        <img id="dz-preview" class="absolute inset-0 w-full h-full object-contain bg-black/5 hidden" />
-                        <button id="dz-remove" class="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hidden hover:bg-red-600 z-10"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+                <!-- AGREGAR PRODUCTOS (CON FOTO INDIVIDUAL) -->
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4">
+                    <!-- Formulario de Producto -->
+                    <div class="flex-grow space-y-3">
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">Añadir Producto</label>
+                        
+                        <div class="flex gap-2">
+                            <!-- Cantidad ahora es texto libre -->
+                            <input type="text" id="np-cant" placeholder="Cant. (Ej. 2 cajas)" class="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-cobalto">
+                            <input type="text" id="np-nombre" placeholder="Nombre del producto..." class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
+                        </div>
+                        
+                        <!-- Detalle Obligatorio -->
+                        <div>
+                            <input type="text" id="np-detalle" placeholder="Talla, Medida, Peso... etc. (*Obligatorio)" class="w-full px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-sm font-medium text-yellow-800 placeholder-yellow-600/70 outline-none focus:border-yellow-400">
+                        </div>
+
+                        <!-- Opcionales -->
+                        <div class="flex gap-2">
+                            <input type="text" id="np-sku" placeholder="SKU (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-marca" placeholder="Marca (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                            <input type="text" id="np-cat" placeholder="Categoría (Opc.)" class="w-1/3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
+                        </div>
+                    </div>
+
+                    <!-- Dropzone del Producto -->
+                    <div class="w-full md:w-48 shrink-0 flex flex-col gap-2">
+                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Foto (Opcional)</label>
+                        <div id="dropzone" class="dropzone bg-gray-50 rounded-xl p-2 flex flex-col items-center justify-center text-center cursor-pointer relative overflow-hidden h-28 border border-gray-200">
+                            <input type="file" id="file-input" class="hidden" accept="image/*">
+                            <div id="dz-content" class="pointer-events-none flex flex-col items-center">
+                                <i data-lucide="image-plus" class="w-6 h-6 text-gray-400 mb-1"></i>
+                                <p class="text-[10px] font-semibold text-gray-500 px-2">Clic o pega imagen</p>
+                            </div>
+                            <img id="dz-preview" class="absolute inset-0 w-full h-full object-cover bg-black/5 hidden" />
+                            <button id="dz-remove" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hidden hover:bg-red-600 z-10"><i data-lucide="x" class="w-3 h-3"></i></button>
+                        </div>
+                        <button onclick="agregarItem()" class="w-full bg-cobalto text-white px-3 py-2.5 rounded-xl text-sm font-bold hover:bg-[#004330] transition-colors flex items-center justify-center gap-1 shadow-md">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Añadir a Lista
+                        </button>
+                    </div>
+                </div>
+
+                <!-- LISTA TEMPORAL -->
+                <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[120px] max-h-48 overflow-y-auto p-3 space-y-2" id="np-lista">
+                    <div class="h-full flex flex-col items-center justify-center text-gray-400 py-6">
+                        <i data-lucide="shopping-basket" class="w-8 h-8 mb-2 opacity-50"></i>
+                        <p class="text-sm font-medium">No hay productos en este pedido aún</p>
                     </div>
                 </div>
 
             </div>
             <div class="p-6 bg-white border-t border-gray-100 flex justify-end gap-3 shrink-0">
                 <button onclick="cerrarModalPedido()" class="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors">Cancelar</button>
-                <button onclick="guardarPedido()" class="px-6 py-2.5 rounded-xl bg-cobalto text-white font-bold text-sm hover:bg-[#004330] transition-colors shadow-lg flex items-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Guardar Pedido</button>
+                <button onclick="guardarPedido()" class="px-6 py-2.5 rounded-xl bg-cobalto text-white font-bold text-sm hover:bg-[#004330] transition-colors shadow-lg flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Enviar Pedido</button>
             </div>
         </div>
     </div>
@@ -270,18 +281,17 @@
         import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ==========================================
-        // TUS NUEVAS CLAVES DE FIREBASE (IMAGEN 20)
+        // LA CONFIGURACIÓN CORRECTA PROPORCIONADA
         // ==========================================
-        // Reemplaza este bloque en tu código con el que te da Firebase:
-  const firebaseConfig = {
-  apiKey: "AIzaSyCcHClKyeMlz6DexTM80q_zT4oMbk6WWuM",
-  authDomain: "lista-de-pedidos-pg.firebaseapp.com",
-  projectId: "lista-de-pedidos-pg",
-  storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
-  messagingSenderId: "640372061129",
-  appId: "1:640372061129:web:24ca2a267f46c466aeee18",
-  measurementId: "G-5W3MZZ9MRM"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcHClKyeMlz6DexTM80q_zT4oMbk6WWuM",
+            authDomain: "lista-de-pedidos-pg.firebaseapp.com",
+            projectId: "lista-de-pedidos-pg",
+            storageBucket: "lista-de-pedidos-pg.firebasestorage.app",
+            messagingSenderId: "640372061129",
+            appId: "1:640372061129:web:24ca2a267f46c466aeee18",
+            measurementId: "G-5W3MZZ9MRM"
+        };
 
         let app, auth, db;
         try {
@@ -290,7 +300,7 @@
             db = getFirestore(app);
         } catch (e) { console.error("Error init:", e); }
 
-        const PATH = 'pedidos_v2';
+        const PATH = 'pedidos_v3'; // Nueva tabla para soportar la nueva estructura
         let pedidos = [];
         let rolActual = null;
         let filtroEstado = 'Todos';
@@ -311,10 +321,9 @@
 
         window.onload = () => {
             lucide.createIcons();
-            document.getElementById('filtro-fecha').valueAsDate = new Date(); // Por defecto hoy
+            document.getElementById('filtro-fecha').valueAsDate = new Date();
             configurarDropzone();
             
-            // Listeners Filtros
             document.getElementById('filtro-sucursal').addEventListener('change', renderTabla);
             document.getElementById('filtro-texto').addEventListener('input', renderTabla);
             
@@ -330,9 +339,7 @@
 
             document.querySelectorAll('#filtros-estado button').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('#filtros-estado button').forEach(b => {
-                        b.className = "flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all";
-                    });
+                    document.querySelectorAll('#filtros-estado button').forEach(b => b.className = "flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 transition-all");
                     e.target.className = "flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold bg-cobalto text-white transition-all";
                     filtroEstado = e.target.getAttribute('data-filter');
                     renderTabla();
@@ -363,8 +370,7 @@
                     renderTabla();
                 });
             } catch(e) {
-                console.error("Auth error", e);
-                document.getElementById('ui-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> Error Firebase';
+                document.getElementById('ui-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> Error';
             }
         };
 
@@ -377,19 +383,15 @@
             const filtrados = pedidos.filter(p => {
                 const matchEst = filtroEstado === 'Todos' || p.estado === filtroEstado;
                 const matchSuc = suc === 'Todas' || p.sucursal === suc;
-                const matchTxt = p.cod.toLowerCase().includes(text) || p.productos.some(prod => prod.n.toLowerCase().includes(text));
-                
+                const matchTxt = p.cod.toLowerCase().includes(text) || p.productos.some(prod => prod.n.toLowerCase().includes(text) || (prod.det && prod.det.toLowerCase().includes(text)));
                 let matchFec = true;
                 if(fechaSeleccionada) {
-                    // Comparar solo la fecha (YYYY-MM-DD)
                     const fechaPedido = new Date(p.timestamp).toISOString().split('T')[0];
                     matchFec = fechaPedido === fechaSeleccionada;
                 }
-
                 return matchEst && matchSuc && matchTxt && matchFec;
             });
 
-            // Actualizar contadores base (ignorando texto y fecha para el KPI general de la vista)
             const baseKpi = pedidos.filter(p => (suc === 'Todas' || p.sucursal === suc));
             document.getElementById('count-total').textContent = baseKpi.length;
             document.getElementById('count-pendientes').textContent = baseKpi.filter(p=>p.estado==='Pendiente').length;
@@ -405,40 +407,62 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-gray-50/50 transition-colors group";
                     
+                    // Renderizar lista de productos, cada uno con su mini foto
                     const pList = p.productos.map((pr, idx) => `
-                        <div class="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
-                            <input type="checkbox" ${pr.chk ? 'checked' : ''} onchange="chkProd('${p.id}', ${idx})" class="w-4 h-4 accent-cobalto cursor-pointer shrink-0">
-                            <span class="text-xs ${pr.chk ? 'line-through text-gray-400' : 'text-gray-700 font-medium'}"><b class="text-cobalto">${pr.c}x</b> ${pr.n}</span>
-                            ${pr.mar ? `<span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-bold uppercase shrink-0">${pr.mar}</span>` : ''}
-                            ${pr.cat ? `<span class="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[9px] font-bold uppercase shrink-0">${pr.cat}</span>` : ''}
+                        <div class="flex gap-3 py-3 border-b border-gray-100 last:border-0 items-start">
+                            <input type="checkbox" ${pr.chk ? 'checked' : ''} onchange="chkProd('${p.id}', ${idx})" class="mt-1 w-4 h-4 accent-cobalto cursor-pointer shrink-0">
+                            
+                            <div class="w-10 h-10 rounded bg-gray-200 shrink-0 border border-gray-200 overflow-hidden relative">
+                                <img src="${pr.img || 'https://placehold.co/100/eeeeee/999999?text=No+Foto'}" class="w-full h-full object-cover">
+                            </div>
+
+                            <div class="flex-grow">
+                                <p class="text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800 font-bold'}">
+                                    <span class="text-cobalto">${pr.c}</span> - ${pr.n}
+                                </p>
+                                <p class="text-xs text-gray-500 font-medium leading-snug">Detalle: <span class="text-gray-700">${pr.det}</span></p>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    ${pr.s ? `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[9px] font-bold uppercase">SKU: ${pr.s}</span>` : ''}
+                                    ${pr.mar ? `<span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-bold uppercase">${pr.mar}</span>` : ''}
+                                    ${pr.cat ? `<span class="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[9px] font-bold uppercase">${pr.cat}</span>` : ''}
+                                </div>
+                            </div>
                         </div>
                     `).join('');
 
                     const selColor = p.estado === 'Pendiente' ? 'bg-amber-100 text-amber-800' : p.estado === 'En Preparación' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800';
-                    const tipoColor = p.tipo === 'Urgente' ? 'bg-red-100 text-red-600' : p.tipo === 'Programado' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600';
+                    let tipoColor = 'bg-gray-100 text-gray-600';
+                    let infoProgramado = '';
+                    
+                    if (p.tipo === 'Consulta') tipoColor = 'bg-purple-100 text-purple-600';
+                    if (p.tipo === 'Reposición') tipoColor = 'bg-blue-100 text-blue-600';
+                    if (p.tipo === 'Programado') {
+                        tipoColor = 'bg-orange-100 text-orange-600';
+                        infoProgramado = `<p class="text-[10px] font-bold text-orange-600 flex items-center gap-1 mt-1"><i data-lucide="calendar" class="w-3 h-3"></i> Para: ${p.fechaProg}</p>`;
+                    }
+
+                    // Foto principal del pedido (toma la del primer producto)
+                    const mainImg = p.productos.length > 0 && p.productos[0].img ? p.productos[0].img : 'https://placehold.co/100/eeeeee/999999?text=Pedido';
 
                     tr.innerHTML = `
-                        <td class="p-4 relative">
-                            <div class="w-14 h-14 rounded-xl border border-gray-200 overflow-hidden relative mx-auto bg-gray-50">
-                                <img src="${p.img || 'https://placehold.co/100/eeeeee/999999?text=No+Foto'}" class="w-full h-full object-cover">
-                                <!-- Botón editar foto -->
-                                <label class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity text-white" title="Cambiar foto">
-                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
-                                    <input type="file" class="hidden" accept="image/*" onchange="cambiarFoto('${p.id}', event)">
-                                </label>
+                        <td class="p-4 text-center align-top">
+                            <div class="w-14 h-14 rounded-xl border border-gray-200 overflow-hidden mx-auto bg-gray-50 mt-1">
+                                <img src="${mainImg}" class="w-full h-full object-cover">
                             </div>
                         </td>
-                        <td class="p-4">
-                            <p class="font-mono font-bold text-sm text-gray-900">${p.cod}</p>
+                        <td class="p-4 align-top">
+                            <p class="font-mono font-black text-sm text-gray-900">${p.cod}</p>
                             <p class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i> ${new Date(p.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5">${new Date(p.timestamp).toLocaleDateString()}</p>
                         </td>
-                        <td class="p-4">
-                            <p class="text-xs font-bold text-gray-800 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-cobalto"></i> ${p.sucursal}</p>
-                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-1 ${tipoColor}">${p.tipo}</span>
+                        <td class="p-4 align-top">
+                            <p class="text-xs font-bold text-gray-800 flex items-center gap-1"><i data-lucide="store" class="w-3 h-3 text-cobalto"></i> ${p.sucursal}</p>
+                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-2 ${tipoColor}">${p.tipo}</span>
+                            ${infoProgramado}
                         </td>
-                        <td class="p-4"><div class="max-w-md">${pList}</div></td>
-                        <td class="p-4 text-center">
-                            <select onchange="cambiarEstado('${p.id}', this.value)" class="text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer ${selColor}">
+                        <td class="p-2 align-top"><div class="max-w-xl">${pList}</div></td>
+                        <td class="p-4 text-center align-top">
+                            <select onchange="cambiarEstado('${p.id}', this.value)" class="mt-1 text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer ${selColor} w-full text-center">
                                 <option value="Pendiente" ${p.estado==='Pendiente'?'selected':''}>⏳ Pendiente</option>
                                 <option value="En Preparación" ${p.estado==='En Preparación'?'selected':''}>📦 En Proceso</option>
                                 <option value="Preparado" ${p.estado==='Preparado'?'selected':''}>✅ Completado</option>
@@ -451,40 +475,57 @@
             }
         }
 
-        // AGREGAR PRODUCTOS TEMPORALMENTE
+        window.toggleFechaProg = (val) => {
+            const cont = document.getElementById('container-fecha-prog');
+            if (val === 'Programado') cont.classList.remove('hidden');
+            else cont.classList.add('hidden');
+        };
+
+        // AGREGAR PRODUCTO A LISTA TEMPORAL
         window.agregarItem = () => {
-            const c = document.getElementById('np-cant').value;
+            const c = document.getElementById('np-cant').value.trim() || '1';
             const n = document.getElementById('np-nombre').value.trim();
+            const det = document.getElementById('np-detalle').value.trim();
             const s = document.getElementById('np-sku').value.trim();
             const mar = document.getElementById('np-marca').value.trim();
             const cat = document.getElementById('np-cat').value.trim();
             
-            if(!n) return alert("Ingresa el nombre del producto");
+            if(!n) return alert("Por favor ingresa el nombre del producto.");
+            if(!det) return alert("El Detalle del producto (Talla, Medida, etc.) es obligatorio para logística.");
             
-            itemsTmp.push({ c: parseInt(c)||1, n, s, mar, cat, chk: false });
+            // Guardar producto con la foto que haya en el dropzone en este momento
+            itemsTmp.push({ c, n, det, s, mar, cat, img: base64Img, chk: false });
             
-            document.getElementById('np-cant').value = '1';
+            // Limpiar inputs
+            document.getElementById('np-cant').value = '';
             document.getElementById('np-nombre').value = '';
+            document.getElementById('np-detalle').value = '';
             document.getElementById('np-sku').value = '';
             document.getElementById('np-marca').value = '';
             document.getElementById('np-cat').value = '';
-            document.getElementById('np-nombre').focus();
             
+            // Limpiar Dropzone
+            dzRem.click();
+            
+            document.getElementById('np-cant').focus();
             pintarItemsTmp();
         };
 
         function pintarItemsTmp() {
             const list = document.getElementById('np-lista');
             if(itemsTmp.length === 0) {
-                list.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-400 py-4"><i data-lucide="shopping-basket" class="w-6 h-6 mb-1 opacity-50"></i><p class="text-xs font-medium">Lista vacía</p></div>`;
+                list.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-400 py-6"><i data-lucide="shopping-basket" class="w-8 h-8 mb-2 opacity-50"></i><p class="text-sm font-medium">No hay productos en este pedido aún</p></div>`;
             } else {
                 list.innerHTML = itemsTmp.map((i, idx) => `
-                    <div class="flex items-center justify-between bg-white border border-gray-100 p-2 rounded-lg text-sm">
-                        <div>
-                            <span class="font-bold text-cobalto">${i.c}x</span> <span class="font-medium text-gray-700">${i.n}</span>
-                            ${i.mar ? `<span class="text-[9px] bg-gray-100 ml-1 px-1 rounded">${i.mar}</span>`:''}
+                    <div class="flex items-center gap-3 bg-white border border-gray-100 p-2 rounded-xl shadow-sm">
+                        <div class="w-12 h-12 rounded bg-gray-100 shrink-0 overflow-hidden border border-gray-200">
+                            <img src="${i.img || 'https://placehold.co/100/eeeeee/999999?text=Sin+Foto'}" class="w-full h-full object-cover">
                         </div>
-                        <button onclick="itemsTmp.splice(${idx},1); pintarItemsTmp()" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <div class="flex-grow min-w-0">
+                            <p class="text-sm font-bold text-gray-800 truncate"><span class="text-cobalto">${i.c}</span> - ${i.n}</p>
+                            <p class="text-[10px] text-gray-500 font-medium truncate">${i.det}</p>
+                        </div>
+                        <button onclick="itemsTmp.splice(${idx},1); pintarItemsTmp()" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 `).join('');
             }
@@ -503,16 +544,11 @@
             fi.addEventListener('change', (e) => {
                 if(e.target.files[0]) procesarFile(e.target.files[0]);
             });
-            // Pegar con Ctrl+V
             window.addEventListener('paste', (e) => {
                 if(!document.getElementById('modal-pedido').classList.contains('hidden')) {
                     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                     for (let index in items) {
-                        const item = items[index];
-                        if (item.kind === 'file') {
-                            const blob = item.getAsFile();
-                            procesarFile(blob);
-                        }
+                        if (items[index].kind === 'file') procesarFile(items[index].getAsFile());
                     }
                 }
             });
@@ -532,12 +568,10 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    const MAX_W = 500;
+                    const MAX_W = 400; // Reducido para optimizar carga ya que son fotos por producto
                     const scale = MAX_W / img.width;
-                    canvas.width = MAX_W;
-                    canvas.height = img.height * scale;
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.width = MAX_W; canvas.height = img.height * scale;
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
                     base64Img = canvas.toDataURL('image/jpeg', 0.6);
                     
                     dzPrev.src = base64Img;
@@ -550,31 +584,42 @@
             r.readAsDataURL(file);
         }
 
-        // GUARDAR Y MODALES
+        // GUARDAR PEDIDO FINAL
         window.abrirModalPedido = () => {
             itemsTmp = []; pintarItemsTmp();
-            dzRem.click(); // limpia imagen
+            dzRem.click(); 
             document.getElementById('np-sucursal').value = rolActual === 'Logística' ? 'Sucursal Centro' : rolActual;
+            document.getElementById('np-tipo').value = 'Pedido';
+            toggleFechaProg('Pedido');
             document.getElementById('modal-pedido').classList.remove('hidden');
         };
         
         window.cerrarModalPedido = () => document.getElementById('modal-pedido').classList.add('hidden');
 
         window.guardarPedido = async () => {
-            if(itemsTmp.length === 0) return alert('Agrega productos');
+            if(itemsTmp.length === 0) return alert('Debes agregar al menos un producto a la lista.');
+            
+            const tipo = document.getElementById('np-tipo').value;
+            let fechaProg = '';
+            if (tipo === 'Programado') {
+                fechaProg = document.getElementById('np-fecha-prog').value;
+                if(!fechaProg) return alert('Debes seleccionar una fecha para el pedido programado.');
+            }
+
             const nuevo = {
                 cod: `PED-${Math.floor(Math.random()*9000)+1000}`,
                 sucursal: document.getElementById('np-sucursal').value,
-                tipo: document.getElementById('np-tipo').value,
+                tipo: tipo,
+                fechaProg: fechaProg,
                 estado: 'Pendiente',
                 timestamp: Date.now(),
-                img: base64Img,
                 productos: itemsTmp
             };
+            
             try {
                 await addDoc(collection(db, PATH), nuevo);
                 cerrarModalPedido();
-            } catch(e) { alert('Error guardando'); }
+            } catch(e) { alert('Error conectando a la base de datos.'); }
         };
 
         window.cambiarEstado = async (id, est) => {
@@ -596,67 +641,25 @@
             }
         };
 
-        window.cambiarFoto = async (id, event) => {
-            const file = event.target.files[0];
-            if(!file) return;
-            const r = new FileReader();
-            r.onload = (e) => {
-                const img = new Image();
-                img.onload = async () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX = 400;
-                    const scale = MAX / img.width;
-                    canvas.width = MAX; canvas.height = img.height * scale;
-                    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-                    try {
-                        await updateDoc(doc(db, PATH, id), { img: canvas.toDataURL('image/jpeg', 0.6) });
-                    } catch(err) { alert('Error actualizando foto'); }
-                };
-                img.src = e.target.result;
-            };
-            r.readAsDataURL(file);
-        };
-
-        // EXPORTAR A EXCEL (CSV) (MEJORA)
         window.exportarExcel = () => {
-            // Obtenemos los mismos pedidos que se están mostrando en la tabla ahora
-            const text = document.getElementById('filtro-texto').value.toLowerCase();
-            const suc = document.getElementById('filtro-sucursal').value;
-            const fechaSeleccionada = inputFecha.value;
-
-            const filtrados = pedidos.filter(p => {
-                const matchEst = filtroEstado === 'Todos' || p.estado === filtroEstado;
-                const matchSuc = suc === 'Todas' || p.sucursal === suc;
-                const matchTxt = p.cod.toLowerCase().includes(text) || p.productos.some(prod => prod.n.toLowerCase().includes(text));
-                let matchFec = true;
-                if(fechaSeleccionada) {
-                    const fechaPedido = new Date(p.timestamp).toISOString().split('T')[0];
-                    matchFec = fechaPedido === fechaSeleccionada;
-                }
-                return matchEst && matchSuc && matchTxt && matchFec;
-            });
-
-            if(filtrados.length === 0) return alert("No hay datos para exportar con estos filtros.");
-
-            let csv = "Codigo,Fecha,Hora,Sucursal,Tipo,Estado,Cant,Producto,Marca,Categoria,SKU\n";
-            filtrados.forEach(p => {
-                const f = new Date(p.timestamp);
-                const fecha = f.toLocaleDateString();
-                const hora = f.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            if(pedidos.length === 0) return alert("No hay datos para exportar.");
+            let csv = "Codigo,Fecha Sistema,Sucursal,Tipo,Fecha Programada,Estado,Cantidad,Producto,Detalle,Marca,Categoria,SKU\n";
+            pedidos.forEach(p => {
+                const f = new Date(p.timestamp).toLocaleDateString();
                 p.productos.forEach(pr => {
-                    // Limpiamos comas para que no rompan el CSV
                     const nom = pr.n.replace(/,/g, '');
+                    const det = (pr.det || '').replace(/,/g, '');
                     const mar = (pr.mar || '').replace(/,/g, '');
                     const cat = (pr.cat || '').replace(/,/g, '');
                     const sku = (pr.s || '').replace(/,/g, '');
-                    csv += `${p.cod},${fecha},${hora},${p.sucursal},${p.tipo},${p.estado},${pr.c},${nom},${mar},${cat},${sku}\n`;
+                    const cant = (pr.c || '').toString().replace(/,/g, '');
+                    csv += `${p.cod},${f},${p.sucursal},${p.tipo},${p.fechaProg||''},${p.estado},${cant},${nom},${det},${mar},${cat},${sku}\n`;
                 });
             });
-
             const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", `Reporte_Pedidos_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`);
+            link.setAttribute("download", `Reporte_Pedidos.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
