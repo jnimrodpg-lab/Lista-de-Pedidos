@@ -54,6 +54,14 @@
                 <i data-lucide="loader-circle" class="w-6 h-6 animate-spin mx-auto mb-2 text-cobalto"></i> Verificando sesión…
             </div>
 
+            <div id="login-sucursales" class="hidden">
+                <div id="login-lista-suc" class="space-y-2 max-h-[45vh] overflow-y-auto"></div>
+                <button type="button" data-action="login-logistica" class="w-full flex items-center justify-between p-4 mt-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all">
+                    <span class="flex items-center gap-3"><i data-lucide="layout-dashboard" class="w-5 h-5 text-cobalto"></i><span class="font-bold text-gray-700">Logística / Compras</span></span>
+                    <i data-lucide="lock" class="w-4 h-4 text-gray-400"></i>
+                </button>
+            </div>
+
             <div id="login-campos" class="space-y-3">
                 <div>
                     <label for="login-email" class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Correo</label>
@@ -65,10 +73,19 @@
                 </div>
                 <p id="login-error" class="hidden text-sm font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg p-2"></p>
                 <button type="submit" id="btn-login" class="w-full bg-cobalto hover:bg-cobalto-oscuro text-white font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-60">Entrar</button>
+                <button type="button" data-action="login-volver" id="btn-login-volver" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 rounded-xl text-sm">Volver a sucursales</button>
             </div>
 
             <div id="login-sin-perfil" class="hidden text-center space-y-4">
                 <p class="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-xl p-3">Tu cuenta existe pero <b>no tiene acceso asignado</b>. Pide a Logística que te dé acceso.</p>
+                <div class="text-left bg-gray-50 border border-gray-200 rounded-xl p-3">
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Correo</p>
+                    <p id="login-diag-email" class="text-sm font-semibold text-gray-800 break-all mb-2"></p>
+                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">UID (ID del documento en "usuarios")</p>
+                    <p id="login-diag-uid" class="font-mono text-sm font-bold text-gray-800 break-all select-all"></p>
+                    <button type="button" id="btn-copiar-uid" class="mt-2 w-full bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold py-2 rounded-lg text-xs">Copiar UID</button>
+                </div>
+                <button type="button" onclick="location.reload()" class="w-full bg-cobalto hover:bg-cobalto-oscuro text-white font-bold py-2.5 rounded-xl text-sm">Ya lo corregí, reintentar</button>
                 <button type="button" data-action="logout" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-sm">Salir</button>
             </div>
         </form>
@@ -97,7 +114,7 @@
                     <p class="text-xs flex items-center gap-1 mt-0.5 ui-status"></p>
                 </div>
             </div>
-            <button type="button" data-action="logout" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-white/80 hover:text-white hover:bg-white/10 transition-colors"><i data-lucide="log-out" class="w-4 h-4"></i> Cerrar sesión</button>
+            <button type="button" data-action="logout" id="btn-logout-side" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-white/80 hover:text-white hover:bg-white/10 transition-colors"><i data-lucide="log-out" class="w-4 h-4"></i> Cerrar sesión</button>
         </div>
     </aside>
 
@@ -111,7 +128,7 @@
             <div class="flex items-center gap-2 shrink-0">
                 <span class="md:hidden text-xs font-bold text-gray-500 max-w-[110px] truncate ui-rol"></span>
                 <button type="button" data-action="avisos" id="btn-avisos" class="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600" title="Sonido y notificaciones"><i data-lucide="bell" class="w-5 h-5"></i></button>
-                <button type="button" data-action="logout" class="md:hidden p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600" title="Cerrar sesión"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                <button type="button" data-action="logout" id="btn-logout-movil" class="md:hidden p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600" title="Cerrar sesión"><i data-lucide="log-out" class="w-5 h-5"></i></button>
             </div>
         </header>
 
@@ -246,7 +263,7 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 lg:col-span-3">
                     <h3 class="text-lg font-extrabold text-gray-800 mb-1 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-cobalto"></i> Usuarios y accesos</h3>
-                    <p class="text-xs text-gray-500 mb-4">Crea una cuenta por sucursal (o por persona). Cada sucursal solo ve sus propios pedidos.</p>
+                    <p class="text-xs text-gray-500 mb-4">El personal de tienda entra eligiendo su sucursal, sin cuenta. Aquí solo necesitas crear cuentas para Logística (o, si algún día quieres, una cuenta fija para una sucursal).</p>
                     <div class="grid grid-cols-1 md:grid-cols-6 gap-2 mb-4">
                         <input type="text" id="usr-nombre" placeholder="Nombre (ej. Tienda Centro)" class="md:col-span-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-cobalto">
                         <input type="email" id="usr-email" placeholder="correo@ejemplo.com" class="md:col-span-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-cobalto">
@@ -385,7 +402,7 @@
 
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInAnonymously, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, query, where, getDoc, getDocs, setDoc, deleteDoc, runTransaction, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -531,11 +548,21 @@
             $('modal-login').classList.remove('hidden');
             $('login-cargando').classList.toggle('hidden', modo !== 'cargando');
             $('login-campos').classList.toggle('hidden', modo !== 'form');
+            $('login-sucursales').classList.toggle('hidden', modo !== 'sucursales');
             $('login-sin-perfil').classList.toggle('hidden', modo !== 'sin-perfil');
+            $('btn-login-volver').classList.toggle('hidden', !S.user?.isAnonymous);
+            $('login-subtitulo').textContent = modo === 'sucursales' ? 'Elige tu sucursal para ingresar'
+                : modo === 'form' ? 'Acceso de Logística' : 'Un momento…';
             $('login-error').classList.toggle('hidden', !error);
             $('login-error').textContent = error;
             pintarIconos();
         }
+
+        $('btn-copiar-uid').addEventListener('click', async () => {
+            const uid = $('login-diag-uid').textContent;
+            try { await navigator.clipboard.writeText(uid); toast('UID copiado', 'ok'); }
+            catch { prompt('Copia el UID:', uid); }
+        });
 
         $('form-login').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -559,11 +586,29 @@
         onAuthStateChanged(auth, async (user) => {
             limpiarSuscripciones();
             S.user = user; S.perfil = null;
-            if (!user) { mostrarLogin('form'); return; }
+            if (!user) {
+                // El personal de tienda entra con una sesión anónima y luego elige su sucursal.
+                mostrarLogin('cargando');
+                try { await signInAnonymously(auth); }
+                catch (e) {
+                    console.error(e);
+                    const c = e.code || '';
+                    mostrarLogin('form', c.includes('admin-restricted') || c.includes('operation-not-allowed')
+                        ? 'El acceso del personal está desactivado: activa "Anónimo" en Firebase Authentication.'
+                        : 'No se pudo conectar: ' + mensajeError(e));
+                }
+                return;
+            }
+            if (user.isAnonymous) { mostrarSelectorSucursal(); return; }
             mostrarLogin('cargando');
             try {
                 const snap = await getDoc(doc(db, 'usuarios', user.uid));
-                if (!snap.exists()) { mostrarLogin('sin-perfil'); return; }
+                if (!snap.exists()) {
+                    $('login-diag-email').textContent = user.email || '';
+                    $('login-diag-uid').textContent = user.uid;
+                    mostrarLogin('sin-perfil');
+                    return;
+                }
                 S.perfil = { uid: user.uid, email: user.email, ...snap.data() };
                 iniciarApp();
             } catch (e) {
@@ -574,7 +619,48 @@
 
         async function cerrarSesion() {
             cerrarModales();
+            if (S.user?.isAnonymous) {
+                // Personal: solo vuelve a la lista de sucursales.
+                guardarPref('sucursal', null);
+                limpiarSuscripciones();
+                S.perfil = null;
+                mostrarSelectorSucursal();
+                return;
+            }
             try { await signOut(auth); } catch (e) { toast(mensajeError(e), 'error'); }
+        }
+
+        // ---- Ingreso del personal por sucursal ----
+        async function mostrarSelectorSucursal() {
+            mostrarLogin('cargando');
+            let sucursales = [];
+            try {
+                const snap = await getDoc(doc(db, 'config', 'general'));
+                const d = snap.exists() ? snap.data() : {};
+                sucursales = normLista(d.sucursales ?? SUCURSALES_POR_DEFECTO);
+            } catch (e) {
+                console.error(e);
+                mostrarLogin('form', 'No se pudieron cargar las sucursales: ' + mensajeError(e));
+                return;
+            }
+            const guardada = leerPref('sucursal', null);
+            const encontrada = sucursales.find(s => s.id === guardada);
+            if (encontrada) { entrarComoSucursal(encontrada); return; }
+
+            $('login-lista-suc').innerHTML = sucursales.length ? sucursales.map(s => `
+                <button type="button" data-action="elegir-sucursal" data-id="${esc(s.id)}" class="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-cobalto hover:bg-emerald-50 transition-all text-left">
+                    ${icono('store', 'w-5 h-5 text-gray-400 shrink-0')}<span class="font-semibold text-gray-700">${esc(s.nombre)}</span>
+                </button>`).join('')
+                : '<p class="text-sm text-gray-500 text-center bg-gray-50 rounded-xl p-4">Aún no hay sucursales creadas. Logística debe crearlas en Configuración.</p>';
+            S.sucursalesLogin = sucursales;
+            mostrarLogin('sucursales');
+        }
+
+        function entrarComoSucursal(suc) {
+            prepararAudio();
+            guardarPref('sucursal', suc.id);
+            S.perfil = { uid: S.user.uid, rol: 'personal', sucursalId: suc.id, nombre: `Personal · ${suc.nombre}` };
+            iniciarApp();
         }
 
         function limpiarSuscripciones() {
@@ -588,6 +674,10 @@
         function iniciarApp() {
             $('modal-login').classList.add('hidden');
             document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', !esLog()));
+            const esPersonal = S.perfil.rol === 'personal';
+            $('btn-logout-side').innerHTML = esPersonal ? `${icono('repeat', 'w-4 h-4')} Cambiar sucursal` : `${icono('log-out', 'w-4 h-4')} Cerrar sesión`;
+            $('btn-logout-movil').innerHTML = icono(esPersonal ? 'repeat' : 'log-out', 'w-5 h-5');
+            $('btn-logout-movil').title = esPersonal ? 'Cambiar sucursal' : 'Cerrar sesión';
             pintarRol();
             pintarBotonAvisos();
             pintarConexion();
@@ -597,6 +687,11 @@
                 S.config.sucursales = normLista(d.sucursales ?? SUCURSALES_POR_DEFECTO);
                 S.config.proveedores = normLista(d.proveedores);
                 S.config.lugares = normLista(d.lugares);
+                if (S.perfil?.rol === 'personal' && !S.config.sucursales.some(x => x.id === S.perfil.sucursalId)) {
+                    toast('Esta sucursal ya no existe. Elige otra.', 'warn');
+                    cerrarSesion();
+                    return;
+                }
                 renderConfigUI();
                 pintarRol();
                 refrescar();
@@ -617,7 +712,9 @@
 
         function pintarRol() {
             if (!S.perfil) return;
-            const txt = esLog() ? (S.perfil.nombre || 'Logística') : (S.perfil.nombre || nombreDe(S.config.sucursales, S.perfil.sucursalId));
+            const txt = esLog() ? (S.perfil.nombre || 'Logística')
+                : S.perfil.rol === 'personal' ? nombreDe(S.config.sucursales, S.perfil.sucursalId, S.perfil.nombre)
+                : (S.perfil.nombre || nombreDe(S.config.sucursales, S.perfil.sucursalId));
             document.querySelectorAll('.ui-rol').forEach(el => el.textContent = txt);
         }
 
@@ -1567,6 +1664,9 @@
         const accionesClick = {
             'vista': el => cambiarVista(el.dataset.vista),
             'logout': () => cerrarSesion(),
+            'login-logistica': () => { mostrarLogin('form'); setTimeout(() => $('login-email').focus(), 50); },
+            'login-volver': () => mostrarSelectorSucursal(),
+            'elegir-sucursal': el => { const s = (S.sucursalesLogin || []).find(x => x.id === el.dataset.id); if (s) entrarComoSucursal(s); },
             'avisos': () => { S.avisos = !S.avisos; guardarPref('avisos', S.avisos); if (S.avisos) { prepararAudio(); pedirPermisoNotif(); beep(); } pintarBotonAvisos(); toast(S.avisos ? 'Avisos activados' : 'Avisos desactivados'); },
             'filtro-estado': el => { S.filtroEstado = el.dataset.filter; marcarFiltroEstado(); renderPedidos(); },
             'nuevo-pedido': () => abrirModalPedido(),
