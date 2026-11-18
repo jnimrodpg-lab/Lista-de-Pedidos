@@ -37,6 +37,8 @@
     <datalist id="dl-nombres"></datalist>
     <datalist id="dl-marcas"></datalist>
     <datalist id="dl-cats"></datalist>
+    <datalist id="dl-codigos"></datalist>
+    <datalist id="dl-varnom"></datalist>
 
     <!-- AVISOS (toasts) -->
     <div id="toasts" class="fixed top-4 right-4 left-4 sm:left-auto z-[200] flex flex-col gap-2 items-end pointer-events-none"></div>
@@ -134,6 +136,7 @@
 
         <!-- VISTA PEDIDOS -->
         <div id="vista-dashboard" class="p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto flex-grow">
+            <button type="button" id="banner-recibir" data-action="ver-por-recibir" class="hidden w-full mb-4 p-3 rounded-2xl bg-teal-50 border border-teal-200 text-teal-800 text-sm font-bold flex items-center justify-center gap-2 hover:bg-teal-100"></button>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6">
                 <div class="bg-white p-4 md:p-6 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
                     <div><p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total</p><h3 class="text-2xl md:text-3xl font-black text-cobalto" id="count-total">0</h3></div>
@@ -159,6 +162,7 @@
                     <button type="button" data-action="filtro-estado" data-filter="Pendiente" class="shrink-0 px-4 py-1.5 rounded-lg text-sm font-bold transition-all">⏳ Pendiente</button>
                     <button type="button" data-action="filtro-estado" data-filter="En Preparación" class="shrink-0 px-4 py-1.5 rounded-lg text-sm font-bold transition-all">📦 En Proceso</button>
                     <button type="button" data-action="filtro-estado" data-filter="Preparado" class="shrink-0 px-4 py-1.5 rounded-lg text-sm font-bold transition-all">✅ Completados</button>
+                    <button type="button" data-action="filtro-estado" data-filter="Recibido" class="shrink-0 px-4 py-1.5 rounded-lg text-sm font-bold transition-all">📥 Recibidos</button>
                     <button type="button" data-action="filtro-estado" data-filter="Cancelado" class="shrink-0 px-4 py-1.5 rounded-lg text-sm font-bold transition-all">🚫 Cancelados</button>
                 </div>
                 <button type="button" data-action="nuevo-pedido" class="bg-cobalto hover:bg-cobalto-oscuro text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md">
@@ -192,14 +196,26 @@
                         <option value="programados">Por fecha programada</option>
                     </select>
                 </label>
+                <label class="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 text-sm">
+                    <i data-lucide="layers" class="w-4 h-4 text-gray-400"></i>
+                    <select id="filtro-forma" data-action="forma" class="bg-transparent font-bold text-gray-700 outline-none cursor-pointer">
+                        <option value="todos">Individuales y grupos</option>
+                        <option value="individual">Solo individuales</option>
+                        <option value="grupo">Solo grupos</option>
+                    </select>
+                </label>
+                <div class="flex bg-white rounded-xl border border-gray-200 p-1" id="vista-lista">
+                    <button type="button" data-action="vista-lista" data-v="pedido" class="px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"><i data-lucide="receipt" class="w-4 h-4"></i> Por pedido</button>
+                    <button type="button" data-action="vista-lista" data-v="marca" class="px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"><i data-lucide="tag" class="w-4 h-4"></i> Por marca</button>
+                </div>
                 <button type="button" data-action="exportar" id="btn-exportar" class="admin-only hidden bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-sm" title="Exporta lo que ves con los filtros actuales">
                     <i data-lucide="download" class="w-4 h-4"></i> Excel
                 </button>
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative min-h-[300px]">
-                <div class="hidden md:grid grid-cols-[80px_190px_170px_1fr_170px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <div class="text-center">Foto</div><div>ID y detalles</div><div>Destino / Tipo</div><div>Productos</div><div class="text-center">Estado</div>
+                <div id="cabecera-tabla" class="hidden md:grid grid-cols-[80px_1fr_180px_160px_170px] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <div class="text-center">Foto</div><div>Producto</div><div>Pedido</div><div>Destino / Tipo</div><div class="text-center">Estado</div>
                 </div>
                 <div id="lista-pedidos" class="divide-y divide-gray-100"></div>
                 <div id="empty-state" class="hidden flex-col items-center justify-center py-16 px-4 text-center">
@@ -221,6 +237,7 @@
                     <div class="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1" id="compras-modo">
                         <button type="button" data-action="compras-modo" data-modo="prov" class="px-4 py-1.5 rounded-lg text-sm font-bold">Por proveedor</button>
                         <button type="button" data-action="compras-modo" data-modo="lugar" class="px-4 py-1.5 rounded-lg text-sm font-bold">Por lugar</button>
+                        <button type="button" data-action="compras-modo" data-modo="marca" class="px-4 py-1.5 rounded-lg text-sm font-bold">Por marca</button>
                     </div>
                 </div>
                 <div id="compras-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>
@@ -302,6 +319,10 @@
             <div class="w-full md:w-1/3 bg-white flex flex-col flex-grow min-h-0 md:h-full border-t md:border-t-0 md:border-l border-gray-200">
                 <div class="p-5 border-b border-gray-100 bg-gray-50 shrink-0" id="mdi-cabecera"></div>
                 <div class="p-5 overflow-y-auto flex-grow" id="mdi-cuerpo"></div>
+                <div class="p-3 border-t border-gray-100 bg-white shrink-0 flex gap-2">
+                    <input type="text" id="mdi-nota-input" maxlength="300" placeholder="Escribe una nota para este pedido…" class="flex-grow min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-cobalto">
+                    <button type="button" data-action="enviar-nota" id="btn-enviar-nota" class="bg-cobalto hover:bg-cobalto-oscuro text-white px-3 rounded-xl disabled:opacity-60" title="Enviar nota"><i data-lucide="send" class="w-4 h-4"></i></button>
+                </div>
             </div>
         </div>
     </div>
@@ -321,7 +342,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                     <div class="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1 self-start" id="np-modo">
                         <button type="button" data-action="modo-pedido" data-modo="individual" class="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><i data-lucide="package" class="w-4 h-4"></i> Individual</button>
-                        <button type="button" data-action="modo-pedido" data-modo="lista" class="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4"></i> Lista</button>
+                        <button type="button" data-action="modo-pedido" data-modo="grupo" class="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4"></i> Grupo</button>
                     </div>
                     <p class="text-xs text-gray-500 font-medium" id="np-modo-ayuda"></p>
                 </div>
@@ -347,6 +368,9 @@
                                 <i data-lucide="calendar-clock" class="w-4 h-4 text-cobalto mr-2"></i>
                                 <input type="date" id="np-fecha-prog" class="w-full bg-transparent text-sm font-bold text-gray-700 outline-none">
                             </div>
+                            <label class="mt-2 inline-flex items-center gap-2 text-sm font-bold text-red-600 cursor-pointer select-none">
+                                <input type="checkbox" id="np-urgente" class="w-4 h-4 accent-red-600"> Urgente
+                            </label>
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente (Opcional)</label>
@@ -365,48 +389,10 @@
                     </div>
                 </div>
 
-                <div id="np-card-producto" class="bg-white p-4 md:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 transition-all">
-                    <div class="flex-grow space-y-3">
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider" id="np-label-producto">Añadir Producto</label>
-                        <div class="flex gap-2">
-                            <input type="number" id="np-cant" placeholder="Cant." min="0" step="1" inputmode="numeric" value="1" title="Deja vacío o 0 si no sabes la cantidad" class="w-20 px-2 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-cobalto">
-                            <input type="text" id="np-nombre" list="dl-nombres" maxlength="120" placeholder="Nombre del producto…" class="flex-grow min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto">
-                        </div>
-                        <div class="relative">
-                            <input type="text" id="np-detalle" maxlength="300" placeholder="Talla, medida, peso, color… (*Obligatorio)" class="w-full pl-3 pr-10 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-sm font-medium text-yellow-900 placeholder-yellow-600/70 outline-none focus:border-yellow-400">
-                            <button type="button" data-action="dictado" id="btn-dictado" class="absolute right-2 top-1/2 -translate-y-1/2 text-yellow-700 hover:text-yellow-900 bg-yellow-100 hover:bg-yellow-200 p-1.5 rounded-lg" title="Dictado por voz"><i data-lucide="mic" class="w-4 h-4"></i></button>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="np-sku" maxlength="60" placeholder="SKU (Opc.)" class="w-1/3 min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                            <input type="text" id="np-marca" list="dl-marcas" maxlength="60" placeholder="Marca (Opc.)" class="w-1/3 min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                            <input type="text" id="np-cat" list="dl-cats" maxlength="60" placeholder="Categoría (Opc.)" class="w-1/3 min-w-0 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium outline-none focus:border-cobalto">
-                        </div>
-                    </div>
-                    <div class="w-full md:w-48 shrink-0 flex flex-col gap-2">
-                        <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Foto (Opcional)</label>
-                        <div id="dropzone" class="dropzone bg-gray-50 rounded-xl p-2 flex flex-col items-center justify-center text-center cursor-pointer relative overflow-hidden h-28">
-                            <input type="file" id="file-input" class="hidden" accept="image/*">
-                            <div id="dz-content" class="pointer-events-none flex flex-col items-center">
-                                <i data-lucide="image-plus" class="w-6 h-6 text-gray-400 mb-1"></i>
-                                <p class="text-[10px] font-semibold text-gray-500 px-2">Toca, arrastra o pega una imagen</p>
-                            </div>
-                            <img id="dz-preview" alt="" class="absolute inset-0 w-full h-full object-cover bg-black/5 hidden">
-                            <button type="button" id="dz-remove" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hidden hover:bg-red-600 z-10"><i data-lucide="x" class="w-3 h-3"></i></button>
-                        </div>
-                        <input type="file" id="file-camara" class="hidden" accept="image/*" capture="environment">
-                        <div class="grid grid-cols-2 gap-2">
-                            <button type="button" data-action="camara" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="camera" class="w-4 h-4"></i> Cámara</button>
-                            <button type="button" data-action="galeria" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="images" class="w-4 h-4"></i> Galería</button>
-                        </div>
-                        <button type="button" data-action="agregar-item" id="btn-agregar-item" class="w-full bg-cobalto text-white px-3 py-2.5 rounded-xl text-sm font-bold hover:bg-cobalto-oscuro flex items-center justify-center gap-1 shadow-md"></button>
-                        <button type="button" data-action="cancelar-edicion-item" id="btn-cancelar-edicion" class="hidden w-full text-gray-500 hover:text-gray-800 text-xs font-bold py-1">Cancelar edición</button>
-                    </div>
-                </div>
-
-                <div id="np-lista-wrap">
-                    <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2" id="np-lista-titulo">Productos del pedido</p>
-                    <div class="bg-gray-50 rounded-xl border border-gray-200 min-h-[120px] max-h-64 overflow-y-auto p-3 space-y-2" id="np-lista"></div>
-                </div>
+                <input type="file" id="file-input" class="hidden" accept="image/*">
+                <input type="file" id="file-camara" class="hidden" accept="image/*" capture="environment">
+                <div id="np-bloques" class="flex flex-col gap-4"></div>
+                <button type="button" data-action="agregar-bloque" id="btn-agregar-bloque" class="self-center bg-white border-2 border-dashed border-cobalto/40 hover:border-cobalto hover:bg-emerald-50 text-cobalto px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Agregar código</button>
             </div>
             <div class="p-4 md:p-6 bg-white border-t border-gray-100 flex justify-end gap-3 shrink-0">
                 <button type="button" data-action="cerrar-pedido" class="px-6 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50">Cancelar</button>
@@ -448,10 +434,12 @@
 
         const PATH = 'pedidos_v3';
         const ESTADOS_ACTIVOS = ['Pendiente', 'En Preparación'];
+        const TERMINADOS = ['Preparado', 'Recibido', 'Cancelado'];
         const ESTADOS = {
             'Pendiente':      { label: 'Pendiente',  emoji: '⏳', cls: 'bg-amber-100 text-amber-800' },
             'En Preparación': { label: 'En proceso', emoji: '📦', cls: 'bg-sky-100 text-sky-800' },
             'Preparado':      { label: 'Completado', emoji: '✅', cls: 'bg-emerald-100 text-emerald-800' },
+            'Recibido':       { label: 'Recibido',   emoji: '📥', cls: 'bg-teal-100 text-teal-800' },
             'Cancelado':      { label: 'Cancelado',  emoji: '🚫', cls: 'bg-gray-200 text-gray-600' }
         };
         const TIPO_CLS = { 'Consulta': 'bg-purple-100 text-purple-600', 'Reposición': 'bg-blue-100 text-blue-600', 'Programado': 'bg-orange-100 text-orange-600' };
@@ -476,11 +464,13 @@
             config: { sucursales: [], proveedores: [], lugares: [] },
             usuarios: [],
             activos: new Map(), rango: new Map(),
-            estadoPrevio: new Map(), conocidos: new Set(), cargado: { act: false, ran: false },
+            prev: new Map(), conocidos: new Set(), cargado: { act: false, ran: false },
             unsubs: [], unsubPedidos: [],
             vista: 'dashboard', filtroEstado: 'Activos', rangoDias: 14, orden: 'recientes', comprasModo: 'prov',
             items: [], editId: null, imgTmp: null, guardando: false, modo: 'individual', editItemIdx: null,
             detalle: null, recienCompletados: new Set(), textosCompra: new Map(),
+            expandidos: new Set(), filtroForma: 'todos', marcasCerradas: new Set(), vistaLista: leerPref('vistaLista', 'pedido'),
+            catalogo: new Map(), fotoTarget: 0, bloqueActivo: 0, notasVistas: leerPref('notasVistas', {}),
             avisos: leerPref('avisos', true)
         };
 
@@ -495,6 +485,13 @@
         const hoyISO = () => new Date().toLocaleDateString('en-CA'); // AAAA-MM-DD en hora local
         const fmtFechaISO = f => { const [a, m, d] = String(f).split('-'); return d ? `${d}/${m}/${a}` : f; };
         const esLog = () => S.perfil?.rol === 'logistica';
+        const autor = () => S.perfil?.nombre || S.perfil?.email || 'Usuario';
+        const esGrupo = p => (p.productos || []).length > 1;
+        // ---- Variaciones (talla, peso…) ----
+        const tieneVars = pr => Array.isArray(pr?.vars) && pr.vars.length > 0;
+        const parseValores = t => [...new Map(String(t || '').split(',').map(x => x.trim()).filter(Boolean).map(x => [norm(x), x])).values()].slice(0, 40);
+        const cantTotal = pr => tieneVars(pr) ? pr.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0) : toCant(pr.c);
+        const urgenteActivo = p => !!p.urgente && !TERMINADOS.includes(p.estado);
         const sucId = p => p.sucursalId ?? p.sucursal ?? '';
         const toCant = c => { if (c === null || c === undefined || c === '') return null; const n = Number(c); return Number.isFinite(n) && n > 0 ? n : null; };
         const fmtCant = c => toCant(c) ?? '?';
@@ -554,9 +551,10 @@
         function pedirPermisoNotif() {
             try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch { /* no soportado */ }
         }
-        function notificar(titulo, cuerpo) {
+        function notificar(titulo, cuerpo, urgente = false) {
             if (!S.avisos) return;
             beep();
+            if (urgente) { setTimeout(beep, 250); setTimeout(beep, 500); }
             toast(`${titulo} · ${cuerpo}`, 'info', 6000);
             try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification(titulo, { body: cuerpo }); } catch { /* móvil sin service worker */ }
         }
@@ -691,7 +689,7 @@
         function limpiarSuscripciones() {
             [...S.unsubs, ...S.unsubPedidos].forEach(u => { try { u(); } catch { /* ya cerrada */ } });
             S.unsubs = []; S.unsubPedidos = [];
-            S.activos.clear(); S.rango.clear(); S.estadoPrevio.clear(); S.conocidos.clear();
+            S.activos.clear(); S.rango.clear(); S.prev.clear(); S.conocidos.clear();
             S.cargado = { act: false, ran: false };
             S.usuarios = [];
         }
@@ -777,21 +775,46 @@
             const inicial = !S.cargado[cual];
             snap.docChanges().forEach(ch => {
                 const id = ch.doc.id, d = ch.doc.data();
-                if (!inicial && !ch.doc.metadata.hasPendingWrites) {
-                    if (ch.type === 'added' && !S.conocidos.has(id) && esLog() && d.creadoPor !== S.user?.uid) {
-                        notificar(`Nuevo pedido ${d.cod || ''}`, nombreSucursal(d));
-                    }
-                    const prev = S.estadoPrevio.get(id);
-                    if (ch.type === 'modified' && !esLog() && prev && prev !== d.estado) {
-                        notificar(`Pedido ${d.cod || ''}`, `Ahora está: ${ESTADOS[d.estado]?.label || d.estado}`);
-                    }
-                }
+                if (!inicial && !ch.doc.metadata.hasPendingWrites) avisosCambio(ch.type, id, d);
                 if (ch.type === 'removed') mapa.delete(id); else mapa.set(id, { id, ...d });
             });
             S.cargado[cual] = true;
-            for (const m of [S.activos, S.rango]) for (const [id, p] of m) { S.conocidos.add(id); S.estadoPrevio.set(id, p.estado); }
+            for (const m of [S.activos, S.rango]) for (const [id, p] of m) {
+                S.conocidos.add(id);
+                S.prev.set(id, { estado: p.estado, notas: (p.notas || []).length, urgente: !!p.urgente });
+            }
             actualizarAutocompletado();
             refrescar();
+        }
+
+        function avisosCambio(tipo, id, d) {
+            const cod = d.cod || '';
+            if (tipo === 'added' && !S.conocidos.has(id)) {
+                if (esLog() && d.creadoPor !== S.user?.uid) notificar(d.urgente ? `🔴 Pedido URGENTE ${cod}` : `Nuevo pedido ${cod}`, nombreSucursal(d), !!d.urgente);
+                return;
+            }
+            const prev = S.prev.get(id);
+            if (tipo !== 'modified' || !prev) return;
+            if (!esLog() && prev.estado !== d.estado) notificar(`Pedido ${cod}`, `Ahora está: ${ESTADOS[d.estado]?.label || d.estado}`);
+            if (esLog() && d.urgente && !prev.urgente) notificar(`🔴 ${cod} ahora es URGENTE`, nombreSucursal(d), true);
+            const n = (d.notas || []).length;
+            if (n > prev.notas) {
+                const u = d.notas[n - 1];
+                if (u && u.uid !== S.user?.uid) notificar(`💬 Nota en ${cod}`, `${u.por}: ${u.texto}`);
+            }
+        }
+
+        function notasNuevas(p) {
+            const visto = S.notasVistas[p.id] ?? 0;
+            return (p.notas || []).slice(visto).filter(n => n.uid !== S.user?.uid).length;
+        }
+        function marcarNotasVistas(p) {
+            const n = (p.notas || []).length;
+            if ((S.notasVistas[p.id] ?? 0) === n) return;
+            S.notasVistas[p.id] = n;
+            const claves = Object.keys(S.notasVistas);
+            if (claves.length > 600) claves.slice(0, claves.length - 400).forEach(k => delete S.notasVistas[k]);
+            guardarPref('notasVistas', S.notasVistas);
         }
 
         function todosPedidos() {
@@ -809,12 +832,16 @@
         }
 
         function actualizarAutocompletado() {
-            const n = new Set(), m = new Set(), c = new Set();
-            todosPedidos().forEach(p => (p.productos || []).forEach(pr => {
+            const n = new Set(), m = new Set(), c = new Set(), cod = new Set(), vn = new Set(['Talla', 'Peso', 'Color', 'Medida', 'Número']);
+            S.catalogo.clear();
+            todosPedidos().sort((a, b) => a.timestamp - b.timestamp).forEach(p => (p.productos || []).forEach(pr => {
                 if (pr.n) n.add(pr.n.trim()); if (pr.mar) m.add(pr.mar.trim()); if (pr.cat) c.add(pr.cat.trim());
+                if (pr.varNom) vn.add(pr.varNom.trim());
+                if (pr.s) { cod.add(pr.s.trim()); S.catalogo.set(norm(pr.s), { n: pr.n || '', mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '' }); }
             }));
             const opts = set => [...set].sort().map(v => `<option value="${esc(v)}">`).join('');
             $('dl-nombres').innerHTML = opts(n); $('dl-marcas').innerHTML = opts(m); $('dl-cats').innerHTML = opts(c);
+            $('dl-codigos').innerHTML = opts(cod); $('dl-varnom').innerHTML = opts(vn);
         }
 
         // ================== VISTA PEDIDOS ==================
@@ -829,14 +856,19 @@
                     : p.estado === S.filtroEstado;
                 if (!okE) return false;
                 if (suc !== 'Todas' && sucId(p) !== suc) return false;
+                if (S.filtroForma === 'individual' && esGrupo(p)) return false;
+                if (S.filtroForma === 'grupo' && !esGrupo(p)) return false;
                 if (!txt) return true;
                 const campos = [p.cod, p.cliente, p.contacto, nombreSucursal(p), p.tipo,
-                    ...(p.productos || []).flatMap(pr => [pr.n, pr.det, pr.mar, pr.cat, pr.s])];
+                    ...(p.productos || []).flatMap(pr => [pr.n, pr.det, pr.mar, pr.cat, pr.s, pr.varNom, ...(pr.vars || []).map(v => v.v)]),
+                    ...(p.notas || []).map(n => n.texto)];
                 return campos.some(c => norm(c).includes(txt));
             });
-            if (S.orden === 'antiguos') lista.sort((a, b) => a.timestamp - b.timestamp);
-            else if (S.orden === 'programados') lista.sort((a, b) => (a.fechaProg || '9999').localeCompare(b.fechaProg || '9999') || b.timestamp - a.timestamp);
-            else lista.sort((a, b) => b.timestamp - a.timestamp);
+            const base = S.orden === 'antiguos' ? (a, b) => a.timestamp - b.timestamp
+                : S.orden === 'programados' ? (a, b) => (a.fechaProg || '9999').localeCompare(b.fechaProg || '9999') || b.timestamp - a.timestamp
+                : (a, b) => b.timestamp - a.timestamp;
+            // Los urgentes sin terminar siempre van primero.
+            lista.sort((a, b) => (urgenteActivo(b) - urgenteActivo(a)) || base(a, b));
             return lista;
         }
 
@@ -846,7 +878,12 @@
             $('count-total').textContent = base.length;
             $('count-pendientes').textContent = base.filter(p => p.estado === 'Pendiente').length;
             $('count-proceso').textContent = base.filter(p => p.estado === 'En Preparación').length;
-            $('count-completados').textContent = base.filter(p => p.estado === 'Preparado').length;
+            const porRecibir = base.filter(p => p.estado === 'Preparado').length;
+            $('count-completados').textContent = porRecibir;
+            const banner = $('banner-recibir');
+            const verBanner = !esLog() && porRecibir > 0 && S.filtroEstado !== 'Preparado';
+            banner.classList.toggle('hidden', !verBanner);
+            if (verBanner) banner.innerHTML = `${icono('package-check', 'w-5 h-5')} ${porRecibir === 1 ? 'Tienes 1 pedido completado' : `Tienes ${porRecibir} pedidos completados`}. Confírmalo cuando te llegue →`;
 
             const lista = pedidosFiltrados();
             const vacio = lista.length === 0;
@@ -855,8 +892,18 @@
             $('empty-texto').textContent = (S.cargado.act && S.cargado.ran)
                 ? `No hay pedidos con estos filtros (los completados y cancelados se buscan en los últimos ${S.rangoDias} días).`
                 : 'Cargando pedidos…';
-            $('lista-pedidos').innerHTML = lista.map(filaPedido).join('');
+            const porMarca = S.vistaLista === 'marca';
+            $('cabecera-tabla').classList.toggle('md:grid', !porMarca);
+            $('lista-pedidos').innerHTML = porMarca ? renderPorMarca(lista) : lista.map(filaPedido).join('');
+            marcarVistaLista();
             pintarIconos();
+        }
+
+        function marcarVistaLista() {
+            document.querySelectorAll('#vista-lista button').forEach(b => {
+                const on = b.dataset.v === S.vistaLista;
+                b.classList.toggle('bg-cobalto', on); b.classList.toggle('text-white', on); b.classList.toggle('text-gray-500', !on);
+            });
         }
 
         function opcionesLista(lista, sel, vacio) {
@@ -882,14 +929,14 @@
         }
 
         function extrasProducto(pr) {
-            const partes = [pr.mar && `Marca: ${esc(pr.mar)}`, pr.cat && `Cat.: ${esc(pr.cat)}`, pr.s && `SKU: ${esc(pr.s)}`].filter(Boolean);
+            const partes = [pr.s && `<b class="text-gray-600">Cód. ${esc(pr.s)}</b>`, pr.mar && `Marca: ${esc(pr.mar)}`, pr.cat && `Cat.: ${esc(pr.cat)}`].filter(Boolean);
             return partes.length ? `<p class="text-[10px] text-gray-400 mt-0.5">${partes.join(' · ')}</p>` : '';
         }
 
         function infoProgramado(p) {
             if (p.tipo !== 'Programado' || !p.fechaProg) return '';
             const dias = Math.round((Date.parse(p.fechaProg) - Date.parse(hoyISO())) / 864e5);
-            const terminado = p.estado === 'Preparado' || p.estado === 'Cancelado';
+            const terminado = TERMINADOS.includes(p.estado);
             let txt = fmtFechaISO(p.fechaProg), cls = 'text-orange-600';
             if (!terminado) {
                 if (dias < 0) { cls = 'text-white bg-red-500 px-1.5 py-0.5 rounded'; txt += ' · Vencido'; }
@@ -919,44 +966,149 @@
             </select>`;
         }
 
-        function filaPedido(p) {
-            const log = esLog();
-            const bloqueado = p.estado === 'Cancelado';
+        function mosaico(p) {
             const productos = p.productos || [];
-            const idxFoto = Math.max(0, productos.findIndex(pr => safeUrl(pr.img)));
-            const fotoPrincipal = productos[idxFoto]?.img;
-            const fecha = new Date(p.timestamp);
+            const extra = productos.length - 4;
+            const celdas = productos.slice(0, 4).map((pr, i) => (i === 3 && extra > 0)
+                ? `<div class="flex items-center justify-center bg-gray-100 text-[11px] font-black text-gray-500">+${extra + 1}</div>`
+                : miniatura(pr.img, 'w-full h-full'));
+            return `<div class="w-full h-full grid grid-cols-2 grid-rows-2 gap-0.5 bg-white">${celdas.join('')}</div>`;
+        }
 
-            const pList = productos.map((pr, idx) => `
+        // Variantes como "fichas" con su propio check (cada una se marca por separado).
+        function htmlVars(p, pr, idx, conCheck = true) {
+            if (!tieneVars(pr)) return '';
+            const bloqueado = p?.estado === 'Cancelado';
+            const fichas = pr.vars.map((v, vi) => conCheck && p
+                ? `<label class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold cursor-pointer ${v.chk ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-700 hover:border-cobalto'}">
+                        <input type="checkbox" ${v.chk ? 'checked' : ''} ${bloqueado ? 'disabled' : ''} data-action="chk-var" data-id="${esc(p.id)}" data-idx="${idx}" data-vi="${vi}" class="w-3.5 h-3.5 accent-cobalto">
+                        <span class="${v.chk ? 'line-through' : ''}">${esc(v.v)}</span> <span class="text-cobalto">×${esc(fmtCant(v.c))}</span></label>`
+                : `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 bg-white text-xs font-bold ${v.chk ? 'line-through text-gray-400' : 'text-gray-700'}">${esc(v.v)} <span class="text-cobalto">×${esc(fmtCant(v.c))}</span></span>`).join('');
+            return `<div class="mt-1.5 flex flex-wrap items-center gap-1.5"><span class="text-[10px] font-bold text-gray-400 uppercase">${esc(pr.varNom || 'Variante')}:</span>${fichas}</div>`;
+        }
+
+        function detalleLinea(pr) {
+            return pr.det ? `<p class="text-xs text-gray-500 font-medium leading-snug">Detalle: <span class="text-gray-700">${esc(pr.det)}</span></p>` : '';
+        }
+
+        function lineaProducto(p, pr, idx, conCheck, conPedido = false) {
+            const bloqueado = p.estado === 'Cancelado';
+            const est = ESTADOS[p.estado] || ESTADOS.Pendiente;
+            const meta = conPedido ? `
+                <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                    ${urgenteActivo(p) ? '<span class="px-1.5 py-0.5 rounded bg-red-600 text-white uppercase">Urgente</span>' : ''}
+                    <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idx}" class="font-mono text-gray-700 hover:text-cobalto">${esc(p.cod)}</button>
+                    <span class="text-gray-400">· ${esc(nombreSucursal(p))} · ${esGrupo(p) ? 'Grupo' : 'Individual'}</span>
+                    <span class="px-1.5 py-0.5 rounded ${est.cls}">${est.emoji} ${est.label}</span>
+                </div>` : '';
+            return `
                 <div class="flex gap-3 py-2.5 border-b border-gray-100 last:border-0 items-start">
-                    <input type="checkbox" ${pr.chk ? 'checked' : ''} ${bloqueado ? 'disabled' : ''} data-action="chk" data-id="${esc(p.id)}" data-idx="${idx}" class="mt-1 w-4 h-4 accent-cobalto cursor-pointer shrink-0" title="Marcar como conseguido">
+                    ${conCheck && !tieneVars(pr) ? `<input type="checkbox" ${pr.chk ? 'checked' : ''} ${bloqueado ? 'disabled' : ''} data-action="chk" data-id="${esc(p.id)}" data-idx="${idx}" class="mt-1 w-4 h-4 accent-cobalto cursor-pointer shrink-0" title="Marcar como conseguido">` : (conCheck ? '<span class="w-4 shrink-0"></span>' : '')}
                     <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idx}" class="w-10 h-10 rounded-lg shrink-0 border border-gray-200 overflow-hidden">${miniatura(pr.img, 'w-full h-full')}</button>
                     <div class="flex-grow min-w-0">
-                        <p class="text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800 font-bold'}"><span class="text-cobalto">${esc(fmtCant(pr.c))}</span> × ${esc(pr.n)}</p>
-                        <p class="text-xs text-gray-500 font-medium leading-snug">Detalle: <span class="text-gray-700">${esc(pr.det)}</span></p>
+                        <p class="text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800 font-bold'}"><span class="text-cobalto">${esc(fmtCant(cantTotal(pr)))}</span> × ${esc(pr.n)}</p>
+                        ${detalleLinea(pr)}
                         ${extrasProducto(pr)}
-                        ${log ? selectsCompra(p, pr, idx) : chipsCompra(pr)}
+                        ${htmlVars(p, pr, idx, conCheck)}
+                        ${esLog() ? selectsCompra(p, pr, idx) : chipsCompra(pr)}
+                        ${meta}
                     </div>
-                </div>`).join('');
+                </div>`;
+        }
+
+        // ---- Vista "Por marca": junta productos de la misma marca de todos los pedidos filtrados ----
+        function renderPorMarca(lista) {
+            const grupos = new Map();
+            lista.forEach(p => (p.productos || []).forEach((pr, idx) => {
+                const k = norm(pr.mar);
+                if (!grupos.has(k)) grupos.set(k, { nombre: (pr.mar || '').trim(), items: [] });
+                grupos.get(k).items.push({ p, pr, idx });
+            }));
+            const claves = [...grupos.keys()].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b));
+            return claves.map(k => {
+                const g = grupos.get(k);
+                const pend = g.items.filter(x => !x.pr.chk).length;
+                const abierta = !S.marcasCerradas.has(k);
+                return `
+                <div class="border-b border-gray-200 last:border-0">
+                    <button type="button" data-action="toggle-marca" data-k="${esc(k)}" class="w-full flex items-center justify-between gap-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 text-left">
+                        <span class="flex items-center gap-2 font-black text-gray-800 uppercase tracking-wide min-w-0 truncate">${icono('tag', 'w-4 h-4 text-cobalto shrink-0')} ${esc(g.nombre || 'Sin marca')}</span>
+                        <span class="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0">${g.items.length} producto${g.items.length > 1 ? 's' : ''} · ${pend} por conseguir ${icono(abierta ? 'chevron-up' : 'chevron-down', 'w-4 h-4')}</span>
+                    </button>
+                    ${abierta ? `<div class="px-4">${g.items.map(x => lineaProducto(x.p, x.pr, x.idx, true, true)).join('')}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function filaPedido(p) {
+            const log = esLog();
+            const productos = p.productos || [];
+            const grupo = productos.length > 1;
+            const fecha = new Date(p.timestamp);
+            const urg = urgenteActivo(p);
+            const totalNotas = (p.notas || []).length, nuevas = notasNuevas(p);
+            const idxFoto = Math.max(0, productos.findIndex(pr => safeUrl(pr.img)));
+
+            // Columna FOTO: individual = su foto; grupo = mosaico.
+            const foto = `<button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${grupo ? idxFoto : 0}" class="w-16 h-16 rounded-xl border border-gray-200 overflow-hidden md:mx-auto block bg-gray-50 hover:ring-2 hover:ring-cobalto transition-all shadow-sm" title="Ver detalle completo">${grupo ? mosaico(p) : miniatura(productos[0]?.img, 'w-full h-full')}</button>`;
+
+            // Columna PRODUCTO
+            let producto;
+            if (!grupo) {
+                const pr = productos[0] || {};
+                producto = `
+                    <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="0" class="text-left">
+                        <p class="text-[15px] font-bold text-gray-800 hover:text-cobalto"><span class="text-cobalto">${esc(fmtCant(cantTotal(pr)))} ×</span> ${esc(pr.n)}</p>
+                    </button>
+                    ${detalleLinea(pr)}
+                    ${extrasProducto(pr)}
+                    ${htmlVars(p, pr, 0, true)}
+                    ${productos.length ? (log ? selectsCompra(p, pr, 0) : chipsCompra(pr)) : ''}`;
+            } else {
+                const hechos = productos.filter(pr => pr.chk).length;
+                const pct = Math.round(hechos / productos.length * 100);
+                const abierto = S.expandidos.has(p.id);
+                const resumen = productos.slice(0, 3).map(pr => pr.n).join(', ') + (productos.length > 3 ? '…' : '');
+                producto = `
+                    <button type="button" data-action="toggle-grupo" data-id="${esc(p.id)}" class="text-left w-full">
+                        <p class="text-[15px] font-bold text-gray-800 flex items-center gap-2">${icono('layers', 'w-4 h-4 text-cobalto')} Grupo · ${productos.length} productos ${icono(abierto ? 'chevron-up' : 'chevron-down', 'w-4 h-4 text-gray-400')}</p>
+                        <p class="text-xs text-gray-500 font-medium truncate">${esc(resumen)}</p>
+                    </button>
+                    <div class="flex items-center gap-2 mt-2 max-w-sm">
+                        <div class="flex-grow h-1.5 rounded-full bg-gray-100 overflow-hidden"><div class="h-full rounded-full bg-emerald-500" style="width:${pct}%"></div></div>
+                        <span class="text-[11px] font-bold text-gray-500 shrink-0">${hechos} de ${productos.length}</span>
+                    </div>
+                    ${abierto ? `<div class="mt-2">${productos.map((pr, idx) => lineaProducto(p, pr, idx, true)).join('')}</div>` : ''}
+                    <button type="button" data-action="toggle-grupo" data-id="${esc(p.id)}" class="mt-2 text-xs font-bold text-cobalto hover:underline">${abierto ? 'Ocultar productos' : 'Ver productos'}</button>`;
+            }
+
+            const notasBadge = totalNotas ? `
+                <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idxFoto}" class="mt-2 inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg ${nuevas ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-gray-100 text-gray-600'}">
+                    ${icono('message-circle', 'w-3 h-3')} ${totalNotas} nota${totalNotas > 1 ? 's' : ''}${nuevas ? ` · ${nuevas} nueva${nuevas > 1 ? 's' : ''}` : ''}
+                </button>` : '';
+
+            const btnRecibido = (!log && p.estado === 'Preparado' && sucId(p) === S.perfil.sucursalId)
+                ? `<button type="button" data-action="recibido" data-id="${esc(p.id)}" class="mt-2 w-full text-xs font-bold px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center gap-1">${icono('package-check', 'w-4 h-4')} Confirmar recibido</button>` : '';
 
             return `
-            <div class="grid grid-cols-[64px_1fr] md:grid-cols-[80px_190px_170px_1fr_170px] gap-x-4 gap-y-2 p-4 hover:bg-gray-50/50 transition-colors ${S.recienCompletados.has(p.id) ? 'fade-out-row' : ''} ${bloqueado ? 'opacity-60' : ''}">
-                <div class="md:text-center">
-                    <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idxFoto}" class="w-14 h-14 rounded-xl border border-gray-200 overflow-hidden md:mx-auto block bg-gray-50 hover:ring-2 hover:ring-cobalto transition-all shadow-sm" title="Ver detalle completo">${miniatura(fotoPrincipal, 'w-full h-full')}</button>
-                </div>
-                <div class="min-w-0">
+            <div class="grid grid-cols-[64px_1fr] md:grid-cols-[80px_1fr_180px_160px_170px] gap-x-4 gap-y-2 p-4 transition-colors ${urg ? 'border-l-4 border-red-500 bg-red-50/40' : 'hover:bg-gray-50/50'} ${S.recienCompletados.has(p.id) ? 'fade-out-row' : ''} ${p.estado === 'Cancelado' ? 'opacity-60' : ''}">
+                <div class="md:text-center">${foto}</div>
+                <div class="min-w-0">${producto}</div>
+                <div class="col-start-2 md:col-start-auto min-w-0">
                     <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idxFoto}" class="font-mono font-black text-sm text-gray-900 hover:text-cobalto">${esc(p.cod)}</button>
                     <p class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">${icono('clock', 'w-3 h-3')} ${fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })} · ${fecha.toLocaleDateString('es-PE')}</p>
                     ${infoCliente(p)}
+                    ${notasBadge}
                 </div>
                 <div class="col-start-2 md:col-start-auto min-w-0">
+                    ${urg ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white mb-1.5">${icono('siren', 'w-3 h-3')} Urgente</span><br>` : ''}
                     <p class="text-xs font-bold text-gray-800 flex items-center gap-1">${icono('store', 'w-3 h-3 text-cobalto')} ${esc(nombreSucursal(p))}</p>
                     <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-2 ${TIPO_CLS[p.tipo] || 'bg-gray-100 text-gray-600'}">${esc(p.tipo)}</span>
                     ${infoProgramado(p)}
                 </div>
-                <div class="col-span-2 md:col-span-1 min-w-0">${pList}</div>
                 <div class="col-span-2 md:col-span-1 md:text-center">
                     ${selectEstado(p, 'text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer w-full text-center')}
+                    ${btnRecibido}
                 </div>
             </div>`;
         }
@@ -982,17 +1134,23 @@
 
             const est = ESTADOS[p.estado] || ESTADOS.Pendiente;
             const editable = puedeEditar(p);
-            const cancelable = !['Preparado', 'Cancelado'].includes(p.estado) && editable;
+            const cancelable = !TERMINADOS.includes(p.estado) && editable;
+            const puedeRecibir = p.estado === 'Preparado' && (esLog() || sucId(p) === S.perfil.sucursalId);
+            const puedeUrgente = !TERMINADOS.includes(p.estado) && (esLog() || sucId(p) === S.perfil.sucursalId);
             $('mdi-cabecera').innerHTML = `
                 <h3 class="font-black text-2xl text-cobalto pr-10">${esc(p.cod)}</h3>
                 <p class="text-xs font-bold text-gray-500 mt-1 flex items-center gap-1">${icono('clock', 'w-3 h-3')} ${esc(new Date(p.timestamp).toLocaleString('es-PE'))}</p>
                 <p class="text-xs font-bold text-gray-500 mt-1 flex items-center gap-1">${icono('store', 'w-3 h-3')} ${esc(nombreSucursal(p))}${p.creadoPorNombre ? ` · por ${esc(p.creadoPorNombre)}` : ''}</p>
                 <div class="mt-3 flex flex-wrap gap-2">
+                    ${urgenteActivo(p) ? `<span class="px-3 py-1.5 rounded-lg text-xs font-black uppercase bg-red-600 text-white">🔴 Urgente</span>` : ''}
                     <span class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${est.cls}">${est.emoji} ${est.label}</span>
+                    ${esGrupo(p) ? `<span class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase bg-gray-100 text-gray-600">Grupo · ${productos.length}</span>` : ''}
                     <span class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${TIPO_CLS[p.tipo] || 'bg-gray-100 text-gray-600'}">${esc(p.tipo)}</span>
                 </div>
                 ${infoProgramado(p)}
                 <div class="mt-4 flex flex-wrap gap-2">
+                    ${puedeRecibir ? `<button type="button" data-action="recibido" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-1">${icono('package-check', 'w-3.5 h-3.5')} Confirmar recibido</button>` : ''}
+                    ${puedeUrgente ? `<button type="button" data-action="urgente" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border ${p.urgente ? 'border-gray-200 text-gray-600' : 'border-red-200 text-red-600'} hover:bg-red-50 flex items-center gap-1">${icono('siren', 'w-3.5 h-3.5')} ${p.urgente ? 'Quitar urgente' : 'Marcar urgente'}</button>` : ''}
                     ${editable ? `<button type="button" data-action="editar-pedido" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 hover:bg-gray-100 flex items-center gap-1">${icono('pencil', 'w-3.5 h-3.5')} Editar</button>` : ''}
                     ${cancelable ? `<button type="button" data-action="cancelar-pedido" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 hover:bg-gray-100 text-amber-700 flex items-center gap-1">${icono('ban', 'w-3.5 h-3.5')} Cancelar pedido</button>` : ''}
                     ${esLog() ? `<button type="button" data-action="eliminar-pedido" data-id="${esc(p.id)}" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-red-200 hover:bg-red-50 text-red-600 flex items-center gap-1">${icono('trash-2', 'w-3.5 h-3.5')} Eliminar</button>` : ''}
@@ -1003,9 +1161,10 @@
                     <div class="flex items-start gap-3">
                         <button type="button" data-action="det-img" data-idx="${i}" class="w-16 h-16 rounded-xl overflow-hidden border border-gray-200 shrink-0 hover:opacity-80" title="Ver en grande">${miniatura(pr.img, 'w-full h-full')}</button>
                         <div class="flex-grow min-w-0">
-                            <p class="font-bold text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800'}"><span class="text-cobalto">${esc(fmtCant(pr.c))}×</span> ${esc(pr.n)}</p>
-                            <p class="text-xs text-gray-500 font-medium mt-1 leading-relaxed">${esc(pr.det)}</p>
+                            <p class="font-bold text-sm ${pr.chk ? 'line-through text-gray-400' : 'text-gray-800'}"><span class="text-cobalto">${esc(fmtCant(cantTotal(pr)))}×</span> ${esc(pr.n)}</p>
+                            ${pr.det ? `<p class="text-xs text-gray-500 font-medium mt-1 leading-relaxed">${esc(pr.det)}</p>` : ''}
                             ${extrasProducto(pr)}
+                            ${htmlVars(p, pr, i, true)}
                             ${esLog() ? '' : chipsCompra(pr)}
                         </div>
                         ${editable ? `<button type="button" data-action="editar-producto" data-id="${esc(p.id)}" data-idx="${i}" class="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg shrink-0" title="Editar este producto">${icono('pencil')}</button>` : ''}
@@ -1016,53 +1175,128 @@
             const hist = (p.historial || []).slice().reverse().slice(0, 20).map(h => `
                 <li class="text-xs text-gray-600 flex gap-2"><span class="text-gray-400 shrink-0">${esc(new Date(h.ts).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}</span><span><b>${esc(h.por)}</b>: ${esc(h.accion)}</span></li>`).join('');
 
-            $('mdi-cuerpo').innerHTML = `
+            const notas = (p.notas || []).map(n => {
+                const mia = n.uid === S.user?.uid;
+                return `<div class="flex ${mia ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[85%] px-3 py-2 rounded-2xl text-sm ${mia ? 'bg-cobalto text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}">
+                        <p class="text-[10px] font-bold ${mia ? 'text-emerald-100' : 'text-gray-500'}">${esc(n.por)} · ${esc(new Date(n.ts).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}</p>
+                        <p class="whitespace-pre-wrap break-words">${esc(n.texto)}</p>
+                    </div></div>`;
+            }).join('');
+
+            const cuerpo = $('mdi-cuerpo');
+            const scroll = cuerpo.scrollTop;
+            cuerpo.innerHTML = `
                 ${infoCliente(p, true)}
                 <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Productos (${productos.length})</h4>
                 ${prods}
+                <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2 flex items-center gap-1">${icono('message-circle', 'w-3.5 h-3.5')} Notas</h4>
+                ${notas ? `<div class="space-y-2" id="mdi-notas">${notas}</div>` : '<p class="text-xs text-gray-400 mb-2">Sin notas. Escribe abajo para coordinar con la tienda o con Logística.</p>'}
                 ${hist ? `<h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2 flex items-center gap-1">${icono('history', 'w-3.5 h-3.5')} Historial</h4><ul class="space-y-1.5">${hist}</ul>` : ''}`;
+            cuerpo.scrollTop = scroll;
+            marcarNotasVistas(p);
             pintarIconos();
         }
 
         // ================== ESCRITURA SEGURA (transacciones) ==================
         // Cada cambio lee la versión más reciente del pedido y la modifica dentro de una transacción,
         // así dos personas editando a la vez ya no se pisan los cambios.
-        async function mutarPedido(id, fn, accion) {
+        async function mutarPedido(id, fn, accion = null) {
             const r = doc(db, PATH, id);
             await runTransaction(db, async tx => {
                 const s = await tx.get(r);
                 if (!s.exists()) throw new Error('El pedido ya no existe.');
                 const p = s.data();
                 const cambios = fn(p) || {};
-                cambios.historial = [...(p.historial || []), { ts: Date.now(), por: S.perfil.nombre || S.perfil.email || 'Usuario', accion }].slice(-60);
+                if (accion) cambios.historial = [...(p.historial || []), { ts: Date.now(), por: autor(), accion }].slice(-60);
                 cambios.actualizado = Date.now();
                 tx.update(r, cambios);
             });
         }
 
-        async function toggleChk(id, idx) {
+        function marcarRecienCompletado(id) {
+            if (S.filtroEstado !== 'Activos') return;
+            S.recienCompletados.add(id);
+            setTimeout(() => { S.recienCompletados.delete(id); refrescar(); }, 6000);
+        }
+
+        function aplicarToggle(x, vi) {
+            if (vi === null || !tieneVars(x)) {
+                const chk = !x.chk;
+                const r = { ...x, chk, chkAuto: false };
+                if (tieneVars(x)) r.vars = x.vars.map(v => ({ ...v, chk, chkAuto: false }));
+                return r;
+            }
+            const vars = x.vars.map((v, i) => i === vi ? { ...v, chk: !v.chk, chkAuto: false } : v);
+            return { ...x, vars, chk: vars.every(v => v.chk), chkAuto: false };
+        }
+        function marcarTodo(pr) {
+            const r = pr.chk ? { ...pr } : { ...pr, chk: true, chkAuto: true };
+            if (tieneVars(pr)) r.vars = pr.vars.map(v => v.chk ? v : { ...v, chk: true, chkAuto: true });
+            return r;
+        }
+        function desmarcarAuto(pr) {
+            const r = pr.chkAuto ? { ...pr, chk: false, chkAuto: false } : { ...pr };
+            if (tieneVars(pr)) { r.vars = pr.vars.map(v => v.chkAuto ? { ...v, chk: false, chkAuto: false } : v); r.chk = r.vars.every(v => v.chk); }
+            return r;
+        }
+
+        // Marca un producto (o una variante). Al conseguir lo último, el pedido pasa solo a "Completado".
+        async function toggleMarca(id, idx, vi = null) {
+            const local = pedidoPorId(id);
+            const pr = local?.productos?.[idx];
+            if (!pr) return;
+            const antes = local.productos.every(x => x.chk);
+            const despues = local.productos.map((x, i) => i === idx ? aplicarToggle(x, vi) : x).every(x => x.chk);
+            const completaria = !antes && despues && ESTADOS_ACTIVOS.includes(local.estado);
+            if (completaria) marcarRecienCompletado(id);
+            const que = vi !== null && tieneVars(pr) ? `"${pr.n}" ${pr.varNom || ''} ${pr.vars[vi]?.v || ''}` : `"${pr.n}"`;
+            const marcado = vi !== null && tieneVars(pr) ? pr.vars[vi]?.chk : pr.chk;
             try {
                 await mutarPedido(id, p => {
-                    const productos = (p.productos || []).map((pr, i) => i === idx ? { ...pr, chk: !pr.chk, chkAuto: false } : pr);
-                    return { productos };
-                }, `${pedidoPorId(id)?.productos?.[idx]?.chk ? 'Desmarcó' : 'Marcó'} "${pedidoPorId(id)?.productos?.[idx]?.n || 'producto'}"`);
-            } catch (e) { toast(mensajeError(e), 'error'); refrescar(); }
+                    const productos = (p.productos || []).map((x, i) => i === idx ? aplicarToggle(x, vi) : x);
+                    const todos = productos.length > 0 && productos.every(x => x.chk);
+                    return (todos && ESTADOS_ACTIVOS.includes(p.estado)) ? { productos, estado: 'Preparado' } : { productos };
+                }, `${marcado ? 'Desmarcó' : 'Marcó'} ${que}${completaria ? ' · pedido completado' : ''}`);
+                if (completaria) toast(`${local.cod} completado: se consiguió todo`, 'ok');
+            } catch (e) { S.recienCompletados.delete(id); toast(mensajeError(e), 'error'); refrescar(); }
         }
 
         async function cambiarEstado(id, est) {
             if (est === 'Cancelado' && !confirm('¿Cancelar este pedido?')) { refrescar(); return; }
-            if (est === 'Preparado' && S.filtroEstado === 'Activos') {
-                S.recienCompletados.add(id);
-                setTimeout(() => { S.recienCompletados.delete(id); refrescar(); }, 6000);
-            } else S.recienCompletados.delete(id);
+            if (est === 'Preparado') marcarRecienCompletado(id); else S.recienCompletados.delete(id);
             try {
                 await mutarPedido(id, p => {
                     let productos = p.productos || [];
-                    if (est === 'Preparado') productos = productos.map(pr => pr.chk ? pr : { ...pr, chk: true, chkAuto: true });
-                    else if (p.estado === 'Preparado') productos = productos.map(pr => pr.chkAuto ? { ...pr, chk: false, chkAuto: false } : pr);
+                    const listo = e => e === 'Preparado' || e === 'Recibido';
+                    if (listo(est)) productos = productos.map(marcarTodo);
+                    else if (listo(p.estado) && ESTADOS_ACTIVOS.includes(est)) productos = productos.map(desmarcarAuto);
                     return { estado: est, productos };
                 }, `Cambió el estado a "${ESTADOS[est]?.label || est}"`);
+                if (est === 'Recibido') toast('Recepción confirmada', 'ok');
             } catch (e) { S.recienCompletados.delete(id); toast(mensajeError(e), 'error'); refrescar(); }
+        }
+
+        async function toggleUrgente(id) {
+            const local = pedidoPorId(id);
+            try {
+                await mutarPedido(id, p => ({ urgente: !p.urgente }), local?.urgente ? 'Quitó la marca de urgente' : 'Marcó como URGENTE');
+            } catch (e) { toast(mensajeError(e), 'error'); }
+        }
+
+        async function enviarNota() {
+            const input = $('mdi-nota-input');
+            const texto = input.value.trim();
+            if (!texto || !S.detalle) return;
+            const btn = $('btn-enviar-nota'); btn.disabled = true;
+            try {
+                await mutarPedido(S.detalle.id, p => ({
+                    notas: [...(p.notas || []), { ts: Date.now(), uid: S.user.uid, por: autor(), rol: S.perfil.rol, texto }].slice(-100)
+                }));
+                input.value = '';
+                setTimeout(() => { const n = $('mdi-notas'); if (n) n.lastElementChild?.scrollIntoView({ block: 'nearest' }); }, 50);
+            } catch (e) { toast('No se pudo enviar la nota: ' + mensajeError(e), 'error'); }
+            finally { btn.disabled = false; input.focus(); }
         }
 
         async function actDatoCompra(id, idx, campo, valor) {
@@ -1089,13 +1323,23 @@
         }
 
         // ================== NUEVO / EDITAR PEDIDO ==================
+        // ---- Bloques de producto (Individual = 1 bloque; Grupo = Código 1, Código 2…) ----
+        const nuevoBloque = () => ({ _key: nuevoId(), c: 1, n: '', det: '', s: '', mar: '', cat: '', varNom: '', varVals: '', vars: [],
+            prov: '', lugar: '', chk: false, chkAuto: false, img: null, _blob: null, _dataUrl: null, _preview: null });
+        const desdeProducto = pr => ({ ...nuevoBloque(), ...pr, _key: nuevoId(),
+            varNom: pr.varNom || '', vars: (pr.vars || []).map(v => ({ ...v })), varVals: (pr.vars || []).map(v => v.v).join(', '),
+            _blob: null, _dataUrl: null, _preview: null });
+        const bloqueVacio = it => !String(it.n).trim() && !String(it.det).trim() && !String(it.s).trim() && !it.vars.length && !it.img && !it._dataUrl;
+        const totalVars = it => it.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
+
         function abrirModalPedido(p = null, idxProducto = null) {
             if (p && !puedeEditar(p)) return toast('Solo se puede editar mientras está Pendiente.', 'warn');
             cerrarDetalleSiAbierto();
             S.editId = p?.id || null;
-            S.items = p ? (p.productos || []).map(pr => ({ ...pr })) : [];
-            S.editItemIdx = null;
-            S.modo = p ? (S.items.length > 1 ? 'lista' : 'individual') : leerPref('modoPedido', 'individual');
+            S.items = p ? (p.productos || []).map(desdeProducto) : [nuevoBloque()];
+            if (!S.items.length) S.items = [nuevoBloque()];
+            const pref = leerPref('modoPedido', 'individual');
+            S.modo = p ? (S.items.length > 1 ? 'grupo' : 'individual') : (pref === 'lista' ? 'grupo' : pref);
             $('np-titulo').textContent = p ? `Editar ${p.cod}` : 'Crear Nuevo Pedido';
             $('btn-guardar-pedido').querySelector('span').textContent = p ? 'Guardar cambios' : 'Enviar Pedido';
 
@@ -1110,156 +1354,192 @@
             $('np-fecha-prog').min = p ? '' : hoyISO();
             $('np-cliente').value = p?.cliente || '';
             $('np-contacto').value = p?.contacto || '';
-            limpiarCamposProducto();
+            $('np-urgente').checked = !!p?.urgente;
             toggleFechaProg();
             $('modal-pedido').classList.remove('hidden');
-            if (S.modo === 'individual' && S.items.length === 1) cargarItem(0);
-            else if (idxProducto !== null && S.items[idxProducto]) cargarItem(idxProducto);
-            aplicarModo();
-            pintarItems();
-            setTimeout(() => $('np-nombre').focus(), 50);
+            renderBloques();
+            const destinoIdx = idxProducto !== null && S.items[idxProducto] ? idxProducto : 0;
+            setTimeout(() => {
+                const b = $(`bloque-${destinoIdx}`);
+                if (idxProducto !== null && b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); b.classList.add('ring-2', 'ring-amber-300'); setTimeout(() => b.classList.remove('ring-2', 'ring-amber-300'), 2500); }
+                b?.querySelector('[data-f="n"]')?.focus();
+            }, 80);
         }
 
-        // ---- Modo Individual / Lista ----
         function aplicarModo() {
             const ind = S.modo === 'individual';
-            const editando = S.editItemIdx !== null;
             document.querySelectorAll('#np-modo button').forEach(b => {
                 const on = b.dataset.modo === S.modo;
                 b.classList.toggle('bg-cobalto', on); b.classList.toggle('text-white', on); b.classList.toggle('text-gray-500', !on);
             });
-            $('np-modo-ayuda').textContent = ind ? 'Un solo producto: llénalo y envía.' : 'Varios productos: añade cada uno a la lista y luego envía.';
-            $('np-lista-wrap').classList.toggle('hidden', ind);
-            $('btn-agregar-item').classList.toggle('hidden', ind);
-            $('btn-cancelar-edicion').classList.toggle('hidden', ind || !editando);
-            $('btn-agregar-item').innerHTML = editando ? `${icono('check')} Guardar producto` : `${icono('plus')} Añadir a Lista`;
-            $('np-label-producto').textContent = ind ? 'Producto' : (editando ? `Editando producto ${S.editItemIdx + 1}` : 'Añadir producto');
-            const card = $('np-card-producto');
-            card.classList.toggle('ring-2', !ind && editando); card.classList.toggle('ring-amber-300', !ind && editando);
-            $('np-lista-titulo').textContent = `Productos del pedido (${S.items.length})`;
-            pintarIconos();
+            $('np-modo-ayuda').textContent = ind ? 'Un solo producto.' : 'Varios productos: cada código con su foto y sus variaciones.';
+            $('btn-agregar-bloque').classList.toggle('hidden', ind);
         }
-
-        function hayProductoEscrito() { return !!($('np-nombre').value.trim() || $('np-detalle').value.trim()); }
 
         function cambiarModo(m) {
             if (m === S.modo) return;
             if (m === 'individual') {
-                const total = S.items.length + (hayProductoEscrito() && S.editItemIdx === null ? 1 : 0);
-                if (total > 1) return toast('Este pedido tiene varios productos. Déjalo en Lista, o quita productos hasta dejar uno.', 'warn', 6000);
-                if (S.items.length === 1 && S.editItemIdx === null) cargarItem(0);
+                const conDatos = S.items.filter(it => !bloqueVacio(it));
+                if (conDatos.length > 1) return toast('Este pedido tiene varios códigos. Déjalo en Grupo, o elimina códigos hasta dejar uno.', 'warn', 6000);
+                S.items = conDatos.length ? conDatos : [S.items[0] || nuevoBloque()];
             }
             S.modo = m;
             if (!S.editId) guardarPref('modoPedido', m);
-            aplicarModo();
-            pintarItems();
+            renderBloques();
         }
 
-        // Carga un producto de la lista en el formulario para editarlo.
-        function cargarItem(idx) {
-            const it = S.items[idx];
+        function fotoHTML(it, i) {
+            const src = it._preview || safeUrl(it.img);
+            return `
+                <div data-action="galeria" data-b="${i}" class="foto-zona dropzone bg-gray-50 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer relative overflow-hidden h-32" title="Toca, arrastra o pega una imagen">
+                    ${src ? `<img src="${esc(src)}" alt="" class="absolute inset-0 w-full h-full object-cover">
+                             <button type="button" data-action="quitar-foto" data-b="${i}" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 z-10" title="Quitar foto">${icono('x', 'w-3 h-3')}</button>`
+                          : `${icono('image-plus', 'w-6 h-6 text-gray-400 mb-1 pointer-events-none')}<p class="text-[10px] font-semibold text-gray-500 px-2 pointer-events-none">Toca, arrastra o pega</p>`}
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" data-action="camara" data-b="${i}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1">${icono('camera')} Cámara</button>
+                    <button type="button" data-action="galeria" data-b="${i}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1">${icono('images')} Galería</button>
+                </div>`;
+        }
+
+        function cantHTML(it, i) {
+            return it.vars.length
+                ? `<div class="h-[38px] flex items-center justify-center bg-emerald-50 border border-emerald-200 text-cobalto rounded-xl text-sm font-black" title="Suma de las variantes">Σ ${totalVars(it)}</div>`
+                : `<input type="number" data-b="${i}" data-f="c" value="${esc(it.c ?? '')}" min="0" step="1" inputmode="numeric" placeholder="Cant." title="Deja vacío si no sabes la cantidad" class="w-full h-[38px] px-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-center outline-none focus:border-cobalto">`;
+        }
+
+        function varsQtyHTML(it, i) {
+            if (!it.vars.length) return `<p class="text-[11px] text-gray-400">Ej.: Talla → S, M, L · Peso → 2kg, 4kg. Cada valor tendrá su propia cantidad.</p>`;
+            return `<div class="flex flex-wrap gap-2">${it.vars.map((v, vi) => `
+                <label class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg pl-2 pr-1 py-1 text-xs font-bold text-gray-700">
+                    ${esc(v.v)}
+                    <input type="number" min="0" step="1" inputmode="numeric" data-b="${i}" data-f="varC" data-vi="${vi}" value="${esc(v.c ?? '')}" placeholder="0" class="w-14 px-1.5 py-1 bg-gray-50 border border-gray-200 rounded text-center outline-none focus:border-cobalto">
+                </label>`).join('')}</div>
+                <p class="text-[10px] text-gray-400 mt-1.5">Las variantes en 0 o vacías no se guardan.</p>`;
+        }
+
+        function bloqueHTML(it, i) {
+            const grupo = S.modo === 'grupo';
+            const campo = 'bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:border-cobalto';
+            return `
+            <div id="bloque-${i}" data-b="${i}" class="bloque bg-white p-4 rounded-2xl border border-gray-200 shadow-sm transition-all">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[11px] font-black text-cobalto uppercase tracking-wider flex items-center gap-1">${icono(grupo ? 'hash' : 'package', 'w-3.5 h-3.5')} ${grupo ? `Código ${i + 1}` : 'Producto'}</p>
+                    ${grupo && S.items.length > 1 ? `<button type="button" data-action="quitar-bloque" data-b="${i}" class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar este código">${icono('trash-2')}</button>` : ''}
+                </div>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-grow space-y-2.5 min-w-0">
+                        <div class="grid grid-cols-[72px_minmax(0,1fr)] sm:grid-cols-[72px_120px_minmax(0,1fr)] gap-2">
+                            <div id="cant-${i}">${cantHTML(it, i)}</div>
+                            <input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código" title="Código del producto o modelo (opcional)" class="h-[38px] px-3 ${campo} hidden sm:block">
+                            <input type="text" data-b="${i}" data-f="n" value="${esc(it.n)}" list="dl-nombres" maxlength="120" placeholder="Nombre del producto *" class="h-[38px] px-3 ${campo}">
+                        </div>
+                        <input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código del producto (opcional)" class="w-full h-[38px] px-3 ${campo} sm:hidden">
+                        <div class="relative">
+                            <input type="text" data-b="${i}" data-f="det" value="${esc(it.det)}" maxlength="300" placeholder="Detalle: color, modelo, medida… (obligatorio si no usas variaciones)" class="w-full pl-3 pr-10 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-sm font-medium text-yellow-900 placeholder-yellow-600/70 outline-none focus:border-yellow-400">
+                            <button type="button" data-action="dictado" data-b="${i}" class="btn-dictado absolute right-2 top-1/2 -translate-y-1/2 text-yellow-700 hover:text-yellow-900 bg-yellow-100 hover:bg-yellow-200 p-1.5 rounded-lg" title="Dictado por voz">${icono('mic')}</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" data-b="${i}" data-f="mar" value="${esc(it.mar)}" list="dl-marcas" maxlength="60" placeholder="Marca (opc.)" class="px-3 py-2 ${campo} text-xs">
+                            <input type="text" data-b="${i}" data-f="cat" value="${esc(it.cat)}" list="dl-cats" maxlength="60" placeholder="Categoría (opc.)" class="px-3 py-2 ${campo} text-xs">
+                        </div>
+                        <div class="rounded-xl border border-dashed border-gray-300 p-2.5 bg-gray-50/60">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-1.5 flex items-center gap-1">${icono('ruler', 'w-3.5 h-3.5')} Variaciones (opcional)</p>
+                            <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
+                                <input type="text" data-b="${i}" data-f="varNom" value="${esc(it.varNom)}" list="dl-varnom" maxlength="30" placeholder="Talla, Peso…" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-cobalto">
+                                <input type="text" data-b="${i}" data-f="varVals" value="${esc(it.varVals)}" maxlength="300" placeholder="S, M, L, XL  (separa con comas)" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
+                            </div>
+                            <div id="vars-${i}" class="mt-2">${varsQtyHTML(it, i)}</div>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-40 shrink-0 flex flex-col gap-2" id="foto-${i}">${fotoHTML(it, i)}</div>
+                </div>
+            </div>`;
+        }
+
+        function renderBloques() {
+            aplicarModo();
+            $('np-bloques').innerHTML = S.items.map(bloqueHTML).join('');
+            pintarIconos();
+        }
+        function renderFoto(i) { const c = $(`foto-${i}`); if (c) { c.innerHTML = fotoHTML(S.items[i], i); pintarIconos(); } }
+        function actualizarCant(i) {
+            const it = S.items[i], cell = $(`cant-${i}`);
+            if (!it || !cell) return;
+            if (it.vars.length || !cell.querySelector('input')) cell.innerHTML = cantHTML(it, i);
+        }
+
+        function agregarBloque() {
+            S.items.push(nuevoBloque());
+            renderBloques();
+            const i = S.items.length - 1;
+            setTimeout(() => { const b = $(`bloque-${i}`); b?.scrollIntoView({ block: 'center', behavior: 'smooth' }); b?.querySelector('[data-f="n"]')?.focus(); }, 50);
+        }
+        function quitarBloque(i) {
+            const it = S.items[i];
             if (!it) return;
-            if (S.modo === 'lista' && S.editItemIdx === null && hayProductoEscrito()
-                && !confirm('Tienes un producto escrito sin añadir. ¿Descartarlo para editar este?')) return;
-            S.editItemIdx = idx;
-            $('np-cant').value = toCant(it.c) ?? '';
-            $('np-nombre').value = it.n || '';
-            $('np-detalle').value = it.det || '';
-            $('np-sku').value = it.s || '';
-            $('np-marca').value = it.mar || '';
-            $('np-cat').value = it.cat || '';
-            soltarFoto();
-            const prev = it._preview || safeUrl(it.img);
-            if (prev) {
-                const nueva = !!(it._dataUrl || it._blob);
-                S.imgTmp = { dataUrl: it._dataUrl || null, blob: it._blob || null, preview: prev, img: nueva ? null : (it.img || null), deItem: true };
-                mostrarPreviewFoto(prev);
+            if (!bloqueVacio(it) && !confirm(`¿Eliminar el Código ${i + 1}${it.n ? ` (${it.n})` : ''}?`)) return;
+            if (it._preview?.startsWith('blob:')) URL.revokeObjectURL(it._preview);
+            S.items.splice(i, 1);
+            if (!S.items.length) S.items.push(nuevoBloque());
+            renderBloques();
+        }
+
+        // Escribir en un bloque actualiza el estado sin redibujar (no se pierde el cursor).
+        $('np-bloques').addEventListener('input', (e) => {
+            const el = e.target, f = el.dataset.f, i = Number(el.dataset.b), it = S.items[i];
+            if (!it || !f) return;
+            if (f === 'varC') { const v = it.vars[Number(el.dataset.vi)]; if (v) v.c = el.value === '' ? null : Number(el.value); actualizarCant(i); return; }
+            it[f] = el.value;
+            if (f === 's') document.querySelectorAll(`#bloque-${i} [data-f="s"]`).forEach(x => { if (x !== el) x.value = el.value; });
+            if (f === 'varVals') {
+                const previas = new Map(it.vars.map(v => [norm(v.v), v]));
+                it.vars = parseValores(el.value).map(v => { const p = previas.get(norm(v)); return p ? { ...p, v } : { v, c: null, chk: false, chkAuto: false }; });
+                $(`vars-${i}`).innerHTML = varsQtyHTML(it, i);
+                actualizarCant(i);
             }
-            aplicarModo();
-            pintarItems();
-            if (S.modo === 'lista') $('np-nombre').focus();
-        }
-
-        function cancelarEdicionItem() {
-            S.editItemIdx = null;
-            soltarFoto();
-            limpiarCamposProducto();
-            aplicarModo();
-            pintarItems();
-        }
-
-        function limpiarCamposProducto() {
-            $('np-cant').value = '1';
-            ['np-nombre', 'np-detalle', 'np-sku', 'np-marca', 'np-cat'].forEach(id => $(id).value = '');
-            quitarFoto();
-        }
+        });
+        // Al escribir un código ya usado antes, completa nombre, marca y categoría vacíos.
+        $('np-bloques').addEventListener('change', (e) => {
+            const el = e.target, i = Number(el.dataset.b), it = S.items[i];
+            if (!it || el.dataset.f !== 's' || !it.s.trim()) return;
+            const prev = S.catalogo.get(norm(it.s));
+            if (!prev) return;
+            let cambio = false;
+            for (const k of ['n', 'mar', 'cat', 'varNom']) if (!String(it[k]).trim() && prev[k]) { it[k] = prev[k]; cambio = true; }
+            if (cambio) {
+                ['n', 'mar', 'cat', 'varNom'].forEach(k => { const x = document.querySelector(`#bloque-${i} [data-f="${k}"]`); if (x) x.value = it[k]; });
+                toast('Datos completados con el código anterior', 'info', 2500);
+            }
+        });
+        $('np-bloques').addEventListener('focusin', (e) => { const b = e.target.closest('[data-b]'); if (b) S.bloqueActivo = Number(b.dataset.b); });
+        $('np-bloques').addEventListener('dragover', (e) => { const z = e.target.closest('.foto-zona'); if (z) { e.preventDefault(); z.classList.add('dragover'); } });
+        $('np-bloques').addEventListener('dragleave', (e) => { e.target.closest('.foto-zona')?.classList.remove('dragover'); });
+        $('np-bloques').addEventListener('drop', (e) => {
+            const z = e.target.closest('.foto-zona');
+            if (!z) return;
+            e.preventDefault(); z.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) procesarFile(e.dataTransfer.files[0], Number(z.dataset.b));
+        });
 
         function toggleFechaProg() {
             $('container-fecha-prog').classList.toggle('hidden', $('np-tipo').value !== 'Programado');
         }
 
-        function agregarItem() {
-            const n = $('np-nombre').value.trim();
-            const det = $('np-detalle').value.trim();
-            if (!n) { toast('Escribe el nombre del producto.', 'warn'); $('np-nombre').focus(); return false; }
-            if (!det) { toast('El detalle (talla, medida, etc.) es obligatorio para logística.', 'warn'); $('np-detalle').focus(); return false; }
-            const img = S.imgTmp;
-            S.imgTmp = null; // la foto pasa al producto
-            const editando = S.editItemIdx !== null;
-            const base = editando ? S.items[S.editItemIdx] : { prov: '', lugar: '', chk: false, chkAuto: false };
-            const nuevo = {
-                ...base,
-                c: toCant($('np-cant').value), n, det,
-                s: $('np-sku').value.trim(), mar: $('np-marca').value.trim(), cat: $('np-cat').value.trim(),
-                img: img?.img || null,
-                _blob: img?.blob || null, _dataUrl: img?.dataUrl || null, _preview: img?.preview || null
+        const limpiarProducto = pr => {
+            const vars = tieneVars(pr)
+                ? pr.vars.map(v => ({ v: String(v.v), c: toCant(v.c), chk: !!v.chk, chkAuto: !!v.chkAuto })).filter(v => v.c !== null)
+                : [];
+            const out = {
+                c: vars.length ? vars.reduce((a, v) => a + v.c, 0) : toCant(pr.c),
+                n: String(pr.n || '').trim(), det: String(pr.det || '').trim(),
+                s: String(pr.s || '').trim(), mar: String(pr.mar || '').trim(), cat: String(pr.cat || '').trim(),
+                prov: pr.prov || '', lugar: pr.lugar || '',
+                img: pr.img || null, chk: !!pr.chk, chkAuto: !!pr.chkAuto
             };
-            if (editando) S.items[S.editItemIdx] = nuevo;
-            else if (S.modo === 'individual') S.items = [nuevo];
-            else S.items.push(nuevo);
-            S.editItemIdx = null;
-            limpiarCamposProducto();
-            aplicarModo();
-            pintarItems();
-            if (S.modo === 'lista') { $('np-cant').focus(); if (editando) toast('Producto actualizado', 'ok', 2000); }
-            return true;
-        }
-
-        function pintarItems() {
-            const list = $('np-lista');
-            if (!S.items.length) {
-                list.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-gray-400 py-6">${icono('shopping-basket', 'w-8 h-8 mb-2 opacity-50')}<p class="text-sm font-medium">No hay productos en este pedido aún</p></div>`;
-            } else {
-                list.innerHTML = S.items.map((i, idx) => `
-                    <div class="flex items-center gap-3 bg-white border ${idx === S.editItemIdx ? 'border-amber-300 ring-2 ring-amber-200' : 'border-gray-100'} p-2 rounded-xl shadow-sm">
-                        <div class="w-12 h-12 rounded bg-gray-100 shrink-0 overflow-hidden border border-gray-200">${miniatura(i._preview || i.img, 'w-full h-full')}</div>
-                        <div class="flex-grow min-w-0">
-                            <p class="text-sm font-bold text-gray-800 truncate"><span class="text-cobalto">${esc(fmtCant(i.c))}</span> × ${esc(i.n)}</p>
-                            <p class="text-[10px] text-gray-500 font-medium truncate">${esc(i.det)}</p>
-                        </div>
-                        <button type="button" data-action="editar-item" data-idx="${idx}" class="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg shrink-0" title="Editar">${icono('pencil')}</button>
-                        <button type="button" data-action="quitar-item" data-idx="${idx}" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0" title="Quitar">${icono('trash-2')}</button>
-                    </div>`).join('');
-            }
-            pintarIconos();
-        }
-
-        function quitarItem(idx) {
-            if (S.editItemIdx === idx) { S.editItemIdx = null; soltarFoto(); limpiarCamposProducto(); }
-            else if (S.editItemIdx !== null && idx < S.editItemIdx) S.editItemIdx--;
-            const it = S.items[idx];
-            if (it?._preview?.startsWith('blob:')) URL.revokeObjectURL(it._preview);
-            S.items.splice(idx, 1);
-            aplicarModo();
-            pintarItems();
-        }
-
-        const limpiarProducto = pr => ({
-            c: toCant(pr.c), n: String(pr.n || ''), det: String(pr.det || ''),
-            s: pr.s || '', mar: pr.mar || '', cat: pr.cat || '',
-            prov: pr.prov || '', lugar: pr.lugar || '',
-            img: pr.img || null, chk: !!pr.chk, chkAuto: !!pr.chkAuto
-        });
+            if (vars.length) { out.varNom = String(pr.varNom || '').trim() || 'Variante'; out.vars = vars; out.chk = vars.every(v => v.chk); }
+            return out;
+        };
 
         async function resolverImagenes(items) {
             let avisado = false;
@@ -1282,14 +1562,23 @@
             }));
         }
 
+        function enfocar(i, f) {
+            const el = document.querySelector(`#bloque-${i} [data-f="${f}"]`);
+            if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => el.focus(), 200); }
+        }
+
         async function guardarPedido() {
             if (S.guardando) return;
-            // Individual: el producto del formulario es el pedido. Lista: si dejó uno escrito sin añadir, se agrega solo.
-            if (hayProductoEscrito()) {
-                if (!agregarItem()) return;
-                if (S.modo === 'individual') cargarItem(0); // mantiene el formulario lleno si luego cancela o falla
+            const etiqueta = i => S.modo === 'grupo' ? `Código ${i + 1}` : 'Producto';
+            for (const [i, it] of S.items.entries()) {
+                if (bloqueVacio(it)) continue;
+                if (!String(it.n).trim()) { toast(`${etiqueta(i)}: falta el nombre del producto.`, 'warn'); return enfocar(i, 'n'); }
+                const conCant = it.vars.filter(v => toCant(v.c) !== null);
+                if (it.vars.length && !conCant.length) { toast(`${etiqueta(i)}: pon la cantidad de al menos una variante.`, 'warn'); return enfocar(i, 'varC'); }
+                if (!String(it.det).trim() && !it.vars.length) { toast(`${etiqueta(i)}: escribe el detalle (talla, medida, color…) o usa variaciones.`, 'warn'); return enfocar(i, 'det'); }
             }
-            if (!S.items.length) return toast(S.modo === 'individual' ? 'Escribe el producto.' : 'Agrega al menos un producto a la lista.', 'warn');
+            const bloques = S.items.filter(it => !bloqueVacio(it));
+            if (!bloques.length) { toast('Escribe al menos un producto.', 'warn'); return enfocar(0, 'n'); }
 
             const tipo = $('np-tipo').value;
             const fechaProg = tipo === 'Programado' ? $('np-fecha-prog').value : '';
@@ -1297,16 +1586,24 @@
             const sucursalIdDestino = esLog() ? $('np-sucursal').value : S.perfil.sucursalId;
             if (!sucursalIdDestino) return toast('Elige la sucursal de destino.', 'warn');
             const cliente = $('np-cliente').value.trim(), contacto = $('np-contacto').value.trim();
+            const urgente = $('np-urgente').checked;
 
             let resumen = `${S.editId ? 'Guardar cambios' : 'Resumen del pedido'}:\n\n🏬 ${nombreDe(S.config.sucursales, sucursalIdDestino)}\n`;
+            if (urgente) resumen += `🔴 URGENTE\n`;
             if (cliente) resumen += `👤 Cliente: ${cliente}\n`;
-            resumen += `📦 Productos:\n` + S.items.map(i => `  • ${fmtCant(i.c)} × ${i.n} (${i.det})`).join('\n') + '\n\n¿Confirmar?';
+            const lineaRes = it => {
+                const v = it.vars.filter(x => toCant(x.c) !== null);
+                const cant = v.length ? v.reduce((a, x) => a + toCant(x.c), 0) : fmtCant(it.c);
+                const extra = v.length ? `${it.varNom || 'Variante'}: ${v.map(x => `${x.v}×${toCant(x.c)}`).join(', ')}` : it.det;
+                return `  • ${cant} × ${it.n}${it.s ? ` [${it.s}]` : ''} (${extra})`;
+            };
+            resumen += `📦 Productos:\n` + bloques.map(lineaRes).join('\n') + '\n\n¿Confirmar?';
             if (!confirm(resumen)) return;
 
             const btn = $('btn-guardar-pedido');
             S.guardando = true; btn.disabled = true;
             try {
-                const productos = await resolverImagenes(S.items);
+                const productos = await resolverImagenes(bloques);
                 if (JSON.stringify(productos).length > LIMITE_DOC) {
                     toast('El pedido tiene demasiadas fotos para guardarse. Quita algunas o divídelo en dos pedidos.', 'error', 8000);
                     return;
@@ -1314,7 +1611,7 @@
                 const datos = {
                     sucursalId: sucursalIdDestino,
                     sucursalNombre: nombreDe(S.config.sucursales, sucursalIdDestino),
-                    tipo, fechaProg, cliente, contacto, productos
+                    tipo, fechaProg, cliente, contacto, urgente, productos
                 };
                 if (S.editId) {
                     await mutarPedido(S.editId, () => datos, 'Editó el pedido');
@@ -1324,8 +1621,7 @@
                     toast(`Pedido ${cod} enviado`, 'ok');
                 }
                 S.items.forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); });
-                S.items = []; S.editId = null; S.editItemIdx = null;
-                limpiarCamposProducto();
+                S.items = []; S.editId = null;
                 $('modal-pedido').classList.add('hidden');
             } catch (e) {
                 console.error(e);
@@ -1354,8 +1650,8 @@
             return cod;
         }
 
-        // ================== FOTOS ==================
-        const dz = $('dropzone'), fi = $('file-input');
+        // ================== FOTOS (una por producto) ==================
+        const fi = $('file-input');
 
         function cargarImg(file) {
             return new Promise((res, rej) => {
@@ -1376,49 +1672,36 @@
             ctx.drawImage(img, 0, 0, c.width, c.height);
             return c;
         }
-        async function procesarFile(file) {
+        async function procesarFile(file, i = S.fotoTarget) {
+            const it = S.items[i];
+            if (!it) return;
             if (!file || !file.type?.startsWith('image/')) return toast('Ese archivo no es una imagen.', 'warn');
             try {
                 const img = await cargarImg(file);
                 const dataUrl = dibujar(img, 500).toDataURL('image/jpeg', 0.6);
                 const blob = USAR_STORAGE ? await new Promise(r => dibujar(img, 1200).toBlob(r, 'image/jpeg', 0.8)) : null;
-                quitarFoto();
-                S.imgTmp = { dataUrl, blob, preview: blob ? URL.createObjectURL(blob) : dataUrl };
-                mostrarPreviewFoto(S.imgTmp.preview);
+                if (it._preview?.startsWith('blob:')) URL.revokeObjectURL(it._preview);
+                Object.assign(it, { img: null, _dataUrl: dataUrl, _blob: blob, _preview: blob ? URL.createObjectURL(blob) : dataUrl });
+                renderFoto(i);
             } catch { toast('No se pudo leer la imagen.', 'error'); }
         }
-        function mostrarPreviewFoto(src) {
-            $('dz-preview').src = src;
-            $('dz-preview').classList.remove('hidden');
-            $('dz-content').classList.add('hidden');
-            $('dz-remove').classList.remove('hidden');
+        function quitarFotoBloque(i) {
+            const it = S.items[i];
+            if (!it) return;
+            if (it._preview?.startsWith('blob:')) URL.revokeObjectURL(it._preview);
+            Object.assign(it, { img: null, _dataUrl: null, _blob: null, _preview: null });
+            renderFoto(i);
         }
-        // Suelta la foto del formulario sin liberar la que pertenece a un producto de la lista.
-        function soltarFoto() { S.imgTmp = null; quitarFoto(); }
-        function quitarFoto() {
-            if (S.imgTmp && !S.imgTmp.deItem && S.imgTmp.preview?.startsWith('blob:')) URL.revokeObjectURL(S.imgTmp.preview);
-            S.imgTmp = null;
-            $('dz-preview').removeAttribute('src');
-            $('dz-preview').classList.add('hidden');
-            $('dz-content').classList.remove('hidden');
-            $('dz-remove').classList.add('hidden');
-            fi.value = '';
-        }
+        function elegirGaleria(i) { S.fotoTarget = i; fi.value = ''; fi.click(); }
 
-        dz.addEventListener('click', (e) => {
-            if (e.target.closest('#dz-remove')) { e.stopPropagation(); quitarFoto(); return; }
-            fi.click();
-        });
-        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
-        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-        dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); if (e.dataTransfer.files[0]) procesarFile(e.dataTransfer.files[0]); });
-        fi.addEventListener('change', (e) => { if (e.target.files[0]) procesarFile(e.target.files[0]); });
-        $('file-camara').addEventListener('change', (e) => { if (e.target.files[0]) procesarFile(e.target.files[0]); e.target.value = ''; });
+        fi.addEventListener('change', (e) => { if (e.target.files[0]) procesarFile(e.target.files[0], S.fotoTarget); });
+        $('file-camara').addEventListener('change', (e) => { if (e.target.files[0]) procesarFile(e.target.files[0], S.fotoTarget); e.target.value = ''; });
 
         // ---- Cámara ----
         let camStream = null, camFrente = 'environment';
         const esMovil = () => window.matchMedia('(pointer: coarse)').matches;
-        function abrirCamara() {
+        function abrirCamara(i = 0) {
+            S.fotoTarget = i;
             // En celular se abre la cámara del teléfono (mejor calidad y enfoque).
             if (esMovil() || !navigator.mediaDevices?.getUserMedia) { $('file-camara').click(); return; }
             iniciarCamara();
@@ -1455,27 +1738,29 @@
             const c = document.createElement('canvas');
             c.width = v.videoWidth; c.height = v.videoHeight;
             c.getContext('2d').drawImage(v, 0, 0);
-            c.toBlob(b => { detenerCamara(); if (b) procesarFile(new File([b], 'foto.jpg', { type: 'image/jpeg' })); }, 'image/jpeg', 0.9);
+            c.toBlob(b => { detenerCamara(); if (b) procesarFile(new File([b], 'foto.jpg', { type: 'image/jpeg' }), S.fotoTarget); }, 'image/jpeg', 0.9);
         }
         window.addEventListener('paste', (e) => {
             if ($('modal-pedido').classList.contains('hidden')) return;
             for (const it of Array.from(e.clipboardData?.items || [])) {
-                if (it.kind === 'file' && it.type.startsWith('image/')) { e.preventDefault(); procesarFile(it.getAsFile()); break; }
+                if (it.kind === 'file' && it.type.startsWith('image/')) { e.preventDefault(); procesarFile(it.getAsFile(), Math.min(S.bloqueActivo, S.items.length - 1)); break; }
             }
         });
 
         // ================== DICTADO ==================
-        function iniciarDictado() {
+        function iniciarDictado(i = 0) {
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SR) return toast('Tu navegador no soporta dictado por voz (prueba con Chrome).', 'warn');
             const rc = new SR();
             rc.lang = 'es-PE'; rc.interimResults = false;
-            const btn = $('btn-dictado');
+            const btn = document.querySelector(`#bloque-${i} .btn-dictado`);
+            const input = document.querySelector(`#bloque-${i} [data-f="det"]`);
+            if (!btn || !input) return;
             btn.classList.add('bg-red-100', 'text-red-600', 'animate-pulse');
             rc.onresult = (e) => {
                 const t = e.results[0][0].transcript;
-                const input = $('np-detalle');
                 input.value += (input.value ? ', ' : '') + t;
+                if (S.items[i]) S.items[i].det = input.value;
             };
             rc.onerror = (e) => { if (e.error !== 'no-speech' && e.error !== 'aborted') toast('Error de dictado: ' + e.error, 'warn'); };
             rc.onend = () => btn.classList.remove('bg-red-100', 'text-red-600', 'animate-pulse');
@@ -1484,31 +1769,40 @@
 
         // ================== COMPRAS ==================
         function textoLista(items, encabezado) {
-            const agg = new Map();
+            const agg = new Map(), lineasVar = [];
             items.forEach(it => {
-                const k = [norm(it.n), norm(it.det), norm(it.mar)].join('|');
-                const a = agg.get(k) || { n: it.n, det: it.det, mar: it.mar, c: 0, indef: false };
+                const cod = it.s ? ` [Cód. ${it.s}]` : '';
+                if (tieneVars(it)) {
+                    const pend = it.vars.filter(v => !v.chk);
+                    const tot = pend.reduce((a, v) => a + (toCant(v.c) || 0), 0);
+                    lineasVar.push(`• ${tot} × ${it.n}${it.mar ? ` (${it.mar})` : ''}${cod} — ${it.varNom || 'Variante'}: ${pend.map(v => `${v.v}×${fmtCant(v.c)}`).join(', ')}${it.det ? ` · ${it.det}` : ''}`);
+                    return;
+                }
+                const k = [norm(it.n), norm(it.det), norm(it.mar), norm(it.s)].join('|');
+                const a = agg.get(k) || { n: it.n, det: it.det, mar: it.mar, cod, c: 0, indef: false };
                 const c = toCant(it.c);
                 if (c === null) a.indef = true; else a.c += c;
                 agg.set(k, a);
             });
             const lineas = [...agg.values()].map(a => {
                 const cant = a.c ? (a.indef ? `${a.c} + ?` : a.c) : '?';
-                return `• ${cant} × ${a.n}${a.mar ? ` (${a.mar})` : ''} — ${a.det}`;
+                return `• ${cant} × ${a.n}${a.mar ? ` (${a.mar})` : ''}${a.cod} — ${a.det}`;
             });
-            return `${encabezado}\n\n${lineas.join('\n')}`;
+            return `${encabezado}\n\n${[...lineas, ...lineasVar].join('\n')}`;
         }
 
         function renderCompras() {
             const modo = S.comprasModo;
-            const lista = modo === 'prov' ? S.config.proveedores : S.config.lugares;
+            const lista = modo === 'prov' ? S.config.proveedores : modo === 'lugar' ? S.config.lugares : [];
             const suc = sucursalFiltro();
-            const grupos = new Map();
+            const grupos = new Map(), nombresMarca = new Map();
+            const etiqueta = k => modo === 'marca' ? (nombresMarca.get(k) || '') : nombreDe(lista, k);
             for (const p of S.activos.values()) {
                 if (suc !== 'Todas' && sucId(p) !== suc) continue;
                 (p.productos || []).forEach((pr, idx) => {
                     if (pr.chk) return;
-                    const k = (modo === 'prov' ? pr.prov : pr.lugar) || '';
+                    const k = modo === 'marca' ? norm(pr.mar) : ((modo === 'prov' ? pr.prov : pr.lugar) || '');
+                    if (modo === 'marca' && k && !nombresMarca.has(k)) nombresMarca.set(k, pr.mar.trim());
                     if (!grupos.has(k)) grupos.set(k, []);
                     grupos.get(k).push({ ...pr, idx, pedidoId: p.id, cod: p.cod, suc: nombreSucursal(p) });
                 });
@@ -1522,11 +1816,11 @@
                     <p class="text-gray-500">No hay compras pendientes en este momento.</p></div>`;
                 pintarIconos(); return;
             }
-            const claves = [...grupos.keys()].sort((a, b) => (a === '') - (b === '') || nombreDe(lista, a).localeCompare(nombreDe(lista, b)));
+            const claves = [...grupos.keys()].sort((a, b) => (a === '') - (b === '') || etiqueta(a).localeCompare(etiqueta(b)));
             cont.innerHTML = claves.map((k, gi) => {
                 const prods = grupos.get(k);
                 const ent = lista.find(x => x.id === k);
-                const titulo = k ? nombreDe(lista, k) : (modo === 'prov' ? 'Sin proveedor asignado' : 'Sin lugar asignado');
+                const titulo = k ? etiqueta(k) : (modo === 'prov' ? 'Sin proveedor asignado' : modo === 'lugar' ? 'Sin lugar asignado' : 'Sin marca');
                 const texto = textoLista(prods, modo === 'prov' ? 'Hola, necesito hacer el siguiente pedido:' : `Lista de compras – ${titulo}:`);
                 S.textosCompra.set(String(gi), texto);
                 const tel = modo === 'prov' ? telWA(ent?.telefono) : '';
@@ -1535,7 +1829,7 @@
                 <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col">
                     <div class="flex flex-wrap justify-between items-center gap-2 mb-4 border-b border-gray-100 pb-3">
                         <div class="min-w-0">
-                            <h3 class="font-black text-lg text-cobalto flex items-center gap-2">${icono(modo === 'prov' ? 'building-2' : 'map-pin', 'w-5 h-5 text-gray-400')} ${esc(titulo)}</h3>
+                            <h3 class="font-black text-lg text-cobalto flex items-center gap-2">${icono(modo === 'prov' ? 'building-2' : modo === 'lugar' ? 'map-pin' : 'tag', 'w-5 h-5 text-gray-400')} ${esc(titulo)}</h3>
                             <p class="text-xs text-gray-400 font-bold">${prods.length} producto(s)${tel ? ` · +${esc(tel)}` : ''}</p>
                         </div>
                         <div class="flex gap-2">
@@ -1548,19 +1842,21 @@
                         <li class="flex items-start gap-3 text-sm p-3 bg-gray-50 rounded-xl border border-gray-100">
                             <button type="button" data-action="detalle" data-id="${esc(pr.pedidoId)}" data-idx="${pr.idx}" class="w-10 h-10 rounded border border-gray-200 overflow-hidden bg-white shrink-0">${miniatura(pr.img, 'w-full h-full')}</button>
                             <div class="flex-grow min-w-0">
-                                <p class="font-bold text-gray-800"><span class="text-cobalto">${esc(fmtCant(pr.c))}×</span> ${esc(pr.n)}</p>
-                                <p class="text-xs text-gray-500 font-medium">${esc(pr.det)}</p>
+                                <p class="font-bold text-gray-800"><span class="text-cobalto">${esc(fmtCant(cantTotal(pr)))}×</span> ${esc(pr.n)}</p>
+                                ${pr.det ? `<p class="text-xs text-gray-500 font-medium">${esc(pr.det)}</p>` : ''}
                                 ${extrasProducto(pr)}
+                                ${htmlVars({ id: pr.pedidoId, estado: 'Pendiente' }, pr, pr.idx, true)}
                                 <div class="flex flex-wrap justify-between mt-2 items-center gap-1">
-                                    ${modo === 'prov'
-                                        ? (pr.lugar ? `<span class="text-[9px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded font-bold uppercase">${icono('map-pin', 'w-3 h-3 inline')} ${esc(nombreDe(S.config.lugares, pr.lugar))}</span>` : '<span></span>')
-                                        : (pr.prov ? `<span class="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-bold uppercase">${icono('truck', 'w-3 h-3 inline')} ${esc(nombreDe(S.config.proveedores, pr.prov))}</span>` : '<span></span>')}
+                                    <span class="flex flex-wrap gap-1">
+                                    ${modo !== 'lugar' && pr.lugar ? `<span class="text-[9px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded font-bold uppercase">${icono('map-pin', 'w-3 h-3 inline')} ${esc(nombreDe(S.config.lugares, pr.lugar))}</span>` : ''}
+                                    ${modo !== 'prov' && pr.prov ? `<span class="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-bold uppercase">${icono('truck', 'w-3 h-3 inline')} ${esc(nombreDe(S.config.proveedores, pr.prov))}</span>` : ''}
+                                    </span>
                                     <span class="text-[10px] font-bold text-gray-400">${esc(pr.cod)} · ${esc(pr.suc)}</span>
                                 </div>
                             </div>
-                            <label class="flex flex-col items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer shrink-0">
+                            ${tieneVars(pr) ? '' : `<label class="flex flex-col items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer shrink-0">
                                 <input type="checkbox" data-action="chk" data-id="${esc(pr.pedidoId)}" data-idx="${pr.idx}" class="w-5 h-5 accent-cobalto"> Comprado
-                            </label>
+                            </label>`}
                         </li>`).join('')}
                     </ul>
                 </div>`;
@@ -1763,16 +2059,18 @@
             try {
                 await cargarScript(XLSX_URL);
                 const filas = [];
-                lista.forEach(p => (p.productos || []).forEach(pr => filas.push({
+                const filasDe = (p, pr) => tieneVars(pr) ? pr.vars.map(v => ({ v, pr })) : [{ v: null, pr }];
+                lista.forEach(p => (p.productos || []).flatMap(pr => filasDe(p, pr)).forEach(({ v, pr }) => filas.push({
                     'Código': p.cod, 'Fecha': new Date(p.timestamp), 'Sucursal': nombreSucursal(p), 'Tipo': p.tipo,
                     'Fecha programada': p.fechaProg ? fmtFechaISO(p.fechaProg) : '', 'Cliente': p.cliente || '', 'Contacto': p.contacto || '',
-                    'Estado': ESTADOS[p.estado]?.label || p.estado, 'Cantidad': toCant(pr.c) ?? '', 'Producto': pr.n, 'Detalle': pr.det,
-                    'Marca': pr.mar || '', 'Categoría': pr.cat || '', 'SKU': pr.s || '',
+                    'Estado': ESTADOS[p.estado]?.label || p.estado, 'Urgente': p.urgente ? 'Sí' : '', 'Forma': esGrupo(p) ? 'Grupo' : 'Individual', 'Código producto': pr.s || '', 'Producto': pr.n, 'Variación': v ? (pr.varNom || '') : '', 'Valor': v ? v.v : '',
+                    'Cantidad': (v ? toCant(v.c) : toCant(pr.c)) ?? '', 'Detalle': pr.det || '',
+                    'Marca': pr.mar || '', 'Categoría': pr.cat || '',
                     'Proveedor': pr.prov ? nombreDe(S.config.proveedores, pr.prov) : '', 'Lugar de compra': pr.lugar ? nombreDe(S.config.lugares, pr.lugar) : '',
-                    'Conseguido': pr.chk ? 'Sí' : 'No'
+                    'Conseguido': (v ? v.chk : pr.chk) ? 'Sí' : 'No', 'Notas': (p.notas || []).map(n => `${n.por}: ${n.texto}`).join(' | ')
                 })));
                 const ws = XLSX.utils.json_to_sheet(filas, { cellDates: true, dateNF: 'dd/mm/yyyy hh:mm' });
-                ws['!cols'] = [12, 16, 18, 12, 14, 20, 16, 12, 9, 28, 32, 14, 14, 12, 18, 18, 11].map(w => ({ wch: w }));
+                ws['!cols'] = [12, 16, 18, 12, 14, 20, 16, 12, 9, 11, 14, 28, 12, 10, 9, 32, 14, 14, 18, 18, 11, 40].map(w => ({ wch: w }));
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
                 XLSX.writeFile(wb, `Pedidos_${hoyISO()}.xlsx`);
@@ -1783,7 +2081,7 @@
         // ================== NAVEGACIÓN ==================
         const TITULOS = {
             dashboard: ['Panel de Pedidos', 'Gestión rápida y sencilla'],
-            compras: ['Compras', 'Abastecimiento por proveedor o lugar'],
+            compras: ['Compras', 'Abastecimiento por proveedor, lugar o marca'],
             configuracion: ['Configuración', 'Sucursales, proveedores, lugares y usuarios']
         };
         function cambiarVista(vista) {
@@ -1817,9 +2115,8 @@
             $('modal-pedido').classList.add('hidden');
         }
         function cerrarModalPedido() {
-            if ((S.items.length || hayProductoEscrito()) && !S.editId && !confirm('¿Descartar este pedido sin enviar?')) return;
+            if (S.items.some(it => !bloqueVacio(it)) && !S.editId && !confirm('¿Descartar este pedido sin enviar?')) return;
             detenerCamara();
-            S.editItemIdx = null;
             S.items.forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); });
             S.items = []; S.editId = null;
             $('modal-pedido').classList.add('hidden');
@@ -1836,6 +2133,11 @@
             'filtro-estado': el => { S.filtroEstado = el.dataset.filter; marcarFiltroEstado(); renderPedidos(); },
             'nuevo-pedido': () => abrirModalPedido(),
             'detalle': el => abrirDetalle(el.dataset.id, Number(el.dataset.idx) || 0),
+            'toggle-grupo': el => { const id = el.dataset.id; S.expandidos.has(id) ? S.expandidos.delete(id) : S.expandidos.add(id); renderPedidos(); },
+            'recibido': el => cambiarEstado(el.dataset.id, 'Recibido'),
+            'urgente': el => toggleUrgente(el.dataset.id),
+            'enviar-nota': () => enviarNota(),
+            'ver-por-recibir': () => { S.filtroEstado = 'Preparado'; marcarFiltroEstado(); renderPedidos(); },
             'det-img': el => { if (S.detalle) { S.detalle.idx = Number(el.dataset.idx) || 0; renderDetalle(); } },
             'cerrar-detalle': () => cerrarDetalleSiAbierto(),
             'editar-pedido': el => { const p = pedidoPorId(el.dataset.id); if (p) abrirModalPedido(p); },
@@ -1843,18 +2145,19 @@
             'eliminar-pedido': el => eliminarPedido(el.dataset.id),
             'cerrar-pedido': () => cerrarModalPedido(),
             'guardar-pedido': () => guardarPedido(),
-            'agregar-item': () => agregarItem(),
-            'quitar-item': el => quitarItem(Number(el.dataset.idx)),
-            'editar-item': el => cargarItem(Number(el.dataset.idx)),
-            'cancelar-edicion-item': () => cancelarEdicionItem(),
+            'agregar-bloque': () => agregarBloque(),
+            'quitar-bloque': el => quitarBloque(Number(el.dataset.b)),
+            'quitar-foto': el => quitarFotoBloque(Number(el.dataset.b)),
+            'vista-lista': el => { S.vistaLista = el.dataset.v; guardarPref('vistaLista', S.vistaLista); renderPedidos(); },
+            'toggle-marca': el => { const k = el.dataset.k; S.marcasCerradas.has(k) ? S.marcasCerradas.delete(k) : S.marcasCerradas.add(k); renderPedidos(); },
             'modo-pedido': el => cambiarModo(el.dataset.modo),
             'editar-producto': el => { const p = pedidoPorId(el.dataset.id); if (p) abrirModalPedido(p, Number(el.dataset.idx)); },
-            'camara': () => abrirCamara(),
-            'galeria': () => fi.click(),
+            'camara': el => abrirCamara(Number(el.dataset.b) || 0),
+            'galeria': el => elegirGaleria(Number(el.dataset.b) || 0),
             'camara-capturar': () => capturarFoto(),
             'camara-cerrar': () => detenerCamara(),
             'camara-girar': () => { camFrente = camFrente === 'environment' ? 'user' : 'environment'; iniciarCamara(); },
-            'dictado': () => iniciarDictado(),
+            'dictado': el => iniciarDictado(Number(el.dataset.b) || 0),
             'exportar': () => exportar(),
             'compras-modo': el => { S.comprasModo = el.dataset.modo; marcarModoCompras(); renderCompras(); },
             'copiar-lista': el => copiarLista(el.dataset.key),
@@ -1866,11 +2169,13 @@
             'migrar': () => migrar()
         };
         const accionesChange = {
-            'chk': el => toggleChk(el.dataset.id, Number(el.dataset.idx)),
+            'chk': el => toggleMarca(el.dataset.id, Number(el.dataset.idx)),
+            'chk-var': el => toggleMarca(el.dataset.id, Number(el.dataset.idx), Number(el.dataset.vi)),
             'estado': el => cambiarEstado(el.dataset.id, el.value),
             'compra': el => actDatoCompra(el.dataset.id, Number(el.dataset.idx), el.dataset.campo, el.value),
             'rango': el => { S.rangoDias = Number(el.value) || 14; suscribirPedidos(); },
             'orden': el => { S.orden = el.value; renderPedidos(); },
+            'forma': el => { S.filtroForma = el.value; renderPedidos(); },
             'filtro-sucursal': () => refrescar(),
             'np-tipo': () => toggleFechaProg(),
             'usr-rol': () => toggleUsrSucursal()
@@ -1892,7 +2197,7 @@
         ['cfg-input-sucursales', 'cfg-input-proveedores', 'cfg-tel-proveedores', 'cfg-input-lugares'].forEach(id => {
             $(id).addEventListener('keydown', e => { if (e.key === 'Enter') cfgAgregar(id.includes('lugares') ? 'lugares' : id.includes('proveedores') ? 'proveedores' : 'sucursales'); });
         });
-        $('np-detalle').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (S.modo === 'lista') agregarItem(); } });
+        $('mdi-nota-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarNota(); } });
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
             if (!$('modal-camara').classList.contains('hidden')) detenerCamara();
@@ -1901,7 +2206,6 @@
         });
 
         pintarIconos();
-        pintarItems();
     </script>
 </body>
 </html>
