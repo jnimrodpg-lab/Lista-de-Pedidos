@@ -1476,11 +1476,17 @@
                             <div id="dictado-vars-${i}" class="hidden mb-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-800"></div>
                             <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
                                 <input type="text" data-b="${i}" data-f="varNom" value="${esc(it.varNom)}" list="dl-varnom" maxlength="30" placeholder="Talla, Peso…" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-cobalto">
-                                <input type="text" data-b="${i}" data-f="varVals" value="${esc(it.varVals)}" maxlength="300" placeholder="S, M, L, XL  (separa con comas)" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
+                                <div class="relative min-w-0">
+                                    <input type="text" data-b="${i}" data-f="varVals" value="${esc(it.varVals)}" maxlength="300" placeholder="S, M, L, XL  (separa con comas)" class="w-full pl-3 pr-9 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
+                                    <button type="button" data-action="dictar-valores" data-b="${i}" data-campo="varVals" class="btn-mic-varVals absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-cobalto bg-cobalto/10 hover:bg-cobalto/20" title="Dicta las tallas: S, M, L, equis ele…">${icono('mic', 'w-3.5 h-3.5')}</button>
+                                </div>
                             </div>
                             <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2 mt-2">
                                 <input type="text" data-b="${i}" data-f="varNom2" value="${esc(it.varNom2)}" list="dl-varnom" maxlength="30" placeholder="Color…" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-cobalto">
-                                <input type="text" data-b="${i}" data-f="varVals2" value="${esc(it.varVals2)}" maxlength="300" placeholder="Blanco, Negro… (2ª variación, opcional)" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
+                                <div class="relative min-w-0">
+                                    <input type="text" data-b="${i}" data-f="varVals2" value="${esc(it.varVals2)}" maxlength="300" placeholder="Blanco, Negro… (2ª variación, opcional)" class="w-full pl-3 pr-9 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
+                                    <button type="button" data-action="dictar-valores" data-b="${i}" data-campo="varVals2" class="btn-mic-varVals2 absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-cobalto bg-cobalto/10 hover:bg-cobalto/20" title="Dicta los colores: rojo, azul, verde, blanco…">${icono('mic', 'w-3.5 h-3.5')}</button>
+                                </div>
                             </div>
                             <div id="vars-${i}" class="mt-2">${varsQtyHTML(it, i)}</div>
                         </div>
@@ -1643,8 +1649,103 @@
             };
             try { rc.start(); } catch { S.dictadoVars = null; }
         }
-        function detenerDictadoVars() { if (S.dictadoVars) { try { S.dictadoVars.rc.abort(); } catch { /* ya terminó */ } S.dictadoVars = null; } }
-        window.__pg = { parsearDictadoVariantes, aplicarDictadoVars };
+        // ---- Dictar solo los valores de una variación (ej. "rojo azul verde blanco" → 4 colores) ----
+        // Une los modificadores al color anterior: "azul marino", "verde agua", "rosa palo", "gris oscuro"…
+        const MODIF_COLOR = new Set(['claro', 'clara', 'oscuro', 'oscura', 'marino', 'agua', 'limon', 'militar', 'palo', 'cielo', 'electrico',
+            'fuerte', 'pastel', 'neon', 'bebe', 'perla', 'petroleo', 'botella', 'jaspeado', 'jaspeada', 'matizado', 'fosforescente', 'metalico', 'plata', 'oro', 'mate']);
+        const RELLENO_LISTA = new Set(['y', 'e', 'de', 'del', 'color', 'colores', 'talla', 'tallas', 'con', 'el', 'la', 'los', 'las', 'tambien', 'mas', 'en', 'numero']);
+
+        function parsearListaValores(texto, campo) {
+            let t = String(texto || '').toLowerCase();
+            if (campo === 'varVals') {
+                t = t.replace(/triple equis ele/g, ' xxxl ').replace(/(doble equis|equis equis) ele/g, ' xxl ')
+                     .replace(/equis ele/g, ' xl ').replace(/equis ese/g, ' xs ').replace(/(\d)\s*(kg|kgs|lb|oz|cm|ml|gr)\b/g, '$1 $2');
+            }
+            // Si dice "coma" o hay comas, se respeta ese corte (sirve para colores de varias palabras: "azul marino coma rojo").
+            const conCortes = /,|;|\bcoma\b/.test(t);
+            const partes = conCortes ? t.split(/,|;|\bcoma\b|\s+y\s+|\s+e\s+/) : [t];
+            const out = [];
+            for (const parte of partes) {
+                const tok = parte.split(/\s+/).map(x => x.replace(/[.:]/g, '')).filter(x => x && !RELLENO_LISTA.has(norm(x)));
+                if (!tok.length) continue;
+                if (campo === 'varVals') {
+                    for (let k = 0; k < tok.length; k++) {
+                        const w = norm(tok[k]), u = UNIDADES[norm(tok[k + 1] || '')];
+                        const n = w in NUMEROS ? NUMEROS[w] : (/^\d+([.,]\d+)?$/.test(w) ? w : null);
+                        if (n !== null && u) { out.push(`${n}${u}`); k++; }
+                        else if (w in TALLAS) out.push(TALLAS[w]);
+                        else if (n !== null) out.push(String(n));
+                        else out.push(capital(tok[k]));
+                    }
+                } else if (conCortes) {
+                    out.push(capital(tok.join(' ')));
+                } else {
+                    for (const w of tok) {
+                        if (MODIF_COLOR.has(norm(w)) && out.length) out[out.length - 1] += ' ' + w;
+                        else out.push(capital(w));
+                    }
+                }
+            }
+            return out;
+        }
+
+        function aplicarValoresDictados(i, campo, texto) {
+            const it = S.items[i];
+            if (!it) return [];
+            const nuevos = parsearListaValores(texto, campo);
+            if (!nuevos.length) { toast('No entendí ningún valor. Ej.: "rojo, azul, verde, blanco".', 'warn'); return []; }
+            const lista = parseValores(it[campo]);
+            const agregados = nuevos.filter(v => !lista.some(x => norm(x) === norm(v)));
+            lista.push(...agregados);
+            it[campo] = lista.join(', ');
+            const nomCampo = campo === 'varVals' ? 'varNom' : 'varNom2';
+            if (!String(it[nomCampo]).trim()) it[nomCampo] = campo === 'varVals' ? (nuevos.every(v => /\d(kg|lb|g|oz)$/.test(v)) ? 'Peso' : 'Talla') : 'Color';
+            const bloque = $(`bloque-${i}`);
+            bloque.querySelector(`[data-f="${campo}"]`).value = it[campo];
+            bloque.querySelector(`[data-f="${nomCampo}"]`).value = it[nomCampo];
+            reconstruirVars(it);
+            $(`vars-${i}`).innerHTML = varsQtyHTML(it, i);
+            actualizarCant(i);
+            toast(agregados.length ? `Agregado: ${agregados.join(', ')}` : 'Esos valores ya estaban.', agregados.length ? 'ok' : 'info', 3000);
+            return agregados;
+        }
+
+        function dictarValores(i, campo) {
+            if (S.dictadoValores) { S.dictadoValores.stop(); return; }
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) return toast('Tu navegador no permite dictado. Usa Chrome o Edge.', 'warn');
+            const rc = new SR();
+            rc.lang = 'es-PE'; rc.interimResults = true; rc.continuous = false;
+            const btn = document.querySelector(`#bloque-${i} .btn-mic-${campo}`);
+            const input = document.querySelector(`#bloque-${i} [data-f="${campo}"]`);
+            const ph = input.placeholder;
+            let final = '';
+            S.dictadoValores = rc;
+            btn.classList.add('bg-red-600', 'text-white', 'animate-pulse');
+            input.placeholder = '🎙️ Escuchando… di los valores seguidos';
+            rc.onresult = (e) => {
+                let interino = '';
+                for (let k = e.resultIndex; k < e.results.length; k++) {
+                    if (e.results[k].isFinal) final += ' ' + e.results[k][0].transcript; else interino += e.results[k][0].transcript;
+                }
+                input.placeholder = '🎙️ ' + (final + ' ' + interino).trim();
+            };
+            rc.onerror = (e) => {
+                if (e.error === 'not-allowed') toast('Sin permiso de micrófono. Actívalo con el candado junto a la dirección.', 'warn', 7000);
+                else if (e.error !== 'no-speech' && e.error !== 'aborted') toast('Error de dictado: ' + e.error, 'warn');
+            };
+            rc.onend = () => {
+                S.dictadoValores = null;
+                btn.classList.remove('bg-red-600', 'text-white', 'animate-pulse');
+                input.placeholder = ph;
+                if (final.trim()) aplicarValoresDictados(i, campo, final);
+            };
+            try { rc.start(); } catch { S.dictadoValores = null; }
+        }
+
+        function detenerDictadoVars() {
+            if (S.dictadoValores) { try { S.dictadoValores.abort(); } catch { /* ya terminó */ } S.dictadoValores = null; } if (S.dictadoVars) { try { S.dictadoVars.rc.abort(); } catch { /* ya terminó */ } S.dictadoVars = null; } }
+        window.__pg = { parsearDictadoVariantes, aplicarDictadoVars, parsearListaValores, aplicarValoresDictados };
 
         function reconstruirVars(it) {
             const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
@@ -2366,6 +2467,7 @@
             'camara-girar': () => { camFrente = camFrente === 'environment' ? 'user' : 'environment'; iniciarCamara(); },
             'dictado': el => iniciarDictado(Number(el.dataset.b) || 0),
             'dictar-vars': el => dictarVariantes(Number(el.dataset.b) || 0),
+            'dictar-valores': el => dictarValores(Number(el.dataset.b) || 0, el.dataset.campo),
             'exportar': () => exportar(),
             'compras-modo': el => { S.comprasModo = el.dataset.modo; marcarModoCompras(); renderCompras(); },
             'copiar-lista': el => copiarLista(el.dataset.key),
