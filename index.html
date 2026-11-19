@@ -1469,7 +1469,11 @@
                             <input type="text" data-b="${i}" data-f="cat" value="${esc(it.cat)}" list="dl-cats" maxlength="60" placeholder="Categoría (opc.)" class="px-3 py-2 ${campo} text-xs">
                         </div>
                         <div class="rounded-xl border border-dashed border-gray-300 p-2.5 bg-gray-50/60">
-                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-1.5 flex items-center gap-1">${icono('ruler', 'w-3.5 h-3.5')} Variaciones (opcional · hasta 2)</p>
+                            <div class="flex items-center justify-between gap-2 mb-1.5">
+                                <p class="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">${icono('ruler', 'w-3.5 h-3.5')} Variaciones (opcional · hasta 2)</p>
+                                <button type="button" data-action="dictar-vars" data-b="${i}" class="btn-dictar-vars shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cobalto/10 text-cobalto hover:bg-cobalto/20" title="Dicta: talla S rosado 2 lila 2, talla M rojo 3">${icono('mic', 'w-3.5 h-3.5')} <span>Dictar variantes</span></button>
+                            </div>
+                            <div id="dictado-vars-${i}" class="hidden mb-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-800"></div>
                             <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
                                 <input type="text" data-b="${i}" data-f="varNom" value="${esc(it.varNom)}" list="dl-varnom" maxlength="30" placeholder="Talla, Peso…" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-cobalto">
                                 <input type="text" data-b="${i}" data-f="varVals" value="${esc(it.varVals)}" maxlength="300" placeholder="S, M, L, XL  (separa con comas)" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
@@ -1489,6 +1493,12 @@
         function renderBloques() {
             aplicarModo();
             $('np-bloques').innerHTML = S.items.map(bloqueHTML).join('');
+            pintarIconos();
+        }
+        function renderUnBloque(i) {
+            const b = $(`bloque-${i}`);
+            if (!b) return;
+            b.outerHTML = bloqueHTML(S.items[i], i);
             pintarIconos();
         }
         function renderFoto(i) { const c = $(`foto-${i}`); if (c) { c.innerHTML = fotoHTML(S.items[i], i); pintarIconos(); } }
@@ -1515,6 +1525,127 @@
         }
 
         // Combina variación 1 × variación 2. Si solo hay la 1, queda como antes.
+        // ================== DICTADO DE VARIANTES ==================
+        // Ejemplos que entiende:
+        //   "talla S rosado 2 lila 2, talla M rojo 3 beige 3"   → Talla × Color
+        //   "S 2, M 3, XL 1"                                     → solo Talla
+        //   "2 kilos 4, 4 kilos 2"                               → Peso
+        //   "rosado 2, negro 3"                                  → solo Color
+        const NUMEROS = { cero: 0, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+            once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
+            veintiuno: 21, veintiun: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25, veintiseis: 26, veintisiete: 27,
+            veintiocho: 28, veintinueve: 29, treinta: 30, cuarenta: 40, cincuenta: 50, docena: 12 };
+        const UNIDADES = { kilo: 'kg', kilos: 'kg', kg: 'kg', kgs: 'kg', kilogramos: 'kg', kilogramo: 'kg', libra: 'lb', libras: 'lb', lb: 'lb',
+            gramos: 'g', gramo: 'g', gr: 'g', onzas: 'oz', onza: 'oz', oz: 'oz', centimetros: 'cm', centimetro: 'cm', cm: 'cm', litros: 'L', litro: 'L', ml: 'ml', mililitros: 'ml' };
+        const TALLAS = { s: 'S', m: 'M', l: 'L', xs: 'XS', xl: 'XL', xxl: 'XXL', xxxl: 'XXXL', xxs: 'XXS', ese: 'S', eme: 'M', ele: 'L', small: 'S', medium: 'M', large: 'L',
+            '2xl': 'XXL', '3xl': 'XXXL', std: 'STD', standard: 'STD', estandar: 'STD', unica: 'Única' };
+        const RELLENO = new Set(['de', 'del', 'y', 'e', 'con', 'en', 'la', 'el', 'los', 'las', 'a', 'color', 'colores', 'cantidad', 'unidades', 'unidad', 'und', 'piezas', 'pieza', 'pares', 'par', 'por', 'son', 'mas', 'tambien', 'coma', 'punto']);
+
+        function parsearDictadoVariantes(texto) {
+            let t = norm(texto)
+                .replace(/triple equis ele/g, ' xxxl ').replace(/(doble equis|equis equis) ele/g, ' xxl ').replace(/equis ele/g, ' xl ')
+                .replace(/equis ese/g, ' xs ').replace(/media docena/g, ' 6 ')
+                .replace(/(\d)\s*(kg|kgs|lb|oz|cm|ml|gr)\b/g, '$1 $2')
+                .replace(/[,;.:]/g, ' ');
+            const tok = t.split(/\s+/).filter(Boolean);
+            const esNum = w => /^\d+([.,]\d+)?$/.test(w) || w in NUMEROS;
+            const num = w => w in NUMEROS ? NUMEROS[w] : Number(w.replace(',', '.'));
+            const entradas = [], sinCant = [];
+            let a = null, tipoA = null, color = [];
+            for (let i = 0; i < tok.length; i++) {
+                const w = tok[i];
+                if (w === 'talla' || w === 'tallas' || w === 'numero' || w === 'nro') {
+                    const sig = tok[i + 1];
+                    if (sig) { a = TALLAS[sig] || sig.toUpperCase(); tipoA = 'Talla'; i++; if (color.length) sinCant.push(color.join(' ')); color = []; }
+                    continue;
+                }
+                if (esNum(w)) {
+                    const n = num(w), u = UNIDADES[tok[i + 1]];
+                    if (u) { a = `${n}${u}`; tipoA = u === 'cm' ? 'Medida' : u === 'oz' ? 'Onzas' : u === 'L' || u === 'ml' ? 'Capacidad' : 'Peso'; i++; if (color.length) sinCant.push(color.join(' ')); color = []; continue; }
+                    if (color.length) { entradas.push({ a, b: capital(color.join(' ')), c: n }); color = []; }
+                    else if (a !== null) entradas.push({ a, b: null, c: n });
+                    continue;
+                }
+                if (w in TALLAS) { if (color.length) sinCant.push(color.join(' ')); color = []; a = TALLAS[w]; tipoA = 'Talla'; continue; }
+                if (RELLENO.has(w)) continue;
+                color.push(w);
+            }
+            if (color.length) sinCant.push(color.join(' '));
+            // Sin tallas: lo dictado son solo colores → una sola variación "Color".
+            if (entradas.length && entradas.every(e => e.a === null)) return { nom1: 'Color', nom2: '', entradas: entradas.map(e => ({ a: e.b, b: null, c: e.c })), sinCant };
+            const conColor = entradas.some(e => e.b);
+            return { nom1: tipoA || 'Talla', nom2: conColor ? 'Color' : '', entradas: entradas.map(e => ({ a: e.a ?? '—', b: e.b, c: e.c })), sinCant };
+        }
+
+        // Suma lo dictado a las variaciones del producto (se puede dictar por partes).
+        function aplicarDictadoVars(i, texto) {
+            const it = S.items[i];
+            if (!it) return 0;
+            const r = parsearDictadoVariantes(texto);
+            if (!r.entradas.length) { toast('No entendí variantes con cantidad. Ej.: "talla S rosado 2 lila 2, talla M rojo 3".', 'warn', 7000); return 0; }
+            const usaDos = r.entradas.some(e => e.b);
+            const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
+            const agregar = (lista, v) => { if (v && !lista.some(x => norm(x) === norm(v))) lista.push(v); };
+            r.entradas.forEach(e => { agregar(l1, e.a); if (e.b) agregar(l2, e.b); });
+            if (!String(it.varNom).trim()) it.varNom = r.nom1;
+            if (usaDos && !String(it.varNom2).trim()) it.varNom2 = r.nom2 || 'Color';
+            it.varVals = l1.join(', ');
+            it.varVals2 = l2.join(', ');
+            reconstruirVars(it);
+            let puestos = 0; const faltan = [];
+            r.entradas.forEach(e => {
+                const v = it.vars.find(x => norm(x.v) === norm(e.a) && norm(x.v2 || '') === norm(e.b || ''));
+                if (v) { v.c = e.c; puestos++; } else faltan.push(e.a);
+            });
+            renderUnBloque(i);
+            actualizarCant(i);
+            if (faltan.length) toast(`Falta decir el color para: ${[...new Set(faltan)].join(', ')}`, 'warn', 7000);
+            if (r.sinCant.length) toast(`Sin cantidad (no se agregó): ${r.sinCant.join(', ')}`, 'warn', 7000);
+            if (puestos) toast(`${puestos} variante${puestos > 1 ? 's' : ''} agregada${puestos > 1 ? 's' : ''}. Revisa la cuadrícula.`, 'ok');
+            return puestos;
+        }
+
+        function dictarVariantes(i) {
+            // Si ya está escuchando, este toque termina el dictado.
+            if (S.dictadoVars) { S.dictadoVars.rc.stop(); return; }
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) return toast('Tu navegador no permite dictado. Usa Chrome o Edge.', 'warn');
+            const rc = new SR();
+            rc.lang = 'es-PE'; rc.interimResults = true; rc.continuous = true;
+            const caja = $(`dictado-vars-${i}`);
+            const btn = document.querySelector(`#bloque-${i} .btn-dictar-vars`);
+            let final = '';
+            const pintar = (interino = '') => {
+                caja.classList.remove('hidden');
+                caja.innerHTML = `<b>🎙️ Escuchando…</b> toca <b>Terminar</b> cuando acabes.<br><span class="text-gray-800">${esc(final)}</span> <span class="text-gray-400">${esc(interino)}</span>`;
+            };
+            S.dictadoVars = { rc, i };
+            btn.classList.add('bg-red-600', 'text-white', 'animate-pulse');
+            btn.querySelector('span').textContent = 'Terminar';
+            pintar();
+            rc.onresult = (e) => {
+                let interino = '';
+                for (let k = e.resultIndex; k < e.results.length; k++) {
+                    const r = e.results[k];
+                    if (r.isFinal) final += ' ' + r[0].transcript; else interino += r[0].transcript;
+                }
+                pintar(interino);
+            };
+            rc.onerror = (e) => {
+                if (e.error === 'not-allowed') toast('Sin permiso de micrófono. Actívalo con el candado junto a la dirección.', 'warn', 7000);
+                else if (e.error !== 'no-speech' && e.error !== 'aborted') toast('Error de dictado: ' + e.error, 'warn');
+            };
+            rc.onend = () => {
+                S.dictadoVars = null;
+                caja.classList.add('hidden');
+                if (final.trim()) aplicarDictadoVars(i, final);
+                else { btn.classList.remove('bg-red-600', 'text-white', 'animate-pulse'); btn.querySelector('span').textContent = 'Dictar variantes'; }
+            };
+            try { rc.start(); } catch { S.dictadoVars = null; }
+        }
+        function detenerDictadoVars() { if (S.dictadoVars) { try { S.dictadoVars.rc.abort(); } catch { /* ya terminó */ } S.dictadoVars = null; } }
+        window.__pg = { parsearDictadoVariantes, aplicarDictadoVars };
+
         function reconstruirVars(it) {
             const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
             const clave = (a, b) => norm(a) + '|' + norm(b || '');
@@ -1647,9 +1778,8 @@
             if (cliente) resumen += `👤 Cliente: ${cliente}\n`;
             const lineaRes = it => {
                 const v = it.vars.filter(x => toCant(x.c) !== null);
-                const cant = v.length ? v.reduce((a, x) => a + toCant(x.c), 0) : fmtCant(it.c);
-                const extra = v.length ? `${nombreVars(it)}: ${v.map(x => `${etiquetaVar(x, '-')}×${toCant(x.c)}`).join(', ')}` : it.det;
-                return `  • ${cant} × ${it.n}${it.s ? ` [${it.s}]` : ''} (${extra})`;
+                if (v.length) return bloqueVariantes(it, v, '  •').split('\n').map((l, i) => i ? '      ' + l : l).join('\n');
+                return `  • ${it.n}${it.mar ? ` (${it.mar})` : ''}${it.s ? ` [Cód. ${it.s}]` : ''}${it.det ? ` — ${it.det}` : ''} (${fmtCant(it.c)})`;
             };
             resumen += `📦 Productos:\n` + bloques.map(lineaRes).join('\n') + '\n\n¿Confirmar?';
             if (!confirm(resumen)) return;
@@ -1822,14 +1952,33 @@
         }
 
         // ================== COMPRAS ==================
+        const capital = t => { t = String(t ?? '').trim(); return t ? t[0].toUpperCase() + t.slice(1) : t; };
+
+        // Variantes en formato de lista para WhatsApp:
+        //   - S: Rosado (2), Lila (2)        (con 2 variaciones, una línea por talla)
+        //   - Talla: S (2), M (3)            (con 1 variación)
+        function lineasVariantes(pr, vars) {
+            if (!vars.length) return [];
+            if (vars.some(v => v.v2)) {
+                const filas = new Map();
+                vars.forEach(v => { if (!filas.has(v.v)) filas.set(v.v, []); filas.get(v.v).push(`${capital(v.v2)} (${fmtCant(v.c)})`); });
+                return [...filas].map(([talla, l]) => `- ${talla}: ${l.join(', ')}`);
+            }
+            return [`- ${pr.varNom || 'Variante'}: ${vars.map(v => `${v.v} (${fmtCant(v.c)})`).join(', ')}`];
+        }
+        function bloqueVariantes(pr, vars, viñeta = '•') {
+            const tot = vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
+            const cab = `${viñeta} ${pr.n}${pr.mar ? ` (${pr.mar})` : ''}${pr.s ? ` [Cód. ${pr.s}]` : ''} — ${tot} und.`;
+            return [cab, ...lineasVariantes(pr, vars), ...(pr.det ? [`- Detalle: ${pr.det}`] : [])].join('\n');
+        }
+
         function textoLista(items, encabezado) {
-            const agg = new Map(), lineasVar = [];
+            const agg = new Map(), bloquesVar = [];
             items.forEach(it => {
                 const cod = it.s ? ` [Cód. ${it.s}]` : '';
                 if (tieneVars(it)) {
                     const pend = it.vars.filter(v => !v.chk);
-                    const tot = pend.reduce((a, v) => a + (toCant(v.c) || 0), 0);
-                    lineasVar.push(`• ${tot} × ${it.n}${it.mar ? ` (${it.mar})` : ''}${cod} — ${nombreVars(it)}: ${pend.map(v => `${etiquetaVar(v, '-')}×${fmtCant(v.c)}`).join(', ')}${it.det ? ` · ${it.det}` : ''}`);
+                    if (pend.length) bloquesVar.push(bloqueVariantes(it, pend));
                     return;
                 }
                 const k = [norm(it.n), norm(it.det), norm(it.mar), norm(it.s)].join('|');
@@ -1840,9 +1989,11 @@
             });
             const lineas = [...agg.values()].map(a => {
                 const cant = a.c ? (a.indef ? `${a.c} + ?` : a.c) : '?';
-                return `• ${cant} × ${a.n}${a.mar ? ` (${a.mar})` : ''}${a.cod} — ${a.det}`;
+                return `• ${a.n}${a.mar ? ` (${a.mar})` : ''}${a.cod}${a.det ? ` — ${a.det}` : ''} (${cant})`;
             });
-            return `${encabezado}\n\n${[...lineas, ...lineasVar].join('\n')}`;
+            // Los productos con variantes van separados por una línea en blanco para que se lean fácil.
+            const partes = [lineas.join('\n'), ...bloquesVar].filter(Boolean);
+            return `${encabezado}\n\n${partes.join('\n\n')}`;
         }
 
         function renderCompras() {
@@ -2172,6 +2323,7 @@
         function cerrarModalPedido() {
             if (S.items.some(it => !bloqueVacio(it)) && !S.editId && !confirm('¿Descartar este pedido sin enviar?')) return;
             detenerCamara();
+            detenerDictadoVars();
             S.items.forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); });
             S.items = []; S.editId = null;
             $('modal-pedido').classList.add('hidden');
@@ -2213,6 +2365,7 @@
             'camara-cerrar': () => detenerCamara(),
             'camara-girar': () => { camFrente = camFrente === 'environment' ? 'user' : 'environment'; iniciarCamara(); },
             'dictado': el => iniciarDictado(Number(el.dataset.b) || 0),
+            'dictar-vars': el => dictarVariantes(Number(el.dataset.b) || 0),
             'exportar': () => exportar(),
             'compras-modo': el => { S.comprasModo = el.dataset.modo; marcarModoCompras(); renderCompras(); },
             'copiar-lista': el => copiarLista(el.dataset.key),
