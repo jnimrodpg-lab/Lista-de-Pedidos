@@ -490,6 +490,8 @@
         // ---- Variaciones (talla, peso…) ----
         const tieneVars = pr => Array.isArray(pr?.vars) && pr.vars.length > 0;
         const parseValores = t => [...new Map(String(t || '').split(',').map(x => x.trim()).filter(Boolean).map(x => [norm(x), x])).values()].slice(0, 40);
+        const etiquetaVar = (v, sep = ' · ') => v.v2 ? `${v.v}${sep}${v.v2}` : v.v;
+        const nombreVars = pr => `${pr.varNom || 'Variante'}${pr.varNom2 ? ' / ' + pr.varNom2 : ''}`;
         const cantTotal = pr => tieneVars(pr) ? pr.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0) : toCant(pr.c);
         const urgenteActivo = p => !!p.urgente && !TERMINADOS.includes(p.estado);
         const sucId = p => p.sucursalId ?? p.sucursal ?? '';
@@ -837,7 +839,7 @@
             todosPedidos().sort((a, b) => a.timestamp - b.timestamp).forEach(p => (p.productos || []).forEach(pr => {
                 if (pr.n) n.add(pr.n.trim()); if (pr.mar) m.add(pr.mar.trim()); if (pr.cat) c.add(pr.cat.trim());
                 if (pr.varNom) vn.add(pr.varNom.trim());
-                if (pr.s) { cod.add(pr.s.trim()); S.catalogo.set(norm(pr.s), { n: pr.n || '', mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '' }); }
+                if (pr.s) { cod.add(pr.s.trim()); S.catalogo.set(norm(pr.s), { n: pr.n || '', mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '', varNom2: pr.varNom2 || '' }); }
             }));
             const opts = set => [...set].sort().map(v => `<option value="${esc(v)}">`).join('');
             $('dl-nombres').innerHTML = opts(n); $('dl-marcas').innerHTML = opts(m); $('dl-cats').innerHTML = opts(c);
@@ -860,7 +862,7 @@
                 if (S.filtroForma === 'grupo' && !esGrupo(p)) return false;
                 if (!txt) return true;
                 const campos = [p.cod, p.cliente, p.contacto, nombreSucursal(p), p.tipo,
-                    ...(p.productos || []).flatMap(pr => [pr.n, pr.det, pr.mar, pr.cat, pr.s, pr.varNom, ...(pr.vars || []).map(v => v.v)]),
+                    ...(p.productos || []).flatMap(pr => [pr.n, pr.det, pr.mar, pr.cat, pr.s, pr.varNom, pr.varNom2, ...(pr.vars || []).flatMap(v => [v.v, v.v2])]),
                     ...(p.notas || []).map(n => n.texto)];
                 return campos.some(c => norm(c).includes(txt));
             });
@@ -979,12 +981,21 @@
         function htmlVars(p, pr, idx, conCheck = true) {
             if (!tieneVars(pr)) return '';
             const bloqueado = p?.estado === 'Cancelado';
-            const fichas = pr.vars.map((v, vi) => conCheck && p
-                ? `<label class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold cursor-pointer ${v.chk ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-700 hover:border-cobalto'}">
-                        <input type="checkbox" ${v.chk ? 'checked' : ''} ${bloqueado ? 'disabled' : ''} data-action="chk-var" data-id="${esc(p.id)}" data-idx="${idx}" data-vi="${vi}" class="w-3.5 h-3.5 accent-cobalto">
-                        <span class="${v.chk ? 'line-through' : ''}">${esc(v.v)}</span> <span class="text-cobalto">×${esc(fmtCant(v.c))}</span></label>`
-                : `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 bg-white text-xs font-bold ${v.chk ? 'line-through text-gray-400' : 'text-gray-700'}">${esc(v.v)} <span class="text-cobalto">×${esc(fmtCant(v.c))}</span></span>`).join('');
-            return `<div class="mt-1.5 flex flex-wrap items-center gap-1.5"><span class="text-[10px] font-bold text-gray-400 uppercase">${esc(pr.varNom || 'Variante')}:</span>${fichas}</div>`;
+            const dos = pr.vars.some(v => v.v2);
+            const ficha = (v, vi) => {
+                const txt = dos ? v.v2 : v.v;
+                return conCheck && p
+                    ? `<label class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-bold cursor-pointer ${v.chk ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-700 hover:border-cobalto'}">
+                            <input type="checkbox" ${v.chk ? 'checked' : ''} ${bloqueado ? 'disabled' : ''} data-action="chk-var" data-id="${esc(p.id)}" data-idx="${idx}" data-vi="${vi}" class="w-3.5 h-3.5 accent-cobalto">
+                            <span class="${v.chk ? 'line-through' : ''}">${esc(txt)}</span> <span class="text-cobalto">×${esc(fmtCant(v.c))}</span></label>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 bg-white text-xs font-bold ${v.chk ? 'line-through text-gray-400' : 'text-gray-700'}">${esc(txt)} <span class="text-cobalto">×${esc(fmtCant(v.c))}</span></span>`;
+            };
+            const titulo = `<span class="text-[10px] font-bold text-gray-400 uppercase">${esc(nombreVars(pr))}:</span>`;
+            if (!dos) return `<div class="mt-1.5 flex flex-wrap items-center gap-1.5">${titulo}${pr.vars.map(ficha).join('')}</div>`;
+            const filas = new Map();
+            pr.vars.forEach((v, vi) => { const k = v.v; if (!filas.has(k)) filas.set(k, []); filas.get(k).push(ficha(v, vi)); });
+            return `<div class="mt-1.5 space-y-1">${titulo}${[...filas].map(([k, f]) => `
+                <div class="flex flex-wrap items-center gap-1.5"><span class="min-w-[2.5rem] text-xs font-black text-gray-700">${esc(k)}</span>${f.join('')}</div>`).join('')}</div>`;
         }
 
         function detalleLinea(pr) {
@@ -1324,10 +1335,12 @@
 
         // ================== NUEVO / EDITAR PEDIDO ==================
         // ---- Bloques de producto (Individual = 1 bloque; Grupo = Código 1, Código 2…) ----
-        const nuevoBloque = () => ({ _key: nuevoId(), c: 1, n: '', det: '', s: '', mar: '', cat: '', varNom: '', varVals: '', vars: [],
+        const nuevoBloque = () => ({ _key: nuevoId(), c: 1, n: '', det: '', s: '', mar: '', cat: '',  varNom: '', varVals: '', varNom2: '', varVals2: '', vars: [],
             prov: '', lugar: '', chk: false, chkAuto: false, img: null, _blob: null, _dataUrl: null, _preview: null });
         const desdeProducto = pr => ({ ...nuevoBloque(), ...pr, _key: nuevoId(),
-            varNom: pr.varNom || '', vars: (pr.vars || []).map(v => ({ ...v })), varVals: (pr.vars || []).map(v => v.v).join(', '),
+            varNom: pr.varNom || '', varNom2: pr.varNom2 || '', vars: (pr.vars || []).map(v => ({ ...v })),
+            varVals: [...new Set((pr.vars || []).map(v => v.v))].join(', '),
+            varVals2: [...new Set((pr.vars || []).map(v => v.v2).filter(Boolean))].join(', '),
             _blob: null, _dataUrl: null, _preview: null });
         const bloqueVacio = it => !String(it.n).trim() && !String(it.det).trim() && !String(it.s).trim() && !it.vars.length && !it.img && !it._dataUrl;
         const totalVars = it => it.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
@@ -1408,8 +1421,20 @@
                 : `<input type="number" data-b="${i}" data-f="c" value="${esc(it.c ?? '')}" min="0" step="1" inputmode="numeric" placeholder="Cant." title="Deja vacío si no sabes la cantidad" class="w-full h-[38px] px-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-center outline-none focus:border-cobalto">`;
         }
 
+        const inputVar = (i, vi, c) => `<input type="number" min="0" step="1" inputmode="numeric" data-b="${i}" data-f="varC" data-vi="${vi}" value="${esc(c ?? '')}" placeholder="0" class="w-14 px-1.5 py-1 bg-white border border-gray-200 rounded text-center text-xs font-bold outline-none focus:border-cobalto">`;
+
         function varsQtyHTML(it, i) {
-            if (!it.vars.length) return `<p class="text-[11px] text-gray-400">Ej.: Talla → S, M, L · Peso → 2kg, 4kg. Cada valor tendrá su propia cantidad.</p>`;
+            if (!it.vars.length) return `<p class="text-[11px] text-gray-400">Ej.: Talla → S, M, L · Color → Blanco, Negro. Cada combinación tendrá su propia cantidad.</p>`;
+            const l2 = parseValores(it.varVals2);
+            if (l2.length) {
+                const l1 = parseValores(it.varVals);
+                const idx = (a, b) => it.vars.findIndex(v => norm(v.v) === norm(a) && norm(v.v2) === norm(b));
+                return `<div class="overflow-x-auto"><table class="text-xs">
+                    <thead><tr><th class="text-left pr-2 pb-1 text-[10px] text-gray-400 font-bold uppercase">${esc(it.varNom || 'Var. 1')} / ${esc(it.varNom2 || 'Var. 2')}</th>${l2.map(b => `<th class="px-1 pb-1 font-bold text-gray-600 whitespace-nowrap">${esc(b)}</th>`).join('')}</tr></thead>
+                    <tbody>${l1.map(a => `<tr><th class="text-left pr-2 font-black text-gray-700 whitespace-nowrap">${esc(a)}</th>${l2.map(b => { const vi = idx(a, b); return `<td class="p-0.5">${vi >= 0 ? inputVar(i, vi, it.vars[vi].c) : ''}</td>`; }).join('')}</tr>`).join('')}</tbody>
+                </table></div>
+                <p class="text-[10px] text-gray-400 mt-1.5">Las combinaciones en 0 o vacías no se guardan.</p>`;
+            }
             return `<div class="flex flex-wrap gap-2">${it.vars.map((v, vi) => `
                 <label class="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg pl-2 pr-1 py-1 text-xs font-bold text-gray-700">
                     ${esc(v.v)}
@@ -1444,10 +1469,14 @@
                             <input type="text" data-b="${i}" data-f="cat" value="${esc(it.cat)}" list="dl-cats" maxlength="60" placeholder="Categoría (opc.)" class="px-3 py-2 ${campo} text-xs">
                         </div>
                         <div class="rounded-xl border border-dashed border-gray-300 p-2.5 bg-gray-50/60">
-                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-1.5 flex items-center gap-1">${icono('ruler', 'w-3.5 h-3.5')} Variaciones (opcional)</p>
+                            <p class="text-[10px] font-bold text-gray-500 uppercase mb-1.5 flex items-center gap-1">${icono('ruler', 'w-3.5 h-3.5')} Variaciones (opcional · hasta 2)</p>
                             <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
                                 <input type="text" data-b="${i}" data-f="varNom" value="${esc(it.varNom)}" list="dl-varnom" maxlength="30" placeholder="Talla, Peso…" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-cobalto">
                                 <input type="text" data-b="${i}" data-f="varVals" value="${esc(it.varVals)}" maxlength="300" placeholder="S, M, L, XL  (separa con comas)" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
+                            </div>
+                            <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2 mt-2">
+                                <input type="text" data-b="${i}" data-f="varNom2" value="${esc(it.varNom2)}" list="dl-varnom" maxlength="30" placeholder="Color…" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-cobalto">
+                                <input type="text" data-b="${i}" data-f="varVals2" value="${esc(it.varVals2)}" maxlength="300" placeholder="Blanco, Negro… (2ª variación, opcional)" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium outline-none focus:border-cobalto">
                             </div>
                             <div id="vars-${i}" class="mt-2">${varsQtyHTML(it, i)}</div>
                         </div>
@@ -1485,6 +1514,23 @@
             renderBloques();
         }
 
+        // Combina variación 1 × variación 2. Si solo hay la 1, queda como antes.
+        function reconstruirVars(it) {
+            const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
+            const clave = (a, b) => norm(a) + '|' + norm(b || '');
+            const previas = new Map(it.vars.map(v => [clave(v.v, v.v2), v]));
+            const nuevas = [];
+            for (const a of l1) {
+                (l2.length ? l2 : [null]).forEach((b, bi) => {
+                    // Al agregar la 2ª variación, la cantidad que ya tenía "S" pasa a la primera combinación (S · Blanco).
+                    const p = previas.get(clave(a, b)) || (b && bi === 0 ? previas.get(clave(a, null)) : null);
+                    const base = { v: a, c: p ? p.c : null, chk: !!p?.chk, chkAuto: !!p?.chkAuto };
+                    nuevas.push(b ? { ...base, v2: b } : base);
+                });
+            }
+            it.vars = nuevas.slice(0, 300);
+        }
+
         // Escribir en un bloque actualiza el estado sin redibujar (no se pierde el cursor).
         $('np-bloques').addEventListener('input', (e) => {
             const el = e.target, f = el.dataset.f, i = Number(el.dataset.b), it = S.items[i];
@@ -1492,12 +1538,12 @@
             if (f === 'varC') { const v = it.vars[Number(el.dataset.vi)]; if (v) v.c = el.value === '' ? null : Number(el.value); actualizarCant(i); return; }
             it[f] = el.value;
             if (f === 's') document.querySelectorAll(`#bloque-${i} [data-f="s"]`).forEach(x => { if (x !== el) x.value = el.value; });
-            if (f === 'varVals') {
-                const previas = new Map(it.vars.map(v => [norm(v.v), v]));
-                it.vars = parseValores(el.value).map(v => { const p = previas.get(norm(v)); return p ? { ...p, v } : { v, c: null, chk: false, chkAuto: false }; });
+            if (f === 'varVals' || f === 'varVals2') {
+                reconstruirVars(it);
                 $(`vars-${i}`).innerHTML = varsQtyHTML(it, i);
                 actualizarCant(i);
             }
+            if (f === 'varNom' || f === 'varNom2') { const th = document.querySelector(`#vars-${i} thead th`); if (th) th.textContent = `${it.varNom || 'Var. 1'} / ${it.varNom2 || 'Var. 2'}`; }
         });
         // Al escribir un código ya usado antes, completa nombre, marca y categoría vacíos.
         $('np-bloques').addEventListener('change', (e) => {
@@ -1506,9 +1552,9 @@
             const prev = S.catalogo.get(norm(it.s));
             if (!prev) return;
             let cambio = false;
-            for (const k of ['n', 'mar', 'cat', 'varNom']) if (!String(it[k]).trim() && prev[k]) { it[k] = prev[k]; cambio = true; }
+            for (const k of ['n', 'mar', 'cat', 'varNom', 'varNom2']) if (!String(it[k]).trim() && prev[k]) { it[k] = prev[k]; cambio = true; }
             if (cambio) {
-                ['n', 'mar', 'cat', 'varNom'].forEach(k => { const x = document.querySelector(`#bloque-${i} [data-f="${k}"]`); if (x) x.value = it[k]; });
+                ['n', 'mar', 'cat', 'varNom', 'varNom2'].forEach(k => { const x = document.querySelector(`#bloque-${i} [data-f="${k}"]`); if (x) x.value = it[k]; });
                 toast('Datos completados con el código anterior', 'info', 2500);
             }
         });
@@ -1528,7 +1574,11 @@
 
         const limpiarProducto = pr => {
             const vars = tieneVars(pr)
-                ? pr.vars.map(v => ({ v: String(v.v), c: toCant(v.c), chk: !!v.chk, chkAuto: !!v.chkAuto })).filter(v => v.c !== null)
+                ? pr.vars.map(v => {
+                    const o = { v: String(v.v), c: toCant(v.c), chk: !!v.chk, chkAuto: !!v.chkAuto };
+                    if (v.v2) o.v2 = String(v.v2);
+                    return o;
+                }).filter(v => v.c !== null)
                 : [];
             const out = {
                 c: vars.length ? vars.reduce((a, v) => a + v.c, 0) : toCant(pr.c),
@@ -1537,7 +1587,11 @@
                 prov: pr.prov || '', lugar: pr.lugar || '',
                 img: pr.img || null, chk: !!pr.chk, chkAuto: !!pr.chkAuto
             };
-            if (vars.length) { out.varNom = String(pr.varNom || '').trim() || 'Variante'; out.vars = vars; out.chk = vars.every(v => v.chk); }
+            if (vars.length) {
+                out.varNom = String(pr.varNom || '').trim() || 'Variante';
+                if (vars.some(v => v.v2)) out.varNom2 = String(pr.varNom2 || '').trim() || 'Variante 2';
+                out.vars = vars; out.chk = vars.every(v => v.chk);
+            }
             return out;
         };
 
@@ -1594,7 +1648,7 @@
             const lineaRes = it => {
                 const v = it.vars.filter(x => toCant(x.c) !== null);
                 const cant = v.length ? v.reduce((a, x) => a + toCant(x.c), 0) : fmtCant(it.c);
-                const extra = v.length ? `${it.varNom || 'Variante'}: ${v.map(x => `${x.v}×${toCant(x.c)}`).join(', ')}` : it.det;
+                const extra = v.length ? `${nombreVars(it)}: ${v.map(x => `${etiquetaVar(x, '-')}×${toCant(x.c)}`).join(', ')}` : it.det;
                 return `  • ${cant} × ${it.n}${it.s ? ` [${it.s}]` : ''} (${extra})`;
             };
             resumen += `📦 Productos:\n` + bloques.map(lineaRes).join('\n') + '\n\n¿Confirmar?';
@@ -1775,7 +1829,7 @@
                 if (tieneVars(it)) {
                     const pend = it.vars.filter(v => !v.chk);
                     const tot = pend.reduce((a, v) => a + (toCant(v.c) || 0), 0);
-                    lineasVar.push(`• ${tot} × ${it.n}${it.mar ? ` (${it.mar})` : ''}${cod} — ${it.varNom || 'Variante'}: ${pend.map(v => `${v.v}×${fmtCant(v.c)}`).join(', ')}${it.det ? ` · ${it.det}` : ''}`);
+                    lineasVar.push(`• ${tot} × ${it.n}${it.mar ? ` (${it.mar})` : ''}${cod} — ${nombreVars(it)}: ${pend.map(v => `${etiquetaVar(v, '-')}×${fmtCant(v.c)}`).join(', ')}${it.det ? ` · ${it.det}` : ''}`);
                     return;
                 }
                 const k = [norm(it.n), norm(it.det), norm(it.mar), norm(it.s)].join('|');
@@ -2064,13 +2118,14 @@
                     'Código': p.cod, 'Fecha': new Date(p.timestamp), 'Sucursal': nombreSucursal(p), 'Tipo': p.tipo,
                     'Fecha programada': p.fechaProg ? fmtFechaISO(p.fechaProg) : '', 'Cliente': p.cliente || '', 'Contacto': p.contacto || '',
                     'Estado': ESTADOS[p.estado]?.label || p.estado, 'Urgente': p.urgente ? 'Sí' : '', 'Forma': esGrupo(p) ? 'Grupo' : 'Individual', 'Código producto': pr.s || '', 'Producto': pr.n, 'Variación': v ? (pr.varNom || '') : '', 'Valor': v ? v.v : '',
+                    'Variación 2': v?.v2 ? (pr.varNom2 || '') : '', 'Valor 2': v?.v2 || '',
                     'Cantidad': (v ? toCant(v.c) : toCant(pr.c)) ?? '', 'Detalle': pr.det || '',
                     'Marca': pr.mar || '', 'Categoría': pr.cat || '',
                     'Proveedor': pr.prov ? nombreDe(S.config.proveedores, pr.prov) : '', 'Lugar de compra': pr.lugar ? nombreDe(S.config.lugares, pr.lugar) : '',
                     'Conseguido': (v ? v.chk : pr.chk) ? 'Sí' : 'No', 'Notas': (p.notas || []).map(n => `${n.por}: ${n.texto}`).join(' | ')
                 })));
                 const ws = XLSX.utils.json_to_sheet(filas, { cellDates: true, dateNF: 'dd/mm/yyyy hh:mm' });
-                ws['!cols'] = [12, 16, 18, 12, 14, 20, 16, 12, 9, 11, 14, 28, 12, 10, 9, 32, 14, 14, 18, 18, 11, 40].map(w => ({ wch: w }));
+                ws['!cols'] = [12, 16, 18, 12, 14, 20, 16, 12, 9, 11, 14, 28, 12, 10, 12, 12, 9, 32, 14, 14, 18, 18, 11, 40].map(w => ({ wch: w }));
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
                 XLSX.writeFile(wb, `Pedidos_${hoyISO()}.xlsx`);
