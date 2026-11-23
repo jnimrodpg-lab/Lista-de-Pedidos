@@ -383,7 +383,26 @@
                 <input type="file" id="file-input" class="hidden" accept="image/*">
                 <input type="file" id="file-camara" class="hidden" accept="image/*" capture="environment">
                 <div id="np-bloques" class="flex flex-col gap-4"></div>
-                <button type="button" data-action="agregar-bloque" id="btn-agregar-bloque" class="self-start btn border-2 border-dashed border-cobalto/40 hover:border-cobalto hover:bg-cobalto-claro text-cobalto px-4 py-2.5 bg-white"><i data-lucide="plus" class="w-4 h-4"></i> Agregar código</button>
+                <div id="acciones-grupo" class="flex flex-wrap gap-2">
+                    <button type="button" data-action="agregar-bloque" id="btn-agregar-bloque" class="btn border-2 border-dashed border-cobalto/40 hover:border-cobalto hover:bg-cobalto-claro text-cobalto px-4 py-2.5 bg-white"><i data-lucide="plus" class="w-4 h-4"></i> Agregar código</button>
+                    <button type="button" data-action="abrir-codigos" class="btn border-2 border-dashed border-cobalto/40 hover:border-cobalto hover:bg-cobalto-claro text-cobalto px-4 py-2.5 bg-white"><i data-lucide="list-plus" class="w-4 h-4"></i> Agregar varios códigos</button>
+                </div>
+                <section id="panel-codigos" class="hidden bg-white rounded-xl border-2 border-cobalto/30 p-4">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <h3 class="font-cond font-bold text-xl">Agregar varios códigos</h3>
+                        <button type="button" data-action="cerrar-codigos" class="w-8 h-8 rounded-md hover:bg-papel flex items-center justify-center" aria-label="Cerrar"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Escribe, pega o dicta los códigos separados por coma o uno por línea. Si un código ya se pidió antes, se completan solos el nombre, la marca y las tallas.</p>
+                    <div class="relative">
+                        <textarea id="np-codigos" rows="3" class="campo pr-12 font-semibold" placeholder="AL-01, AL-02, AL-05"></textarea>
+                        <button type="button" data-action="dictar-codigos" id="btn-mic-codigos" class="absolute right-1.5 top-1.5 w-8 h-8 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="Dictar los códigos" aria-label="Dictar los códigos"><i data-lucide="mic" class="w-4 h-4"></i></button>
+                    </div>
+                    <p id="np-codigos-cuenta" class="text-[13px] text-gray-500 mt-1.5 min-h-[1.25rem]"></p>
+                    <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mt-2">
+                        <input type="text" id="np-codigos-marca" list="dl-marcas" maxlength="60" placeholder="Marca para todos (opcional)" aria-label="Marca para todos" class="campo">
+                        <button type="button" data-action="crear-codigos" class="btn btn-primario px-5"><i data-lucide="layers" class="w-4 h-4"></i> Crear códigos</button>
+                    </div>
+                </section>
             </div>
 
             <div class="px-4 md:px-6 py-3 bg-white border-t border-linea flex items-center gap-3 shrink-0 pb-safe">
@@ -479,7 +498,7 @@
             items: [], editId: null, guardando: false, modo: 'individual', voz: null, vozId: null, renderPendiente: false,
             detalle: null, recienCompletados: new Set(), textosCompra: new Map(),
             expandidos: new Set(), filtroForma: 'todos', marcasCerradas: new Set(), vistaLista: leerPref('vistaLista', 'pedido'),
-            catalogo: new Map(), fotoTarget: 0, bloqueActivo: 0, notasVistas: leerPref('notasVistas', {}),
+            catalogo: new Map(), catalogoRemoto: new Map(), fotoTarget: 0, bloqueActivo: 0, notasVistas: leerPref('notasVistas', {}),
             avisos: leerPref('avisos', true)
         };
 
@@ -747,6 +766,7 @@
             S.activos.clear(); S.rango.clear(); S.prev.clear(); S.conocidos.clear();
             S.cargado = { act: false, ran: false };
             S.usuarios = [];
+            S.catalogoRemoto = new Map();
         }
 
         function iniciarApp() {
@@ -777,6 +797,11 @@
                 pintarSubtitulo();
                 refrescar();
             }, errorEscucha));
+
+            S.unsubs.push(onSnapshot(collection(db, 'catalogo'), (snap) => {
+                S.catalogoRemoto = new Map(snap.docs.map(d => [d.id, d.data()]));
+                actualizarAutocompletadoPronto();
+            }, (e) => console.warn('Catálogo no disponible (¿reglas sin publicar?):', e.code || e)));
 
             if (esLog()) {
                 S.unsubs.push(onSnapshot(collection(db, 'usuarios'), (snap) => {
@@ -904,10 +929,15 @@
             todosPedidos().sort((a, b) => a.timestamp - b.timestamp).forEach(p => (p.productos || []).forEach(pr => {
                 if (pr.n) n.add(pr.n.trim()); if (pr.mar) m.add(pr.mar.trim()); if (pr.cat) c.add(pr.cat.trim());
                 if (pr.varNom) vn.add(pr.varNom.trim());
-                if (pr.s) { cod.add(pr.s.trim()); S.catalogo.set(norm(pr.s), { n: pr.n || '', mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '', varNom2: pr.varNom2 || '' }); }
+                if (pr.s) { cod.add(pr.s.trim()); S.catalogo.set(norm(pr.s), {
+                    n: pr.n || '', mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '', varNom2: pr.varNom2 || '',
+                    varVals: [...new Set((pr.vars || []).map(v => v.v))].join(', '),
+                    varVals2: [...new Set((pr.vars || []).map(v => v.v2).filter(Boolean))].join(', ')
+                }); }
             }));
             const opts = set => [...set].sort().map(v => `<option value="${esc(v)}">`).join('');
             $('dl-nombres').innerHTML = opts(n); $('dl-marcas').innerHTML = opts(m); $('dl-cats').innerHTML = opts(c);
+            for (const c of S.catalogoRemoto.values()) if (c.s) cod.add(c.s);
             $('dl-codigos').innerHTML = opts(cod); $('dl-varnom').innerHTML = opts(vn);
         }
 
@@ -993,7 +1023,6 @@
 
         function extrasProducto(pr) {
             const partes = [
-                pr.s && `<span class="font-semibold text-gray-700">Cód. ${esc(pr.s)}</span>`,
                 pr.mar && `<span class="inline-flex items-center gap-1">${icono('tag', 'w-3 h-3')}${esc(pr.mar)}</span>`,
                 pr.cat && `<span>${esc(pr.cat)}</span>`
             ].filter(Boolean);
@@ -1065,8 +1094,9 @@
                 <div class="flex flex-wrap items-center gap-1.5"><span class="min-w-[2.25rem] font-cond font-bold text-base">${esc(k)}</span>${f.join('')}</div>`).join('')}</div>`;
         }
 
+        const chapaCodigo = s => s ? `<span class="inline-block align-middle font-cond font-bold text-[13px] leading-none tracking-wide px-1.5 py-1 mr-1.5 rounded border border-tinta/25 bg-papel text-tinta" title="Código del producto">${esc(s)}</span>` : '';
         function infoProducto(p, pr, idx, { grande = false, conCheck = true, tituloBoton = false } = {}) {
-            const titulo = `<p class="${grande ? 'text-[17px]' : 'text-[15px]'} leading-snug ${pr.chk ? 'line-through text-gray-400' : 'font-semibold'} ${tituloBoton ? 'hover:text-cobalto' : ''}"><span class="font-cond font-bold text-cobalto ${grande ? 'text-xl' : 'text-lg'} mr-1">${esc(fmtCant(cantTotal(pr)))}×</span>${esc(pr.n)}</p>`;
+            const titulo = `<p class="${grande ? 'text-[17px]' : 'text-[15px]'} leading-snug ${pr.chk ? 'line-through text-gray-400' : 'font-semibold'} ${tituloBoton ? 'hover:text-cobalto' : ''}">${chapaCodigo(pr.s)}<span class="font-cond font-bold text-cobalto ${grande ? 'text-xl' : 'text-lg'} mr-1">${esc(fmtCant(cantTotal(pr)))}×</span>${esc(pr.n)}</p>`;
             return `${tituloBoton ? `<button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idx}" class="text-left">${titulo}</button>` : titulo}
                 ${detalleLinea(pr)}${extrasProducto(pr)}${htmlVars(p, pr, idx, conCheck)}`;
         }
@@ -1463,7 +1493,8 @@
             const ind = S.modo === 'individual';
             marcarSegmento('#np-modo button', 'modo', S.modo);
             $('np-modo-ayuda').textContent = ind ? 'Un solo producto' : 'Varios productos, cada uno con su foto y variaciones';
-            $('btn-agregar-bloque').classList.toggle('hidden', ind);
+            $('acciones-grupo').classList.toggle('hidden', ind);
+            if (ind) $('panel-codigos').classList.add('hidden');
         }
 
         function cambiarModo(m) {
@@ -1605,10 +1636,10 @@
             const i = S.items.length - 1;
             setTimeout(() => { const b = $(`bloque-${i}`); b?.scrollIntoView({ block: 'center', behavior: 'smooth' }); b?.querySelector('[data-f="n"]')?.focus(); }, 50);
         }
-        function quitarBloque(i) {
+        async function quitarBloque(i) {
             const it = S.items[i];
             if (!it) return;
-            if (!bloqueVacio(it) && !confirm(`¿Eliminar el Código ${i + 1}${it.n ? ` (${it.n})` : ''}?`)) return;
+            if (!bloqueVacio(it) && !await confirmarUI({ titulo: `¿Quitar el código ${i + 1}?`, html: `<p class="text-sm text-gray-600">${esc([it.s, it.n].filter(Boolean).join(' ') || 'Este código')} se quitará del pedido.</p>`, ok: 'Quitar', peligro: true })) return;
             liberarPreviews([it]);
             S.items.splice(i, 1);
             if (!S.items.length) S.items.push(nuevoBloque());
@@ -1833,7 +1864,7 @@
             if (texto !== null && btn.querySelector('span')) btn.querySelector('span').textContent = texto;
         }
         // Acceso para pruebas, solo si la página se abre con ?debug
-        if (new URLSearchParams(location.search).has('debug')) window.__pg = { parsearDictadoVariantes, aplicarDictadoVars, parsearListaValores, aplicarValoresDictados };
+        if (new URLSearchParams(location.search).has('debug')) window.__pg = { parsearDictadoVariantes, aplicarDictadoVars, parsearListaValores, aplicarValoresDictados, parsearCodigos: t => parsearCodigos(t), textoLista: (i, e) => textoLista(i, e) };
 
         function reconstruirVars(it) {
             const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
@@ -1869,16 +1900,110 @@
             actualizarResumenForm();
             if (f === 'varNom' || f === 'varNom2') { const th = document.querySelector(`#vars-${i} thead th`); if (th) th.textContent = `${it.varNom || 'Var. 1'} / ${it.varNom2 || 'Var. 2'}`; }
         });
+        // Completa lo que falte de un bloque con lo que se pidió antes con ese código (nombre, marca, tallas, colores).
+        const buscarCodigo = s => S.catalogoRemoto.get(idCatalogo(s)) || S.catalogo.get(norm(s));
+        const idCatalogo = s => norm(s).replace(/[\/.#\[\]\s]+/g, '_').slice(0, 100) || '_';
+        // Guarda en el catálogo compartido los productos con código (para que cualquier sucursal los reconozca después).
+        function recordarCodigos(productos) {
+            productos.filter(pr => pr.s && pr.n).forEach(pr => {
+                setDoc(doc(db, 'catalogo', idCatalogo(pr.s)), {
+                    s: pr.s, n: pr.n, mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '', varNom2: pr.varNom2 || '',
+                    varVals: [...new Set((pr.vars || []).map(v => v.v))].join(', '),
+                    varVals2: [...new Set((pr.vars || []).map(v => v.v2).filter(Boolean))].join(', '),
+                    actualizado: ahora()
+                }).catch(e => console.warn('Catálogo:', e));
+            });
+        }
+        function completarDesdeCatalogo(it) {
+            const prev = buscarCodigo(it.s);
+            if (!prev) return false;
+            let cambio = false;
+            for (const k of ['n', 'mar', 'cat', 'varNom', 'varNom2']) if (!String(it[k]).trim() && prev[k]) { it[k] = prev[k]; cambio = true; }
+            if (!it.vars.length && prev.varVals) {
+                it.varVals = prev.varVals; it.varVals2 = prev.varVals2 || '';
+                reconstruirVars(it);
+                cambio = true;
+            }
+            return cambio;
+        }
+
+        // ---- Agregar varios códigos de golpe ----
+        function parsearCodigos(texto) {
+            let t = ' ' + String(texto || '') + ' ';
+            // Dictado: "al guion cero uno coma al guion cero dos" → "al-01, al-02"
+            t = t.replace(/\bgui[oó]n\b/gi, '-').replace(/\b(coma|siguiente|luego)\b/gi, ',').replace(/\s+y\s+/gi, ',');
+            t = t.replace(/\b[a-záéíóúñ]+\b/gi, w => (norm(w) in NUMEROS && norm(w) !== 'un' && norm(w) !== 'una') ? String(NUMEROS[norm(w)]) : w);
+            const out = [];
+            for (const seg of t.split(/[,;\n]+/).map(x => x.trim()).filter(Boolean)) {
+                const tok = seg.split(/\s+/);
+                if (tok.length > 1 && tok.every(w => /\d/.test(w))) out.push(...tok);               // "AL01 AL02 AL05"
+                else if (tok.length > 1 && tok.some(w => /^\d+$/.test(w))) out.push(tok.join('').replace(/-+/g, '-')); // "al - 0 1" → "al-01"
+                else out.push(seg.replace(/\s*-\s*/g, '-'));
+            }
+            return [...new Map(out.map(c => c.toUpperCase()).filter(Boolean).map(c => [norm(c), c])).values()].slice(0, 60);
+        }
+        function contarCodigos() {
+            const cods = parsearCodigos($('np-codigos').value);
+            const conocidos = cods.filter(c => buscarCodigo(c)).length;
+            const aviso = conocidos === 1 ? '. 1 ya se pidió antes y se completará solo.' : conocidos > 1 ? `. ${conocidos} ya se pidieron antes y se completarán solos.` : '';
+            $('np-codigos-cuenta').textContent = cods.length ? `${plural(cods.length, 'código', 'códigos')}: ${cods.join(', ')}${aviso}` : '';
+        }
+        function abrirPanelCodigos() {
+            $('panel-codigos').classList.remove('hidden');
+            $('np-codigos').value = ''; $('np-codigos-marca').value = ''; contarCodigos();
+            $('panel-codigos').scrollIntoView({ block: 'center', behavior: 'smooth' });
+            setTimeout(() => $('np-codigos').focus(), 250);
+        }
+        function crearCodigos() {
+            const cods = parsearCodigos($('np-codigos').value);
+            if (!cods.length) { toast('Escribe al menos un código.', 'warn'); return $('np-codigos').focus(); }
+            const marca = $('np-codigos-marca').value.trim();
+            const ya = new Set(S.items.map(it => norm(it.s)).filter(Boolean));
+            const repetidos = cods.filter(c => ya.has(norm(c)));
+            const nuevos = cods.filter(c => !ya.has(norm(c))).map(c => {
+                const b = nuevoBloque();
+                b.s = c;
+                completarDesdeCatalogo(b);
+                if (marca && !b.mar) b.mar = marca;
+                return b;
+            });
+            S.items = [...S.items.filter(it => !bloqueVacio(it)), ...nuevos];
+            if (!S.items.length) S.items = [nuevoBloque()];
+            S.modo = 'grupo';
+            renderBloques();
+            $('panel-codigos').classList.add('hidden');
+            toast(`${plural(nuevos.length, 'código agregado', 'códigos agregados')}${repetidos.length ? `. Ya estaban: ${repetidos.join(', ')}` : ''}`, nuevos.length ? 'ok' : 'warn', 5000);
+            // Lleva al primer código nuevo que necesite datos.
+            const i = S.items.findIndex(it => nuevos.includes(it) && (!it.n || !it.vars.length));
+            const destino = i >= 0 ? i : S.items.indexOf(nuevos[0]);
+            setTimeout(() => {
+                const b = $(`bloque-${destino}`);
+                b?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                (b?.querySelector(S.items[destino]?.n ? '[data-f="varC"], [data-f="c"]' : '[data-f="n"]'))?.focus();
+            }, 120);
+        }
+        function dictarCodigos() {
+            if (S.voz && S.vozId === 'codigos') { S.voz.stop(); return; }
+            const caja = $('np-codigos'), base = caja.value.trim(), btn = $('btn-mic-codigos');
+            const unir = t => [base, t].filter(Boolean).join(', ');
+            const rc = crearVoz('codigos', {
+                continuo: true,
+                alParcial: (final, interino) => { caja.value = unir((final + ' ' + interino).trim()); contarCodigos(); },
+                alTerminar: final => { estadoBotonVoz(btn, false); caja.value = unir(final); contarCodigos(); }
+            });
+            if (rc) estadoBotonVoz(btn, true);
+        }
+        $('np-codigos').addEventListener('input', contarCodigos);
+
         // Al escribir un código ya usado antes, completa nombre, marca y categoría vacíos.
         $('np-bloques').addEventListener('change', (e) => {
             const el = e.target, i = Number(el.dataset.b), it = S.items[i];
             if (!it || el.dataset.f !== 's' || !it.s.trim()) return;
-            const prev = S.catalogo.get(norm(it.s));
+            const prev = buscarCodigo(it.s);
             if (!prev) return;
-            let cambio = false;
-            for (const k of ['n', 'mar', 'cat', 'varNom', 'varNom2']) if (!String(it[k]).trim() && prev[k]) { it[k] = prev[k]; cambio = true; }
-            if (cambio) {
-                ['n', 'mar', 'cat', 'varNom', 'varNom2'].forEach(k => { const x = document.querySelector(`#bloque-${i} [data-f="${k}"]`); if (x) x.value = it[k]; });
+            if (completarDesdeCatalogo(it)) {
+                renderUnBloque(i);
+                actualizarResumenForm();
                 toast('Datos completados con el código anterior', 'info', 2500);
             }
         });
@@ -1986,6 +2111,7 @@
                     sucursalNombre: nombreDe(S.config.sucursales, sucursalIdDestino),
                     tipo, fechaProg, cliente, contacto, urgente, productos
                 };
+                recordarCodigos(productos);
                 if (S.editId) {
                     await mutarPedido(S.editId, p => ({ ...datos, productos: fusionarConActual(datos.productos, bloques, p.productos || []) }), 'Editó el pedido');
                     toast('Cambios guardados', 'ok');
@@ -2038,12 +2164,12 @@
                 } else if (v.length) {
                     variantes = `<p>${esc(it.varNom || 'Variante')}: ${v.map(x => `${esc(x.v)} <b class="font-cond text-cobalto">${toCant(x.c)}</b>`).join(', ')}</p>`;
                 }
-                const extras = [it.s && `Cód. ${esc(it.s)}`, it.mar && esc(it.mar)].filter(Boolean).join(', ');
+                const extras = it.mar ? esc(it.mar) : '';
                 return `
                     <li class="flex gap-3 py-2.5">
                         <div class="w-11 h-11 rounded-md border border-linea overflow-hidden shrink-0">${miniatura(it._preview || it.img, 'w-full h-full')}</div>
                         <div class="min-w-0 text-sm">
-                            <p class="text-[15px] leading-snug"><span class="font-cond font-bold text-lg text-cobalto mr-1">${esc(fmtCant(cant))}×</span><b>${esc(it.n)}</b></p>
+                            <p class="text-[15px] leading-snug">${chapaCodigo(it.s)}<span class="font-cond font-bold text-lg text-cobalto mr-1">${esc(fmtCant(cant))}×</span><b>${esc(it.n)}</b></p>
                             ${extras ? `<p class="text-xs text-gray-500">${extras}</p>` : ''}
                             ${it.det ? `<p class="text-gray-600">${esc(it.det)}</p>` : ''}
                             <div class="text-gray-700 mt-0.5 space-y-0.5">${variantes}</div>
@@ -2243,26 +2369,47 @@
             return [cab, ...lineasVariantes(pr, vars), ...(pr.det ? [`- Detalle: ${pr.det}`] : [])].join('\n');
         }
 
+        // Mensaje para el proveedor, separado por código:
+        //   *AL-01* Alteza clásica (Alteza) — 10 und.
+        //   - S: Rosado (2), Lila (2)
+        // Si el mismo código viene de varios pedidos, se suman las cantidades. Lo que no tiene código va al final.
         function textoLista(items, encabezado) {
-            const agg = new Map(), bloquesVar = [];
+            const porCodigo = new Map(), sinCodigo = new Map(), sinCodigoVar = [];
+            const claveVar = v => norm(v.v) + '|' + norm(v.v2 || '');
             items.forEach(it => {
-                if (tieneVars(it)) {
-                    const pend = it.vars.filter(v => !v.chk);
-                    if (pend.length) bloquesVar.push(bloqueVariantes(it, pend));
+                const pend = tieneVars(it) ? it.vars.filter(v => !v.chk) : null;
+                if (pend && !pend.length) return;
+                if (String(it.s || '').trim()) {
+                    const k = norm(it.s);
+                    const g = porCodigo.get(k) || { s: it.s.trim(), n: it.n, mar: it.mar, varNom: it.varNom, varNom2: it.varNom2, vars: new Map(), c: 0, indef: false, simple: false, dets: new Set() };
+                    if (it.det) g.dets.add(it.det.trim());
+                    if (pend) pend.forEach(v => { const a = g.vars.get(claveVar(v)) || { v: v.v, v2: v.v2, c: 0 }; a.c += toCant(v.c) || 0; g.vars.set(claveVar(v), a); });
+                    else { g.simple = true; const c = toCant(it.c); if (c === null) g.indef = true; else g.c += c; }
+                    porCodigo.set(k, g);
                     return;
                 }
-                const k = [norm(it.n), norm(it.det), norm(it.mar), norm(it.s)].join('|');
-                const a = agg.get(k) || { n: it.n, det: it.det, mar: it.mar, s: it.s, c: 0, indef: false };
+                if (pend) { sinCodigoVar.push(bloqueVariantes(it, pend)); return; }
+                const k = [norm(it.n), norm(it.det), norm(it.mar)].join('|');
+                const a = sinCodigo.get(k) || { n: it.n, det: it.det, mar: it.mar, s: '', c: 0, indef: false };
                 const c = toCant(it.c);
                 if (c === null) a.indef = true; else a.c += c;
-                agg.set(k, a);
+                sinCodigo.set(k, a);
             });
-            const lineas = [...agg.values()].map(a => {
-                const cant = a.c ? (a.indef ? `${a.c} + ?` : a.c) : '?';
-                return lineaSimpleTexto(a, cant);
-            });
-            // Los productos con variantes van separados por una línea en blanco para que se lean fácil.
-            const partes = [lineas.join('\n'), ...bloquesVar].filter(Boolean);
+            const cant = (c, indef) => c ? (indef ? `${c} + ?` : c) : '?';
+            const bloques = [...porCodigo.values()]
+                .sort((a, b) => a.s.localeCompare(b.s, 'es', { numeric: true }))
+                .map(g => {
+                    const vars = [...g.vars.values()];
+                    const tot = vars.reduce((a, v) => a + v.c, 0) + g.c;
+                    const det = [...g.dets].join('; ');
+                    const cab = `*${g.s}* ${g.n}${g.mar ? ` (${g.mar})` : ''}`;
+                    if (!vars.length) return `${cab}${det ? ` — ${det}` : ''} (${cant(g.c, g.indef)})`;
+                    return [`${cab} — ${tot} und.`, ...lineasVariantes(g, vars), ...(det ? [`- Detalle: ${det}`] : [])].join('\n');
+                });
+            const lineasSin = [...sinCodigo.values()].map(a => lineaSimpleTexto(a, cant(a.c, a.indef)));
+            const partes = [...bloques];
+            const resto = [lineasSin.join('\n'), ...sinCodigoVar].filter(Boolean);
+            if (resto.length) partes.push((bloques.length ? '*Sin código*\n' : '') + resto.join('\n\n'));
             return `${encabezado}\n\n${partes.join('\n\n')}`;
         }
 
@@ -2551,6 +2698,26 @@
                 ws['!cols'] = [12, 16, 18, 12, 14, 20, 16, 12, 9, 11, 14, 28, 12, 10, 12, 12, 9, 32, 14, 14, 18, 18, 11, 40].map(w => ({ wch: w }));
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
+                // Resumen por código: suma lo mismo de todos los pedidos filtrados.
+                const res = new Map();
+                lista.forEach(p => (p.productos || []).forEach(pr => filasDe(p, pr).forEach(({ v }) => {
+                    const base = pr.s ? norm(pr.s) : 'sin|' + [norm(pr.n), norm(pr.det), norm(pr.mar)].join('|');
+                    const k = base + '|' + (v ? norm(v.v) + '|' + norm(v.v2 || '') : '');
+                    const r = res.get(k) || { 'Código producto': pr.s || '(sin código)', 'Producto': pr.n, 'Marca': pr.mar || '', 'Detalle': pr.det || '',
+                        'Variación': v ? (pr.varNom || '') : '', 'Valor': v ? v.v : '', 'Variación 2': v?.v2 ? (pr.varNom2 || '') : '', 'Valor 2': v?.v2 || '',
+                        'Cantidad total': 0, 'Falta conseguir': 0, _ped: new Set(), _suc: new Set() };
+                    const c = (v ? toCant(v.c) : toCant(pr.c)) || 0;
+                    r['Cantidad total'] += c;
+                    if (!(v ? v.chk : pr.chk)) r['Falta conseguir'] += c;
+                    r._ped.add(p.cod); r._suc.add(nombreSucursal(p));
+                    res.set(k, r);
+                })));
+                const filasRes = [...res.values()]
+                    .sort((a, b) => (a['Código producto'] === '(sin código)') - (b['Código producto'] === '(sin código)') || a['Código producto'].localeCompare(b['Código producto'], 'es', { numeric: true }) || String(a['Valor']).localeCompare(String(b['Valor'])))
+                    .map(({ _ped, _suc, ...r }) => ({ ...r, 'Pedidos': [..._ped].join(', '), 'Sucursales': [..._suc].join(', ') }));
+                const ws2 = XLSX.utils.json_to_sheet(filasRes);
+                ws2['!cols'] = [14, 28, 14, 24, 12, 10, 12, 12, 13, 14, 30, 24].map(w => ({ wch: w }));
+                XLSX.utils.book_append_sheet(wb, ws2, 'Por código');
                 XLSX.writeFile(wb, `Pedidos_${hoyISO()}.xlsx`);
             } catch (e) { toast('No se pudo exportar: ' + mensajeError(e), 'error'); }
             finally { btn.disabled = false; }
@@ -2644,6 +2811,10 @@
             'dictado': el => iniciarDictado(Number(el.dataset.b) || 0),
             'dictar-vars': el => dictarVariantes(Number(el.dataset.b) || 0),
             'dictar-valores': el => dictarValores(Number(el.dataset.b) || 0, el.dataset.campo),
+            'abrir-codigos': () => abrirPanelCodigos(),
+            'cerrar-codigos': () => { detenerVoz(); $('panel-codigos').classList.add('hidden'); },
+            'crear-codigos': () => crearCodigos(),
+            'dictar-codigos': () => dictarCodigos(),
             'exportar': () => exportar(),
             'compras-modo': el => { S.comprasModo = el.dataset.modo; marcarModoCompras(); renderCompras(); },
             'copiar-lista': el => copiarLista(el.dataset.key),
