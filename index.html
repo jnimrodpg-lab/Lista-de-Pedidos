@@ -527,6 +527,21 @@
         const esLog = () => S.perfil?.rol === 'logistica';
         const autor = () => S.perfil?.nombre || S.perfil?.email || 'Usuario';
         const esGrupo = p => (p.productos || []).length > 1;
+        // Marca del pedido: la que comparten todos sus productos (si no hay una sola, ninguna).
+        function marcaDe(productos) {
+            const lista = (productos || []).map(pr => String(pr.mar || '').trim());
+            if (!lista.length || lista.some(m => !m)) return '';
+            return new Set(lista.map(norm)).size === 1 ? lista[0] : '';
+        }
+        const marcaPedido = p => esGrupo(p) ? marcaDe(p.productos) : '';
+        const tituloPedido = p => p.cod + (marcaPedido(p) ? ` – ${marcaPedido(p)}` : '');
+        const tituloPedidoHTML = p => `${esc(p.cod)}${marcaPedido(p) ? `<span class="text-cobalto"> – ${esc(marcaPedido(p))}</span>` : ''}`;
+        // "Chocolatte int niña: Pima, Estampado" si todos tienen el mismo nombre; si no, los nombres.
+        function resumenProductos(productos) {
+            const nombres = [...new Map(productos.map(pr => [norm(pr.n), pr.n])).values()];
+            if (nombres.length === 1) { const cods = productos.map(pr => pr.s).filter(Boolean); return cods.length ? `${nombres[0]}: ${cods.join(', ')}` : nombres[0]; }
+            return nombres.slice(0, 3).join(', ') + (nombres.length > 3 ? '…' : '');
+        }
         // ---- Variaciones (talla, peso…) ----
         const tieneVars = pr => Array.isArray(pr?.vars) && pr.vars.length > 0;
         // Separa por coma, punto y coma o "/". "S M L" con espacios también se separa (solo si todo son tallas o números).
@@ -1220,7 +1235,7 @@
                 const hechos = productos.reduce((a, pr) => a + unidadesHechas(pr), 0);
                 const pct = total ? Math.round(hechos / total * 100) : 0;
                 const abierto = S.expandidos.has(p.id);
-                const resumen = productos.slice(0, 3).map(pr => pr.n).join(', ') + (productos.length > 3 ? '…' : '');
+                const resumen = resumenProductos(productos);
                 const visibles = productos.map((pr, idx) => ({ pr, idx })).filter(x => cumpleCompra(x.pr));
                 const filtrado = S.filtroCompra !== 'todo' && visibles.length < productos.length;
                 cuerpo = `
@@ -1249,7 +1264,7 @@
             <div class="ticket ${S.recienCompletados.has(p.id) ? 'fade-out-row' : ''} ${p.estado === 'Cancelado' ? 'opacity-60' : ''}" style="--riel:${urg ? '#d4382a' : est.riel}">
                 <div class="pl-5 pr-4 pt-3.5 pb-4">
                     <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idxFoto}" class="font-cond font-bold text-[22px] leading-none tracking-wide hover:text-cobalto">${esc(p.cod)}</button>
+                        <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idxFoto}" class="font-cond font-bold text-[22px] leading-none tracking-wide hover:text-cobalto text-left">${tituloPedidoHTML(p)}</button>
                         ${etiquetas}
                     </div>
                     <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-gray-500">
@@ -1295,7 +1310,7 @@
             const boton = 'btn btn-quieto text-sm px-3 py-1.5';
             $('mdi-cabecera').innerHTML = `
                 <div class="flex flex-wrap items-center gap-2">
-                    <h3 class="font-cond font-bold text-3xl leading-none tracking-wide">${esc(p.cod)}</h3>
+                    <h3 class="font-cond font-bold text-3xl leading-none tracking-wide">${tituloPedidoHTML(p)}</h3>
                     ${urgenteActivo(p) ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-senal text-white text-xs font-bold">${icono('siren', 'w-3 h-3')} Urgente</span>` : ''}
                     <span class="px-2 py-0.5 rounded text-xs font-semibold ${est.cls}">${est.label}</span>
                 </div>
@@ -1547,7 +1562,7 @@
             const borrador = p ? null : leerBorrador();
             if (borrador) restaurarBorrador(borrador);
             if (S.modo === 'tabla') prepararTabla();
-            $('np-titulo').textContent = p ? `Editar ${p.cod}` : 'Nuevo pedido';
+            $('np-titulo').textContent = p ? `Editar ${tituloPedido(p)}` : 'Nuevo pedido';
             $('btn-guardar-pedido').querySelector('span').textContent = p ? 'Revisar cambios' : 'Revisar y enviar';
 
             const sel = $('np-sucursal');
@@ -1663,7 +1678,11 @@
         // ================== MODO TABLA (código × color × talla) ==================
         // Cada código es una tarjeta compacta: filas = colores, columnas = tallas.
         // Usa el mismo modelo de datos de siempre (varNom/varVals = tallas, varNom2/varVals2 = colores).
-        const esNomColor = s => /^colou?r(es)?$/.test(norm(s));
+        // Nombre de las filas de la cuadrícula: color, modelo o código (no son tallas).
+        const esNomColor = s => /^(colou?r(es)?|modelos?|codigos?|disenos?|estampados?)$/.test(norm(s));
+        const NOMBRES_FILA = ['Color', 'Modelo', 'Código'];
+        const nomFila = it => { const d = dimsTabla(it); return String(it._nomFila || (d.tallas.length ? it.varNom2 : (esNomColor(it.varNom) ? it.varNom : '')) || 'Color').trim(); };
+        const plurFila = n => ({ color: 'Colores', modelo: 'Modelos', codigo: 'Códigos' }[norm(n)] || n);
         function dimsTabla(it) {
             const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
             if (l2.length || String(it.varNom2 || '').trim()) return { tallas: l1, colores: l2 };
@@ -1683,7 +1702,7 @@
             const antes = new Map(it.vars.map(v => [claveCelda(v, d), v]));
             const sumaAntes = it.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
             const nomTalla = (!esNomColor(it.varNom) && String(it.varNom || '').trim()) || (tallas.length && tallas.every(v => /\d\s*(kg|lb|g|gr|oz)$/i.test(v)) ? 'Peso' : 'Talla');
-            const nomColor = String(it.varNom2 || '').trim() || (esNomColor(it.varNom) ? it.varNom : '') || 'Color';
+            const nomColor = String(it._nomFila || it.varNom2 || '').trim() || (esNomColor(it.varNom) ? it.varNom : '') || 'Color';
             if (tallas.length) Object.assign(it, { varNom: nomTalla, varVals: tallas.join(', '), varNom2: colores.length ? nomColor : '', varVals2: colores.join(', ') });
             else if (colores.length) Object.assign(it, { varNom: nomColor, varVals: colores.join(', '), varNom2: '', varVals2: '' });
             else Object.assign(it, { varNom: '', varVals: '', varNom2: '', varVals2: '' });
@@ -1794,10 +1813,15 @@
                     ${!ind && S.items.length > 1 ? `<button type="button" data-action="quitar-bloque" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md text-gray-400 hover:text-senal hover:bg-red-50 flex items-center justify-center" title="Quitar este código" aria-label="Quitar este código">${icono('trash-2')}</button>` : ''}
                 </div>
                 ${resumen ? `<p class="px-3 pt-1 text-xs text-gray-500 truncate">${esc(resumen)}</p>` : ''}
-                <div class="grid grid-cols-[minmax(0,1fr)_7rem] sm:grid-cols-[minmax(0,1fr)_12rem] gap-2 px-3 pt-2">
-                    <div class="relative">
-                        <input type="text" data-b="${i}" data-f="colores" value="${esc(d.colores.join(', '))}" maxlength="300" placeholder="Colores (opcional)" aria-label="Colores" class="campo h-10 text-sm pr-10">
-                        ${botonMic('dictar-lista', 'Dictar los colores', `data-tipo="colores" data-b="${i}"`)}
+                <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_12rem] gap-2 px-3 pt-2">
+                    <div class="flex gap-1.5 min-w-0">
+                        <select data-b="${i}" data-f="nomFila" aria-label="Las filas son" title="Las filas son colores, modelos o códigos" class="campo sel h-10 text-sm font-semibold w-[6.75rem] shrink-0">
+                            ${(NOMBRES_FILA.some(x => norm(x) === norm(nomFila(it))) ? NOMBRES_FILA : [nomFila(it), ...NOMBRES_FILA]).map(x => `<option ${norm(x) === norm(nomFila(it)) ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+                        </select>
+                        <div class="relative flex-grow min-w-0">
+                            <input type="text" data-b="${i}" data-f="colores" value="${esc(d.colores.join(', '))}" maxlength="300" placeholder="${esc(plurFila(nomFila(it)))} (opcional)" aria-label="${esc(plurFila(nomFila(it)))}" class="campo h-10 text-sm pr-10">
+                            ${botonMic('dictar-lista', 'Dictar ' + plurFila(nomFila(it)).toLowerCase(), `data-tipo="colores" data-b="${i}"`)}
+                        </div>
                     </div>
                     <div class="relative">
                         <input type="text" data-b="${i}" data-f="tallas" value="${esc(d.tallas.join(', '))}" maxlength="300" placeholder="Tallas o pesos" aria-label="Tallas o pesos" class="campo h-10 text-sm ${ind ? 'pr-10' : ''}">
@@ -1859,6 +1883,16 @@
                 if (!d.tallas.length && !d.colores.length) it.c = n;
                 else { const vi = idxCelda(it, el.dataset.t, el.dataset.c, d); if (vi >= 0) it.vars[vi].c = n; }
                 actualizarTotalesTabla(i);
+                return true;
+            }
+            if (f === 'nomFila') {
+                it._nomFila = el.value;
+                const d = dimsTabla(it);
+                if (d.tallas.length && d.colores.length) it.varNom2 = el.value;
+                else if (d.colores.length) it.varNom = el.value;
+                const inp = document.querySelector(`#bloque-${i} [data-f="colores"]`);
+                if (inp) { inp.placeholder = `${plurFila(el.value)} (opcional)`; inp.setAttribute('aria-label', plurFila(el.value)); }
+                redibujarGrid(i);
                 return true;
             }
             if (f === 'colores' || f === 'tallas') {
@@ -2253,11 +2287,15 @@
             if (!sucursalIdDestino) return toast('Elige la sucursal de destino.', 'warn');
             const cliente = $('np-cliente').value.trim(), contacto = $('np-contacto').value.trim();
             const urgente = $('np-urgente').checked;
+            const unirCon = S.editId ? null : pedidoParaUnir({ sucursalId: sucursalIdDestino, tipo, cliente, bloques });
 
             const okRevision = await confirmarUI({
                 titulo: S.editId ? 'Revisa los cambios' : 'Revisa el pedido',
-                html: vistaPreviaPedido({ sucursalId: sucursalIdDestino, tipo, fechaProg, cliente, contacto, urgente, bloques }),
-                ok: S.editId ? 'Guardar cambios' : 'Enviar pedido'
+                html: (unirCon ? `<div class="mb-3 px-3 py-2.5 rounded-lg bg-cobalto-claro border border-cobalto/25 text-sm text-cobalto-oscuro">
+                        Ya hay un pedido pendiente de <b>${esc(marcaDe(bloques))}</b> para esta sucursal: <b>${esc(tituloPedido(unirCon))}</b>.
+                        Estos productos se agregarán ahí; si un código ya estaba, se suman las cantidades.</div>` : '')
+                    + vistaPreviaPedido({ sucursalId: sucursalIdDestino, tipo, fechaProg, cliente, contacto, urgente, bloques }),
+                ok: S.editId ? 'Guardar cambios' : unirCon ? `Agregar a ${unirCon.cod}` : 'Enviar pedido'
             });
             if (!okRevision) return;
 
@@ -2278,6 +2316,8 @@
                 if (S.editId) {
                     await mutarPedido(S.editId, p => ({ ...datos, productos: fusionarConActual(datos.productos, bloques, p.productos || []) }), 'Editó el pedido');
                     toast('Cambios guardados', 'ok');
+                } else if (unirCon && await unirAPedido(unirCon, productos, urgente)) {
+                    toast(`Se agregó a ${tituloPedido(unirCon)}`, 'ok');
                 } else {
                     const cod = await crearPedido(datos);
                     toast(`Pedido ${cod} enviado`, 'ok');
@@ -2292,6 +2332,50 @@
                 toast('No se pudo guardar: ' + mensajeError(e), 'error', 8000);
             } finally {
                 S.guardando = false; btn.disabled = false;
+            }
+        }
+
+        // ---- Unificar por marca: un pedido Multi códigos nuevo se suma al pendiente de la misma marca ----
+        function pedidoParaUnir({ sucursalId, tipo, cliente, bloques }) {
+            if (S.modo !== 'tabla') return null;
+            const marca = norm(marcaDe(bloques));
+            if (!marca) return null;
+            return todosPedidos()
+                .filter(p => sucId(p) === sucursalId && p.estado === 'Pendiente' && (p.tipo || 'Pedido') === tipo
+                    && norm(p.cliente) === norm(cliente) && norm(marcaDe(p.productos)) === marca)
+                .sort((a, b) => b.timestamp - a.timestamp)[0] || null;
+        }
+        function unirProductos(actuales, nuevos) {
+            const out = actuales.map(pr => ({ ...pr, ...(pr.vars ? { vars: pr.vars.map(v => ({ ...v })) } : {}) }));
+            const clave = pr => norm(pr.s) ? 's|' + norm(pr.s) + '|' + norm(pr.n) : 'n|' + norm(pr.n) + '|' + norm(pr.det);
+            for (const nu of nuevos) {
+                const ex = out.find(pr => clave(pr) === clave(nu) && tieneVars(pr) === tieneVars(nu) && norm(pr.varNom2) === norm(nu.varNom2));
+                if (!ex) { out.push(nu); continue; }
+                if (tieneVars(nu)) {
+                    for (const v of nu.vars) {
+                        const e = ex.vars.find(x => norm(x.v) === norm(v.v) && norm(x.v2) === norm(v.v2));
+                        if (e) Object.assign(e, { c: (toCant(e.c) || 0) + (toCant(v.c) || 0), chk: false, chkAuto: false });
+                        else ex.vars.push({ ...v, chk: false, chkAuto: false });
+                    }
+                    ex.c = ex.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
+                } else ex.c = (toCant(ex.c) || 0) + (toCant(nu.c) || 0) || null;
+                Object.assign(ex, { chk: false, chkAuto: false });
+                if (!ex.img && nu.img) ex.img = nu.img;
+            }
+            if (out.length > 100) throw new Error('El pedido llegaría a más de 100 productos. Crea un pedido nuevo.');
+            return out;
+        }
+        // Devuelve false si el pedido ya no está pendiente (entonces se crea uno nuevo).
+        async function unirAPedido(destino, productos, urgente) {
+            try {
+                await mutarPedido(destino.id, p => {
+                    if (p.estado !== 'Pendiente') throw new Error('NO_PENDIENTE');
+                    return { productos: unirProductos(p.productos || [], productos), urgente: !!p.urgente || urgente };
+                }, `Agregó ${plural(productos.length, 'producto', 'productos')}`);
+                return true;
+            } catch (e) {
+                if (e.message === 'NO_PENDIENTE' || e.message === 'El pedido ya no existe.') return false;
+                throw e;
             }
         }
 
@@ -2509,9 +2593,11 @@
                 const pre = abrevVar(pr.varNom) === 'T' ? 'T ' : '';
                 const filas = new Map();
                 const agregar = (k, txt) => { if (!filas.has(k)) filas.set(k, []); filas.get(k).push(txt); };
-                if (porColor) {
+                // Si las filas son modelos o códigos (no colores), siempre una línea por modelo: "- Modelo Pima: T 10 (6), 12 (6)"
+                const nom2 = String(pr.varNom2 || '').trim(), esModelo = nom2 && !/^colou?r(es)?$/.test(norm(nom2));
+                if (porColor || esModelo) {
                     vars.forEach(v => agregar(capital(v.v2 || ''), `${v.v} (${fmtCant(v.c)})`));
-                    return [...filas].map(([fila, l]) => `- ${fila}: ${pre}${l.join(', ')}`);
+                    return [...filas].map(([fila, l]) => `- ${esModelo ? capital(nom2) + ' ' : ''}${fila}: ${pre}${l.join(', ')}`);
                 }
                 vars.forEach(v => agregar(v.v, `${capital(v.v2 || '')} (${fmtCant(v.c)})`));
                 return [...filas].map(([talla, l]) => `- ${pre}${talla}: ${l.join(', ')}`);
@@ -2520,8 +2606,8 @@
         }
         function bloqueVariantes(pr, vars, viñeta = '•') {
             const tot = vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
-            const cab = `${viñeta} ${pr.n}${pr.mar ? ` (${pr.mar})` : ''}${pr.s ? ` [Cód. ${pr.s}]` : ''} — ${tot} und.`;
-            return [cab, ...lineasVariantes(pr, vars, !!pr.multi), ...(pr.det ? [`- Detalle: ${pr.det}`] : [])].join('\n');
+            const cab = `${viñeta} ${pr.n}${pr.s ? ` [Cód. ${pr.s}]` : ''} — ${tot} und.`;
+            return [cab, ...(pr.mar ? [`- Marca: ${pr.mar}`] : []), ...lineasVariantes(pr, vars, !!pr.multi), ...(pr.det ? [`- Detalle: ${pr.det}`] : [])].join('\n');
         }
 
         // Mensaje para el proveedor, separado por código:
@@ -2558,9 +2644,9 @@
                     const vars = [...g.vars.values()];
                     const tot = vars.reduce((a, v) => a + v.c, 0) + g.c;
                     const det = [...g.dets].join('; ');
-                    const cab = `*${g.s}* ${g.n}${g.mar ? ` (${g.mar})` : ''}`;
-                    if (!vars.length) return `${cab}${det ? ` — ${det}` : ''} (${cant(g.c, g.indef)})`;
-                    return [`${cab} — ${tot} und.`, ...lineasVariantes(g, vars, g.multi), ...(det ? [`- Detalle: ${det}`] : [])].join('\n');
+                    const cab = `*${g.s}* ${g.n}`;
+                    if (!vars.length) return `${cab}${g.mar ? ` (${g.mar})` : ''}${det ? ` — ${det}` : ''} (${cant(g.c, g.indef)})`;
+                    return [`${cab} — ${tot} und.`, ...(g.mar ? [`- Marca: ${g.mar}`] : []), ...lineasVariantes(g, vars, g.multi), ...(det ? [`- Detalle: ${det}`] : [])].join('\n');
                 });
             const lineasSin = [...sinCodigo.values()].map(a => lineaSimpleTexto(a, cant(a.c, a.indef)));
             const partes = [...bloques];
