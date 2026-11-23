@@ -23,6 +23,9 @@
     </script>
     <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
     <style>
+        .celda::-webkit-outer-spin-button, .celda::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .celda { -moz-appearance: textfield; }
+        .celda:not(:placeholder-shown) { background: #e5f1ec; border-color: rgba(0, 92, 66, .35); color: #00412f; }
         /* ===== Sistema de diseño "guía de despacho" ===== */
         :root { --papel: #f3f5f1; --linea: #dce2db; --tinta: #17211d; --verde: #005c42; }
         body { background: var(--papel); color: var(--tinta); font-family: Barlow, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
@@ -340,8 +343,9 @@
             <div class="p-4 md:p-6 overflow-y-auto flex-grow flex flex-col gap-4">
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex bg-white rounded-lg border border-linea p-0.5" id="np-modo">
-                        <button type="button" data-action="modo-pedido" data-modo="individual" class="px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="package" class="w-4 h-4"></i> Individual</button>
-                        <button type="button" data-action="modo-pedido" data-modo="grupo" class="px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4"></i> Grupo</button>
+                        <button type="button" data-action="modo-pedido" data-modo="individual" class="px-3 sm:px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="package" class="w-4 h-4"></i> Individual</button>
+                        <button type="button" data-action="modo-pedido" data-modo="grupo" class="px-3 sm:px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4"></i> Grupo</button>
+                        <button type="button" data-action="modo-pedido" data-modo="tabla" class="px-3 sm:px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="table" class="w-4 h-4"></i> Tabla</button>
                     </div>
                     <p class="text-sm text-gray-500" id="np-modo-ayuda"></p>
                 </div>
@@ -499,7 +503,8 @@
             detalle: null, recienCompletados: new Set(), textosCompra: new Map(),
             expandidos: new Set(), filtroForma: 'todos', marcasCerradas: new Set(), vistaLista: leerPref('vistaLista', 'pedido'),
             catalogo: new Map(), catalogoRemoto: new Map(), fotoTarget: 0, bloqueActivo: 0, notasVistas: leerPref('notasVistas', {}),
-            avisos: leerPref('avisos', true)
+            avisos: leerPref('avisos', true),
+            tabla: { marca: '', tallas: '', nomTalla: 'Talla' }
         };
 
         // ================== UTILIDADES ==================
@@ -1451,7 +1456,7 @@
             varVals: [...new Set((pr.vars || []).map(v => v.v))].join(', '),
             varVals2: [...new Set((pr.vars || []).map(v => v.v2).filter(Boolean))].join(', '),
             _blob: null, _dataUrl: null, _preview: null });
-        const bloqueVacio = it => !String(it.n).trim() && !String(it.det).trim() && !String(it.s).trim() && !it.vars.length && !it.img && !it._dataUrl;
+        const bloqueVacio = it => !String(it.n).trim() && !String(it.det).trim() && !String(it.s).trim() && !it.vars.some(v => toCant(v.c) !== null) && !it.img && !it._dataUrl;
         const totalVars = it => it.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
 
         function abrirModalPedido(p = null, idxProducto = null) {
@@ -1461,7 +1466,8 @@
             S.items = p ? (p.productos || []).map(desdeProducto) : [nuevoBloque()];
             if (!S.items.length) S.items = [nuevoBloque()];
             const pref = leerPref('modoPedido', 'individual');
-            S.modo = p ? (S.items.length > 1 ? 'grupo' : 'individual') : (pref === 'lista' ? 'grupo' : pref);
+            S.modo = p ? (S.items.length > 1 ? (pref === 'tabla' ? 'tabla' : 'grupo') : 'individual') : (pref === 'lista' ? 'grupo' : pref);
+            if (S.modo === 'tabla') prepararTabla();
             $('np-titulo').textContent = p ? `Editar ${p.cod}` : 'Nuevo pedido';
             $('btn-guardar-pedido').querySelector('span').textContent = p ? 'Revisar cambios' : 'Revisar y enviar';
 
@@ -1485,14 +1491,14 @@
             setTimeout(() => {
                 const b = $(`bloque-${destinoIdx}`);
                 if (idxProducto !== null && b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); b.classList.add('ring-2', 'ring-amber-300'); setTimeout(() => b.classList.remove('ring-2', 'ring-amber-300'), 2500); }
-                b?.querySelector('[data-f="n"]')?.focus();
+                b?.querySelector(S.modo === 'tabla' && !p ? '[data-f="s"]' : '[data-f="n"]')?.focus();
             }, 80);
         }
 
         function aplicarModo() {
             const ind = S.modo === 'individual';
             marcarSegmento('#np-modo button', 'modo', S.modo);
-            $('np-modo-ayuda').textContent = ind ? 'Un solo producto' : 'Varios productos, cada uno con su foto y variaciones';
+            $('np-modo-ayuda').textContent = ind ? 'Un solo producto' : S.modo === 'tabla' ? 'Muchos códigos: solo cantidades por color y talla' : 'Cada código con su foto, detalle y variaciones';
             $('acciones-grupo').classList.toggle('hidden', ind);
             if (ind) $('panel-codigos').classList.add('hidden');
         }
@@ -1505,6 +1511,7 @@
                 S.items = conDatos.length ? conDatos : [S.items[0] || nuevoBloque()];
             }
             S.modo = m;
+            if (m === 'tabla') prepararTabla();
             if (!S.editId) guardarPref('modoPedido', m);
             renderBloques();
         }
@@ -1604,7 +1611,7 @@
 
         function renderBloques() {
             aplicarModo();
-            $('np-bloques').innerHTML = S.items.map(bloqueHTML).join('');
+            $('np-bloques').innerHTML = S.modo === 'tabla' ? ajustesTablaHTML() + S.items.map(tarjetaTablaHTML).join('') : S.items.map(bloqueHTML).join('');
             pintarIconos();
             actualizarResumenForm();
         }
@@ -1619,8 +1626,14 @@
         function renderUnBloque(i) {
             const b = $(`bloque-${i}`);
             if (!b) return;
-            b.outerHTML = bloqueHTML(S.items[i], i);
+            // Si el cursor estaba dentro del bloque, vuelve al mismo campo después de redibujar.
+            const a = document.activeElement, dentro = b.contains(a) ? { f: a.dataset.f, t: a.dataset.t, c: a.dataset.c } : null;
+            b.outerHTML = (S.modo === 'tabla' ? tarjetaTablaHTML : bloqueHTML)(S.items[i], i);
             pintarIconos();
+            if (dentro?.f) {
+                const cand = [...$(`bloque-${i}`).querySelectorAll(`[data-f="${dentro.f}"]`)].find(x => x.dataset.t === dentro.t && x.dataset.c === dentro.c);
+                cand?.focus();
+            }
         }
         function renderFoto(i) { const c = $(`foto-${i}`); if (c) { c.innerHTML = fotoHTML(S.items[i], i); pintarIconos(); } actualizarResumenForm(); }
         function actualizarCant(i) {
@@ -1631,10 +1644,12 @@
         }
 
         function agregarBloque() {
-            S.items.push(nuevoBloque());
+            const b = nuevoBloque();
+            if (S.modo === 'tabla') prepararBloqueTabla(b);
+            S.items.push(b);
             renderBloques();
             const i = S.items.length - 1;
-            setTimeout(() => { const b = $(`bloque-${i}`); b?.scrollIntoView({ block: 'center', behavior: 'smooth' }); b?.querySelector('[data-f="n"]')?.focus(); }, 50);
+            setTimeout(() => { const b = $(`bloque-${i}`); b?.scrollIntoView({ block: 'center', behavior: 'smooth' }); b?.querySelector(S.modo === 'tabla' ? '[data-f="s"]' : '[data-f="n"]')?.focus(); }, 50);
         }
         async function quitarBloque(i) {
             const it = S.items[i];
@@ -1644,6 +1659,224 @@
             S.items.splice(i, 1);
             if (!S.items.length) S.items.push(nuevoBloque());
             renderBloques();
+        }
+
+
+        // ================== MODO TABLA (código × color × talla) ==================
+        // Cada código es una tarjeta compacta: filas = colores, columnas = tallas.
+        // Usa el mismo modelo de datos que Grupo (varNom/varVals = tallas, varNom2/varVals2 = colores).
+        const esNomColor = s => /^colou?r(es)?$/.test(norm(s));
+        function dimsTabla(it) {
+            const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
+            if (l2.length || String(it.varNom2 || '').trim()) return { tallas: l1, colores: l2 };
+            if (esNomColor(it.varNom)) return { tallas: [], colores: l1 };
+            return { tallas: l1, colores: [] };
+        }
+        // Clave "talla|color" de una variante, según cómo esté armado el producto.
+        const claveCelda = (v, d) => d.tallas.length ? norm(v.v) + '|' + norm(v.v2 || '') : '|' + norm(v.v);
+        function idxCelda(it, talla, color, d = dimsTabla(it)) {
+            const k = norm(talla || '') + '|' + norm(color || '');
+            return it.vars.findIndex(v => claveCelda(v, d) === k);
+        }
+        const totalItem = it => it.vars.length ? totalVars(it) : (toCant(it.c) || 0);
+        // Cambia las tallas o los colores de un código sin perder las cantidades ya escritas.
+        function fijarDims(it, tallas, colores) {
+            const d = dimsTabla(it);
+            const antes = new Map(it.vars.map(v => [claveCelda(v, d), v]));
+            const sumaAntes = it.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
+            const nomTalla = (!esNomColor(it.varNom) && String(it.varNom || '').trim()) || S.tabla.nomTalla || 'Talla';
+            const nomColor = String(it.varNom2 || '').trim() || (esNomColor(it.varNom) ? it.varNom : '') || 'Color';
+            if (tallas.length) Object.assign(it, { varNom: nomTalla, varVals: tallas.join(', '), varNom2: colores.length ? nomColor : '', varVals2: colores.join(', ') });
+            else if (colores.length) Object.assign(it, { varNom: nomColor, varVals: colores.join(', '), varNom2: '', varVals2: '' });
+            else Object.assign(it, { varNom: '', varVals: '', varNom2: '', varVals2: '' });
+            it.vars = [];
+            reconstruirVars(it);
+            const d2 = dimsTabla(it);
+            it.vars.forEach(v => { const p = antes.get(claveCelda(v, d2)); if (p) Object.assign(v, { c: p.c, chk: !!p.chk, chkAuto: !!p.chkAuto }); });
+            if (!it.vars.length && antes.size) it.c = sumaAntes || null;
+        }
+        function prepararBloqueTabla(b) {
+            b.c = null;
+            if (!String(b.mar || '').trim()) b.mar = S.tabla.marca.trim();
+            const t = parseValores(S.tabla.tallas);
+            if (t.length && !b.vars.length) fijarDims(b, t, []);
+        }
+        // Al entrar a Tabla: toma la marca y las tallas comunes de lo que ya está escrito.
+        function prepararTabla() {
+            const conDatos = S.items.filter(it => !bloqueVacio(it));
+            const marcas = [...new Set(conDatos.map(it => norm(it.mar)).filter(Boolean))];
+            S.tabla.marca = marcas.length === 1 ? conDatos.find(it => norm(it.mar)).mar : (conDatos.length ? '' : S.tabla.marca);
+            const conTallas = conDatos.map(it => dimsTabla(it).tallas).find(t => t.length);
+            S.tabla.tallas = conTallas ? conTallas.join(', ') : (S.tabla.tallas || leerPref('tablaTallas', ''));
+            S.items.forEach(it => { if (bloqueVacio(it)) { it.vars = []; it.varVals = it.varVals2 = ''; prepararBloqueTabla(it); } });
+        }
+
+        const celdaInput = (i, t, c, val) => `<input type="number" min="0" step="1" inputmode="numeric" data-b="${i}" data-f="celda" data-t="${esc(t)}" data-c="${esc(c)}" value="${esc(val ?? '')}" placeholder="·" aria-label="${esc([c, t].filter(Boolean).join(' ') || 'Cantidad')}" class="campo celda w-[3.25rem] h-10 px-1 text-center font-cond font-bold text-lg">`;
+
+        function gridTablaHTML(it, i) {
+            const d = dimsTabla(it), sinDims = !d.tallas.length && !d.colores.length;
+            const cols = d.tallas.length ? d.tallas : [''];
+            const filas = d.colores.length ? d.colores : [''];
+            const valor = (t, c) => { if (sinDims) return it.c; const vi = idxCelda(it, t, c, d); return vi >= 0 ? it.vars[vi].c : null; };
+            const totFila = c => cols.reduce((a, t) => a + (toCant(valor(t, c)) || 0), 0);
+            const conTot = cols.length > 1;
+            const nomFila = d.tallas.length ? (it.varNom2 || 'Color') : (it.varNom || 'Color');
+            return `<table class="text-sm">
+                <thead><tr>
+                    <th class="text-left pr-3 pb-1 text-xs font-semibold text-gray-500 min-w-[4.5rem]">${d.colores.length ? esc(nomFila) : ''}</th>
+                    ${cols.map(t => `<th class="px-0.5 pb-1 font-cond font-bold text-base whitespace-nowrap">${t ? esc(t) : 'Cant.'}</th>`).join('')}
+                    ${conTot ? '<th class="pl-2 pb-1 text-xs font-semibold text-gray-500 text-right">Total</th>' : ''}
+                </tr></thead>
+                <tbody>${filas.map((c, r) => `<tr>
+                    <th class="text-left pr-3 font-semibold whitespace-nowrap max-w-[9rem] truncate">${c ? esc(c) : `<span class="font-normal text-gray-400">${d.tallas.length ? 'Cantidad' : ''}</span>`}</th>
+                    ${cols.map(t => `<td class="p-0.5">${celdaInput(i, t, c, valor(t, c))}</td>`).join('')}
+                    ${conTot ? `<td class="pl-2 text-right font-cond font-bold text-base text-gray-600 tabular-nums" id="totf-${i}-${r}">${totFila(c) || '–'}</td>` : ''}
+                </tr>`).join('')}</tbody></table>`;
+        }
+
+        function ajustesTablaHTML() {
+            return `
+            <section class="bg-white rounded-xl border-2 border-cobalto/25 p-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="tb-marca" class="etiqueta">Marca para todos</label>
+                        <input type="text" id="tb-marca" data-tb="marca" list="dl-marcas" maxlength="60" value="${esc(S.tabla.marca)}" placeholder="Ej.: Alteza" class="campo">
+                    </div>
+                    <div>
+                        <label for="tb-tallas" class="etiqueta">Tallas para todos</label>
+                        <div class="relative">
+                            <input type="text" id="tb-tallas" data-tb="tallas" maxlength="300" value="${esc(S.tabla.tallas)}" placeholder="S, M, L, XL" class="campo pr-11">
+                            <button type="button" data-action="dictar-tabla" data-tipo="tallas" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="Dictar las tallas" aria-label="Dictar las tallas">${icono('mic')}</button>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Escribe solo las cantidades; Enter pasa a la siguiente casilla. Si un código usa otras tallas, cámbialas en ese código. Para agregar foto o detalle, usa el botón del lápiz.</p>
+            </section>`;
+        }
+
+        function tarjetaTablaHTML(it, i) {
+            const d = dimsTabla(it);
+            const extra = [it.det, it.mar && norm(it.mar) !== norm(S.tabla.marca) ? `Marca: ${it.mar}` : '', (it._preview || it.img) ? 'Con foto' : ''].filter(Boolean).join(', ');
+            return `
+            <section id="bloque-${i}" data-b="${i}" class="bloque bg-white rounded-xl border border-linea">
+                <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 px-3 pt-3">
+                    <input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código" aria-label="Código" class="campo h-10 flex-1 sm:flex-none sm:w-28 min-w-0 font-cond font-bold text-lg">
+                    <input type="text" data-b="${i}" data-f="n" value="${esc(it.n)}" list="dl-nombres" maxlength="120" placeholder="Nombre del producto" aria-label="Nombre del producto" class="campo h-10 basis-full sm:basis-auto order-last sm:order-none sm:flex-grow min-w-0 font-semibold">
+                    <div id="tot-${i}" class="shrink-0 h-10 min-w-[3rem] px-2 rounded-lg bg-cobalto-claro text-cobalto font-cond font-bold text-xl flex items-center justify-center tabular-nums" title="Total del código">${totalItem(it)}</div>
+                    <button type="button" data-action="tabla-detalle" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md text-gray-500 hover:text-cobalto hover:bg-cobalto-claro flex items-center justify-center" title="Foto, detalle y más datos" aria-label="Foto, detalle y más datos">${icono('square-pen')}</button>
+                    ${S.items.length > 1 ? `<button type="button" data-action="quitar-bloque" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md text-gray-400 hover:text-senal hover:bg-red-50 flex items-center justify-center" title="Quitar este código" aria-label="Quitar este código">${icono('trash-2')}</button>` : ''}
+                </div>
+                ${extra ? `<p class="px-3 pt-1 text-xs text-gray-500 truncate">${esc(extra)}</p>` : ''}
+                <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] sm:grid-cols-[minmax(0,1fr)_11rem] gap-2 px-3 pt-2">
+                    <div class="relative">
+                        <input type="text" data-b="${i}" data-f="colores" value="${esc(d.colores.join(', '))}" maxlength="300" placeholder="Colores: Rojo, Negro (opcional)" aria-label="Colores de este código" class="campo h-10 text-sm pr-10">
+                        <button type="button" data-action="dictar-tabla" data-tipo="colores" data-b="${i}" class="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="Dictar los colores" aria-label="Dictar los colores">${icono('mic', 'w-3.5 h-3.5')}</button>
+                    </div>
+                    <input type="text" data-b="${i}" data-f="tallas" value="${esc(d.tallas.join(', '))}" maxlength="300" placeholder="Tallas (opcional)" aria-label="Tallas de este código" class="campo h-10 text-sm">
+                </div>
+                <div id="grid-${i}" class="overflow-x-auto px-3 pt-2 pb-3">${gridTablaHTML(it, i)}</div>
+            </section>`;
+        }
+
+        function actualizarTotalesTabla(i) {
+            const it = S.items[i];
+            if (!it) return;
+            const t = $(`tot-${i}`); if (t) t.textContent = totalItem(it);
+            const d = dimsTabla(it);
+            (d.colores.length ? d.colores : ['']).forEach((c, r) => {
+                const el = $(`totf-${i}-${r}`);
+                if (!el) return;
+                const suma = d.tallas.reduce((a, tl) => { const vi = idxCelda(it, tl, c, d); return a + (vi >= 0 ? (toCant(it.vars[vi].c) || 0) : 0); }, 0);
+                el.textContent = suma || '–';
+            });
+            actualizarResumenForm();
+        }
+        function redibujarGrid(i) {
+            const g = $(`grid-${i}`);
+            if (g) g.innerHTML = gridTablaHTML(S.items[i], i);
+            actualizarTotalesTabla(i);
+        }
+        // Las tallas comunes se aplican a los códigos que no tienen tallas propias.
+        function aplicarTallasComunes(texto) {
+            const ant = parseValores(S.tabla.tallas).map(norm).join('|');
+            S.tabla.tallas = texto;
+            guardarPref('tablaTallas', texto);
+            const nuevas = parseValores(texto);
+            S.items.forEach((it, i) => {
+                const d = dimsTabla(it);
+                if (it._tallasPropias || (d.tallas.length && d.tallas.map(norm).join('|') !== ant)) return;
+                if (!d.tallas.length && !d.colores.length && toCant(it.c) !== null) return; // tiene cantidad suelta: no tocar
+                fijarDims(it, nuevas, d.colores);
+                const inp = document.querySelector(`#bloque-${i} [data-f="tallas"]`);
+                if (inp) inp.value = nuevas.join(', ');
+                redibujarGrid(i);
+            });
+        }
+        function manejarInputTabla(el) {
+            const tb = el.dataset.tb;
+            if (tb === 'marca') {
+                const ant = norm(S.tabla.marca);
+                S.tabla.marca = el.value;
+                S.items.forEach(it => { if (!String(it.mar || '').trim() || norm(it.mar) === ant) it.mar = el.value.trim(); });
+                return true;
+            }
+            if (tb === 'tallas') { aplicarTallasComunes(el.value); return true; }
+            const f = el.dataset.f, i = Number(el.dataset.b), it = S.items[i];
+            if (!it) return false;
+            if (f === 'celda') {
+                const n = el.value === '' ? null : Number(el.value), d = dimsTabla(it);
+                if (!d.tallas.length && !d.colores.length) it.c = n;
+                else { const vi = idxCelda(it, el.dataset.t, el.dataset.c, d); if (vi >= 0) it.vars[vi].c = n; }
+                actualizarTotalesTabla(i);
+                return true;
+            }
+            if (f === 'colores' || f === 'tallas') {
+                const d = dimsTabla(it);
+                if (f === 'tallas') it._tallasPropias = true;
+                fijarDims(it, f === 'tallas' ? parseValores(el.value) : d.tallas, f === 'colores' ? parseValores(el.value) : d.colores);
+                redibujarGrid(i);
+                return true;
+            }
+            return false; // código y nombre siguen el flujo normal
+        }
+        // Dictado de colores (por código) o de tallas (para todos): se suman a lo ya escrito.
+        function dictarTabla(i, tipo) {
+            const clave = `tabla-${tipo}-${i}`;
+            if (S.voz && S.vozId === clave) { S.voz.stop(); return; }
+            const input = () => tipo === 'tallas' ? $('tb-tallas') : document.querySelector(`#bloque-${i} [data-f="colores"]`);
+            const btn = () => input()?.parentElement.querySelector('button');
+            const ph = input()?.placeholder || '';
+            const rc = crearVoz(clave, {
+                alParcial: (final, interino) => { const x = input(); if (x) x.placeholder = '🎙️ ' + (final + ' ' + interino).trim(); },
+                alTerminar: final => {
+                    const x = input();
+                    if (x) x.placeholder = ph;
+                    estadoBotonVoz(btn(), false);
+                    if (!final || !x) return;
+                    const nuevos = parsearListaValores(final, tipo === 'tallas' ? 'varVals' : 'varVals2');
+                    if (!nuevos.length) return toast('No entendí ningún valor. Ej.: "rojo, azul, verde".', 'warn');
+                    const lista = parseValores(x.value);
+                    const agregados = nuevos.filter(v => !lista.some(y => norm(y) === norm(v)));
+                    x.value = [...lista, ...agregados].join(', ');
+                    x.dispatchEvent(new Event('input', { bubbles: true }));
+                    toast(agregados.length ? `Agregado: ${agregados.join(', ')}` : 'Esos valores ya estaban.', agregados.length ? 'ok' : 'info', 2500);
+                }
+            });
+            if (rc) { estadoBotonVoz(btn(), true); const x = input(); if (x) x.placeholder = '🎙️ Escuchando… di los valores seguidos'; }
+        }
+        // Enter avanza: código → nombre → colores → tallas → casillas → siguiente código.
+        $('np-bloques').addEventListener('keydown', (e) => {
+            if (S.modo !== 'tabla' || e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+            e.preventDefault();
+            const todos = [...$('np-bloques').querySelectorAll('input')].filter(x => x.offsetParent !== null);
+            const sig = todos[todos.indexOf(e.target) + 1];
+            if (sig) { sig.focus(); try { sig.select(); } catch { /* sin selección */ } }
+            else e.target.blur();
+        });
+        function abrirDetalleTabla(i) {
+            cambiarModo('grupo');
+            setTimeout(() => { const b = $(`bloque-${i}`); b?.scrollIntoView({ block: 'center', behavior: 'smooth' }); b?.classList.add('ring-2', 'ring-amber-300'); setTimeout(() => b?.classList.remove('ring-2', 'ring-amber-300'), 2500); }, 60);
+            toast('Para volver a la tabla, toca "Tabla" arriba.', 'info', 3500);
         }
 
         // Combina variación 1 × variación 2. Si solo hay la 1, queda como antes.
@@ -1888,6 +2121,7 @@
 
         // Escribir en un bloque actualiza el estado sin redibujar (no se pierde el cursor).
         $('np-bloques').addEventListener('input', (e) => {
+            if (S.modo === 'tabla' && manejarInputTabla(e.target)) return;
             const el = e.target, f = el.dataset.f, i = Number(el.dataset.b), it = S.items[i];
             if (!it || !f) return;
             if (f === 'varC') { const v = it.vars[Number(el.dataset.vi)]; if (v) v.c = el.value === '' ? null : Number(el.value); actualizarCant(i); return; }
@@ -1919,8 +2153,10 @@
             if (!prev) return false;
             let cambio = false;
             for (const k of ['n', 'mar', 'cat', 'varNom', 'varNom2']) if (!String(it[k]).trim() && prev[k]) { it[k] = prev[k]; cambio = true; }
-            if (!it.vars.length && prev.varVals) {
+            if (!it.vars.some(v => toCant(v.c) !== null) && prev.varVals) {
+                it.varNom = prev.varNom || it.varNom; it.varNom2 = prev.varNom2 || '';
                 it.varVals = prev.varVals; it.varVals2 = prev.varVals2 || '';
+                it.vars = [];
                 reconstruirVars(it);
                 cambio = true;
             }
@@ -1957,19 +2193,21 @@
         function crearCodigos() {
             const cods = parsearCodigos($('np-codigos').value);
             if (!cods.length) { toast('Escribe al menos un código.', 'warn'); return $('np-codigos').focus(); }
-            const marca = $('np-codigos-marca').value.trim();
+            const marca = $('np-codigos-marca').value.trim() || (S.modo === 'tabla' ? S.tabla.marca.trim() : '');
             const ya = new Set(S.items.map(it => norm(it.s)).filter(Boolean));
             const repetidos = cods.filter(c => ya.has(norm(c)));
             const nuevos = cods.filter(c => !ya.has(norm(c))).map(c => {
                 const b = nuevoBloque();
                 b.s = c;
+                if (S.modo === 'tabla') b.c = null;
                 completarDesdeCatalogo(b);
                 if (marca && !b.mar) b.mar = marca;
+                if (S.modo === 'tabla') prepararBloqueTabla(b);
                 return b;
             });
             S.items = [...S.items.filter(it => !bloqueVacio(it)), ...nuevos];
             if (!S.items.length) S.items = [nuevoBloque()];
-            S.modo = 'grupo';
+            if (S.modo === 'individual') S.modo = 'grupo';
             renderBloques();
             $('panel-codigos').classList.add('hidden');
             toast(`${plural(nuevos.length, 'código agregado', 'códigos agregados')}${repetidos.length ? `. Ya estaban: ${repetidos.join(', ')}` : ''}`, nuevos.length ? 'ok' : 'warn', 5000);
@@ -1979,7 +2217,7 @@
             setTimeout(() => {
                 const b = $(`bloque-${destino}`);
                 b?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                (b?.querySelector(S.items[destino]?.n ? '[data-f="varC"], [data-f="c"]' : '[data-f="n"]'))?.focus();
+                (b?.querySelector(S.items[destino]?.n ? '[data-f="celda"], [data-f="varC"], [data-f="c"]' : '[data-f="n"]'))?.focus();
             }, 120);
         }
         function dictarCodigos() {
@@ -2066,19 +2304,21 @@
         }
 
         function enfocar(i, f) {
+            if (S.modo === 'tabla' && ['varC', 'c', 'det'].includes(f)) f = 'celda';
             const el = document.querySelector(`#bloque-${i} [data-f="${f}"]`);
             if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => el.focus(), 200); }
         }
 
         async function guardarPedido() {
             if (S.guardando) return;
-            const etiqueta = i => S.modo === 'grupo' ? `Código ${i + 1}` : 'Producto';
+            const etiqueta = i => S.modo !== 'individual' ? `Código ${i + 1}` + (S.items[i]?.s ? ` (${S.items[i].s})` : '') : 'Producto';
             for (const [i, it] of S.items.entries()) {
                 if (bloqueVacio(it)) continue;
                 if (!String(it.n).trim()) { toast(`${etiqueta(i)}: falta el nombre del producto.`, 'warn'); return enfocar(i, 'n'); }
                 const conCant = it.vars.filter(v => toCant(v.c) !== null);
                 if (it.vars.length && !conCant.length) { toast(`${etiqueta(i)}: pon la cantidad de al menos una variante.`, 'warn'); return enfocar(i, 'varC'); }
-                if (!String(it.det).trim() && !it.vars.length) { toast(`${etiqueta(i)}: escribe el detalle (talla, medida, color…) o usa variaciones.`, 'warn'); return enfocar(i, 'det'); }
+                if (S.modo === 'tabla' && !it.vars.length && toCant(it.c) === null) { toast(`${etiqueta(i)}: pon la cantidad.`, 'warn'); return enfocar(i, 'celda'); }
+                if (!String(it.det).trim() && !it.vars.length && !String(it.s).trim()) { toast(`${etiqueta(i)}: escribe el detalle (talla, medida, color…) o usa variaciones.`, 'warn'); return enfocar(i, 'det'); }
             }
             const bloques = S.items.filter(it => !bloqueVacio(it));
             if (!bloques.length) { toast('Escribe al menos un producto.', 'warn'); return enfocar(0, 'n'); }
@@ -2812,6 +3052,8 @@
             'dictar-vars': el => dictarVariantes(Number(el.dataset.b) || 0),
             'dictar-valores': el => dictarValores(Number(el.dataset.b) || 0, el.dataset.campo),
             'abrir-codigos': () => abrirPanelCodigos(),
+            'dictar-tabla': el => dictarTabla(Number(el.dataset.b) || 0, el.dataset.tipo),
+            'tabla-detalle': el => abrirDetalleTabla(Number(el.dataset.b) || 0),
             'cerrar-codigos': () => { detenerVoz(); $('panel-codigos').classList.add('hidden'); },
             'crear-codigos': () => crearCodigos(),
             'dictar-codigos': () => dictarCodigos(),
