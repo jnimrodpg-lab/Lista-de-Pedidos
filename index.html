@@ -237,13 +237,14 @@
         <!-- VISTA COMPRAS (LOGÍSTICA) -->
         <div id="vista-compras" class="overflow-y-auto flex-grow pb-28 md:pb-12 hidden">
             <div class="max-w-6xl mx-auto px-4 md:px-8 pt-5">
-                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-5">
-                    <p class="text-sm text-gray-600 max-w-md">Productos que faltan conseguir. Marca "Comprado" a medida que avanzas y el pedido se completa solo.</p>
-                    <div class="flex bg-white rounded-lg border border-linea p-0.5 self-start" id="compras-modo">
-                        <button type="button" data-action="compras-modo" data-modo="prov" class="px-3 py-1.5 rounded-md text-sm font-semibold">Proveedor</button>
-                        <button type="button" data-action="compras-modo" data-modo="lugar" class="px-3 py-1.5 rounded-md text-sm font-semibold">Lugar</button>
-                        <button type="button" data-action="compras-modo" data-modo="marca" class="px-3 py-1.5 rounded-md text-sm font-semibold">Marca</button>
+                <div class="mb-5">
+                    <p class="text-sm font-semibold text-gray-600 mb-2">Agrupar lo que falta comprar por</p>
+                    <div class="grid grid-cols-3 gap-1 bg-white rounded-xl border-2 border-linea p-1 w-full sm:w-auto sm:inline-grid" id="compras-modo" role="tablist">
+                        <button type="button" data-action="compras-modo" data-modo="prov" role="tab" class="px-2 sm:px-7 py-2.5 rounded-lg font-cond font-bold text-lg sm:text-xl flex items-center justify-center gap-2"><i data-lucide="truck" class="hidden sm:block w-5 h-5"></i> Proveedor</button>
+                        <button type="button" data-action="compras-modo" data-modo="lugar" role="tab" class="px-2 sm:px-7 py-2.5 rounded-lg font-cond font-bold text-lg sm:text-xl flex items-center justify-center gap-2"><i data-lucide="map-pin" class="hidden sm:block w-5 h-5"></i> Lugar</button>
+                        <button type="button" data-action="compras-modo" data-modo="marca" role="tab" class="px-2 sm:px-7 py-2.5 rounded-lg font-cond font-bold text-lg sm:text-xl flex items-center justify-center gap-2"><i data-lucide="tag" class="hidden sm:block w-5 h-5"></i> Marca</button>
                     </div>
+                    <p class="text-xs text-gray-500 mt-2">Marca cada producto al comprarlo; el pedido se completa solo.</p>
                 </div>
                 <div id="compras-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start"></div>
             </div>
@@ -2496,27 +2497,36 @@
         const lineaSimpleTexto = (pr, cant, viñeta = '•') =>
             `${viñeta} ${pr.n}${pr.mar ? ` (${pr.mar})` : ''}${pr.s ? ` [Cód. ${pr.s}]` : ''}${pr.det ? ` — ${pr.det}` : ''} (${cant})`;
 
-        // Variantes en formato de lista para WhatsApp:
-        //   - S: Rosado (2), Lila (2)        (con 2 variaciones, una línea por talla)
-        //   - Talla: S (2), M (3)            (con 1 variación)
-        function lineasVariantes(pr, vars) {
+        // Variantes en formato de lista para WhatsApp. "Talla" se abrevia a "T".
+        //   Pedido Individual, una línea por talla:   - T S: Lila (2), Blanco (2)
+        //   Pedido Multi códigos, una línea por color: - Rosado: T S (2), M (2), XL (2)
+        //   Solo tallas:                               - T: S (2), M (3)
+        //   Otras variaciones, con su nombre:          - Peso: 2kg (4)
+        const abrevVar = nom => /^tallas?$/i.test(String(nom || '').trim()) ? 'T' : (String(nom || '').trim() || 'Variante');
+        function lineasVariantes(pr, vars, porColor = false) {
             if (!vars.length) return [];
             if (vars.some(v => v.v2)) {
+                const pre = abrevVar(pr.varNom) === 'T' ? 'T ' : '';
                 const filas = new Map();
-                vars.forEach(v => { if (!filas.has(v.v)) filas.set(v.v, []); filas.get(v.v).push(`${capital(v.v2)} (${fmtCant(v.c)})`); });
-                return [...filas].map(([talla, l]) => `- ${talla}: ${l.join(', ')}`);
+                const agregar = (k, txt) => { if (!filas.has(k)) filas.set(k, []); filas.get(k).push(txt); };
+                if (porColor) {
+                    vars.forEach(v => agregar(capital(v.v2 || ''), `${v.v} (${fmtCant(v.c)})`));
+                    return [...filas].map(([fila, l]) => `- ${fila}: ${pre}${l.join(', ')}`);
+                }
+                vars.forEach(v => agregar(v.v, `${capital(v.v2 || '')} (${fmtCant(v.c)})`));
+                return [...filas].map(([talla, l]) => `- ${pre}${talla}: ${l.join(', ')}`);
             }
-            return [`- ${pr.varNom || 'Variante'}: ${vars.map(v => `${v.v} (${fmtCant(v.c)})`).join(', ')}`];
+            return [`- ${abrevVar(pr.varNom)}: ${vars.map(v => `${v.v} (${fmtCant(v.c)})`).join(', ')}`];
         }
         function bloqueVariantes(pr, vars, viñeta = '•') {
             const tot = vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
             const cab = `${viñeta} ${pr.n}${pr.mar ? ` (${pr.mar})` : ''}${pr.s ? ` [Cód. ${pr.s}]` : ''} — ${tot} und.`;
-            return [cab, ...lineasVariantes(pr, vars), ...(pr.det ? [`- Detalle: ${pr.det}`] : [])].join('\n');
+            return [cab, ...lineasVariantes(pr, vars, !!pr.multi), ...(pr.det ? [`- Detalle: ${pr.det}`] : [])].join('\n');
         }
 
         // Mensaje para el proveedor, separado por código:
         //   *AL-01* Alteza clásica (Alteza) — 10 und.
-        //   - S: Rosado (2), Lila (2)
+        //   - Rosado: T S (2), M (2)
         // Si el mismo código viene de varios pedidos, se suman las cantidades. Lo que no tiene código va al final.
         function textoLista(items, encabezado) {
             const porCodigo = new Map(), sinCodigo = new Map(), sinCodigoVar = [];
@@ -2526,7 +2536,8 @@
                 if (pend && !pend.length) return;
                 if (String(it.s || '').trim()) {
                     const k = norm(it.s);
-                    const g = porCodigo.get(k) || { s: it.s.trim(), n: it.n, mar: it.mar, varNom: it.varNom, varNom2: it.varNom2, vars: new Map(), c: 0, indef: false, simple: false, dets: new Set() };
+                    const g = porCodigo.get(k) || { s: it.s.trim(), n: it.n, mar: it.mar, varNom: it.varNom, varNom2: it.varNom2, vars: new Map(), c: 0, indef: false, simple: false, dets: new Set(), multi: false };
+                    if (it.multi) g.multi = true;
                     if (it.det) g.dets.add(it.det.trim());
                     if (pend) pend.forEach(v => { const a = g.vars.get(claveVar(v)) || { v: v.v, v2: v.v2, c: 0 }; a.c += toCant(v.c) || 0; g.vars.set(claveVar(v), a); });
                     else { g.simple = true; const c = toCant(it.c); if (c === null) g.indef = true; else g.c += c; }
@@ -2549,7 +2560,7 @@
                     const det = [...g.dets].join('; ');
                     const cab = `*${g.s}* ${g.n}${g.mar ? ` (${g.mar})` : ''}`;
                     if (!vars.length) return `${cab}${det ? ` — ${det}` : ''} (${cant(g.c, g.indef)})`;
-                    return [`${cab} — ${tot} und.`, ...lineasVariantes(g, vars), ...(det ? [`- Detalle: ${det}`] : [])].join('\n');
+                    return [`${cab} — ${tot} und.`, ...lineasVariantes(g, vars, g.multi), ...(det ? [`- Detalle: ${det}`] : [])].join('\n');
                 });
             const lineasSin = [...sinCodigo.values()].map(a => lineaSimpleTexto(a, cant(a.c, a.indef)));
             const partes = [...bloques];
@@ -2572,7 +2583,7 @@
                     const k = modo === 'marca' ? norm(pr.mar) : ((modo === 'prov' ? pr.prov : pr.lugar) || '');
                     if (modo === 'marca' && k && !nombresMarca.has(k)) nombresMarca.set(k, pr.mar.trim());
                     if (!grupos.has(k)) grupos.set(k, []);
-                    grupos.get(k).push({ ...pr, idx, pedidoId: p.id, cod: p.cod, suc: nombreSucursal(p) });
+                    grupos.get(k).push({ ...pr, idx, pedidoId: p.id, cod: p.cod, suc: nombreSucursal(p), multi: esGrupo(p) });
                 });
             }
             const cont = $('compras-container');
