@@ -214,9 +214,9 @@
                         <option value="programados">Por fecha programada</option>
                     </select>
                     <select id="filtro-forma" data-action="forma" class="campo sel w-auto text-sm py-1.5">
-                        <option value="todos">Individuales y grupos</option>
+                        <option value="todos">Todos los formatos</option>
                         <option value="individual">Solo individuales</option>
-                        <option value="grupo">Solo grupos</option>
+                        <option value="grupo">Solo multi códigos</option>
                     </select>
                     <button type="button" data-action="exportar" id="btn-exportar" class="admin-only hidden btn btn-quieto text-sm py-1.5 md:ml-auto" title="Exporta lo que ves con los filtros actuales"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Excel</button>
                 </div>
@@ -344,10 +344,13 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex bg-white rounded-lg border border-linea p-0.5" id="np-modo">
                         <button type="button" data-action="modo-pedido" data-modo="individual" class="px-3 sm:px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="package" class="w-4 h-4"></i> Individual</button>
-                        <button type="button" data-action="modo-pedido" data-modo="grupo" class="px-3 sm:px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4"></i> Grupo</button>
-                        <button type="button" data-action="modo-pedido" data-modo="tabla" class="px-3 sm:px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="table" class="w-4 h-4"></i> Tabla</button>
+                        <button type="button" data-action="modo-pedido" data-modo="tabla" class="px-3 sm:px-4 py-2 rounded-md text-sm font-semibold flex items-center gap-2"><i data-lucide="table" class="w-4 h-4"></i> Multi códigos</button>
                     </div>
                     <p class="text-sm text-gray-500" id="np-modo-ayuda"></p>
+                </div>
+                <div id="np-borrador" class="hidden flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
+                    <span class="flex items-center gap-2 min-w-0"><i data-lucide="history" class="w-4 h-4 shrink-0"></i><span id="np-borrador-txt" class="truncate"></span></span>
+                    <button type="button" data-action="descartar-borrador" class="shrink-0 font-semibold underline underline-offset-2 hover:text-amber-700">Empezar de cero</button>
                 </div>
 
                 <section class="bg-white rounded-xl border border-linea p-4">
@@ -396,7 +399,7 @@
                         <h3 class="font-cond font-bold text-xl">Agregar varios códigos</h3>
                         <button type="button" data-action="cerrar-codigos" class="w-8 h-8 rounded-md hover:bg-papel flex items-center justify-center" aria-label="Cerrar"><i data-lucide="x" class="w-4 h-4"></i></button>
                     </div>
-                    <p class="text-sm text-gray-600 mb-3">Escribe, pega o dicta los códigos separados por coma o uno por línea. Si un código ya se pidió antes, se completan solos el nombre, la marca y las tallas.</p>
+                    <p class="text-sm text-gray-600 mb-3">Sepáralos con coma o uno por línea. Los que ya se pidieron antes se completan solos.</p>
                     <div class="relative">
                         <textarea id="np-codigos" rows="3" class="campo pr-12 font-semibold" placeholder="AL-01, AL-02, AL-05"></textarea>
                         <button type="button" data-action="dictar-codigos" id="btn-mic-codigos" class="absolute right-1.5 top-1.5 w-8 h-8 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="Dictar los códigos" aria-label="Dictar los códigos"><i data-lucide="mic" class="w-4 h-4"></i></button>
@@ -568,7 +571,7 @@
         }
         const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
         function liberarPreviews(items) { (items || []).forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); }); }
-        const nombreVars = pr => `${pr.varNom || 'Variante'}${pr.varNom2 ? ' / ' + pr.varNom2 : ''}`;
+        const nombreVars = pr => pr.varNom2 ? `${pr.varNom2} / ${pr.varNom || 'Variante'}` : (pr.varNom || 'Variante'); // con dos: "Color / Talla" (fila / ficha)
         const cantTotal = pr => tieneVars(pr) ? pr.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0) : toCant(pr.c);
         const urgenteActivo = p => !!p.urgente && !TERMINADOS.includes(p.estado);
         const sucId = p => p.sucursalId ?? p.sucursal ?? '';
@@ -1084,7 +1087,7 @@
             const bloqueado = p?.estado === 'Cancelado';
             const dos = pr.vars.some(v => v.v2);
             const ficha = (v, vi) => {
-                const txt = dos ? v.v2 : v.v;
+                const txt = v.v; // con dos variaciones, la fila es el color y la ficha la talla
                 return conCheck && p
                     ? `<label class="inline-flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-md border text-[13px] font-semibold cursor-pointer select-none ${v.chk ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-linea hover:border-cobalto'}">
                             <input type="checkbox" ${v.chk ? 'checked' : ''} ${bloqueado ? 'disabled' : ''} data-action="chk-var" data-id="${esc(p.id)}" data-idx="${idx}" data-vi="${vi}" class="w-3.5 h-3.5 accent-cobalto">
@@ -1094,9 +1097,9 @@
             const titulo = `<span class="text-xs font-semibold text-gray-500">${esc(nombreVars(pr))}</span>`;
             if (!dos) return `<div class="mt-2 flex flex-wrap items-center gap-1.5">${titulo}${pr.vars.map(ficha).join('')}</div>`;
             const filas = new Map();
-            pr.vars.forEach((v, vi) => { if (!filas.has(v.v)) filas.set(v.v, []); filas.get(v.v).push(ficha(v, vi)); });
+            pr.vars.forEach((v, vi) => { if (!filas.has(v.v2)) filas.set(v.v2, []); filas.get(v.v2).push(ficha(v, vi)); });
             return `<div class="mt-2 space-y-1.5">${titulo}${[...filas].map(([k, f]) => `
-                <div class="flex flex-wrap items-center gap-1.5"><span class="min-w-[2.25rem] font-cond font-bold text-base">${esc(k)}</span>${f.join('')}</div>`).join('')}</div>`;
+                <div class="flex flex-wrap items-center gap-1.5"><span class="min-w-[4.5rem] font-semibold text-sm">${esc(k)}</span>${f.join('')}</div>`).join('')}</div>`;
         }
 
         const chapaCodigo = s => s ? `<span class="inline-block align-middle font-cond font-bold text-[13px] leading-none tracking-wide px-1.5 py-1 mr-1.5 rounded border border-tinta/25 bg-papel text-tinta" title="Código del producto">${esc(s)}</span>` : '';
@@ -1118,7 +1121,7 @@
                     ${urgenteActivo(p) ? '<span class="px-1.5 py-0.5 rounded bg-senal text-white font-bold">Urgente</span>' : ''}
                     <button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${idx}" class="font-cond font-bold text-[15px] hover:text-cobalto">${esc(p.cod)}</button>
                     <span class="inline-flex items-center gap-1 text-gray-600">${icono('store', 'w-3 h-3')} ${esc(nombreSucursal(p))}</span>
-                    <span class="text-gray-500">${esGrupo(p) ? 'En grupo' : 'Individual'}</span>
+                    <span class="text-gray-500">${esGrupo(p) ? 'Multi códigos' : 'Individual'}</span>
                     <span class="px-1.5 py-0.5 rounded font-semibold ${est.cls}">${est.label}</span>
                 </div>` : '';
             return `
@@ -1447,7 +1450,45 @@
         }
 
         // ================== NUEVO / EDITAR PEDIDO ==================
-        // ---- Bloques de producto (Individual = 1 bloque; Grupo = Código 1, Código 2…) ----
+        // ---- Bloques de producto (Individual = 1 tarjeta; Multi códigos = varias) ----
+        // ---- Borrador automático: si se cierra la página o se va la señal, el pedido nuevo no se pierde ----
+        const claveBorrador = () => 'pg_borrador_' + (S.perfil?.sucursalId || S.user?.uid || 'x');
+        function borrarBorrador() { try { localStorage.removeItem(claveBorrador()); } catch { /* sin almacenamiento */ } }
+        const guardarBorrador = debounce(() => {
+            if (S.editId || $('modal-pedido').classList.contains('hidden')) return;
+            const items = S.items.filter(it => !bloqueVacio(it));
+            if (!items.length) return borrarBorrador();
+            const limpio = items.map(it => Object.fromEntries(Object.entries(it).filter(([k]) => k !== '_blob' && k !== '_preview')));
+            const datos = { ts: ahora(), modo: S.modo, tabla: S.tabla, items: limpio, cab: {
+                sucursalId: $('np-sucursal').value, tipo: $('np-tipo').value, fechaProg: $('np-fecha-prog').value,
+                cliente: $('np-cliente').value, contacto: $('np-contacto').value, urgente: $('np-urgente').checked } };
+            try { localStorage.setItem(claveBorrador(), JSON.stringify(datos)); }
+            catch { // sin espacio: se guarda sin fotos
+                try { datos.items = limpio.map(it => ({ ...it, _dataUrl: null })); localStorage.setItem(claveBorrador(), JSON.stringify(datos)); } catch { /* sin almacenamiento */ }
+            }
+        }, 400);
+        function leerBorrador() {
+            try {
+                const b = JSON.parse(localStorage.getItem(claveBorrador()) || 'null');
+                return b && Array.isArray(b.items) && b.items.length && ahora() - b.ts < 7 * 864e5 ? b : null;
+            } catch { return null; }
+        }
+        function restaurarBorrador(b) {
+            S.items = b.items.map(it => ({ ...nuevoBloque(), ...it, _blob: null, _preview: it._dataUrl || null }));
+            S.modo = b.modo === 'individual' ? 'individual' : 'tabla';
+            S.tabla = { ...S.tabla, ...(b.tabla || {}) };
+        }
+        function descartarBorrador() {
+            borrarBorrador();
+            liberarPreviews(S.items);
+            S.items = [nuevoBloque()];
+            ['np-cliente', 'np-contacto', 'np-fecha-prog'].forEach(id => $(id).value = '');
+            $('np-tipo').value = 'Pedido'; $('np-urgente').checked = false; toggleFechaProg();
+            $('np-borrador').classList.add('hidden');
+            if (S.modo === 'tabla') { S.tabla.marca = ''; prepararTabla(); }
+            renderBloques();
+            document.querySelector('#bloque-0 [data-f="s"], #bloque-0 [data-f="n"]')?.focus();
+        }
         const nuevoBloque = () => ({ _orig: null, _origN: '', c: 1, n: '', det: '', s: '', mar: '', cat: '',  varNom: '', varVals: '', varNom2: '', varVals2: '', vars: [],
             prov: '', lugar: '', chk: false, chkAuto: false, img: null, _blob: null, _dataUrl: null, _preview: null });
         // _orig recuerda qué producto del pedido era, para no pisar lo que otros marcaron mientras se edita.
@@ -1466,7 +1507,9 @@
             S.items = p ? (p.productos || []).map(desdeProducto) : [nuevoBloque()];
             if (!S.items.length) S.items = [nuevoBloque()];
             const pref = leerPref('modoPedido', 'individual');
-            S.modo = p ? (S.items.length > 1 ? (pref === 'tabla' ? 'tabla' : 'grupo') : 'individual') : (pref === 'lista' ? 'grupo' : pref);
+            S.modo = p ? (S.items.length > 1 ? 'tabla' : 'individual') : (pref === 'individual' ? 'individual' : 'tabla');
+            const borrador = p ? null : leerBorrador();
+            if (borrador) restaurarBorrador(borrador);
             if (S.modo === 'tabla') prepararTabla();
             $('np-titulo').textContent = p ? `Editar ${p.cod}` : 'Nuevo pedido';
             $('btn-guardar-pedido').querySelector('span').textContent = p ? 'Revisar cambios' : 'Revisar y enviar';
@@ -1478,12 +1521,16 @@
             sel.disabled = !esLog();
             sel.classList.toggle('opacity-70', !esLog());
 
-            $('np-tipo').value = p?.tipo || 'Pedido';
-            $('np-fecha-prog').value = p?.fechaProg || '';
+            const cab = borrador?.cab || p || {};
+            if (borrador?.cab?.sucursalId && esLog() && [...sel.options].some(o => o.value === borrador.cab.sucursalId)) sel.value = borrador.cab.sucursalId;
+            $('np-tipo').value = cab.tipo || 'Pedido';
+            $('np-fecha-prog').value = cab.fechaProg || '';
             $('np-fecha-prog').min = p ? '' : hoyISO();
-            $('np-cliente').value = p?.cliente || '';
-            $('np-contacto').value = p?.contacto || '';
-            $('np-urgente').checked = !!p?.urgente;
+            $('np-cliente').value = cab.cliente || '';
+            $('np-contacto').value = cab.contacto || '';
+            $('np-urgente').checked = !!cab.urgente;
+            $('np-borrador').classList.toggle('hidden', !borrador);
+            if (borrador) $('np-borrador-txt').textContent = `Recuperamos lo que estabas escribiendo (${fmtCuando(borrador.ts)}).`;
             toggleFechaProg();
             $('modal-pedido').classList.remove('hidden');
             renderBloques();
@@ -1491,14 +1538,14 @@
             setTimeout(() => {
                 const b = $(`bloque-${destinoIdx}`);
                 if (idxProducto !== null && b) { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); b.classList.add('ring-2', 'ring-amber-300'); setTimeout(() => b.classList.remove('ring-2', 'ring-amber-300'), 2500); }
-                b?.querySelector(S.modo === 'tabla' && !p ? '[data-f="s"]' : '[data-f="n"]')?.focus();
+                if (!borrador) b?.querySelector(S.modo === 'tabla' && !p ? '[data-f="s"]' : '[data-f="n"]')?.focus();
             }, 80);
         }
 
         function aplicarModo() {
             const ind = S.modo === 'individual';
             marcarSegmento('#np-modo button', 'modo', S.modo);
-            $('np-modo-ayuda').textContent = ind ? 'Un solo producto' : S.modo === 'tabla' ? 'Muchos códigos: solo cantidades por color y talla' : 'Cada código con su foto, detalle y variaciones';
+            $('np-modo-ayuda').textContent = ind ? 'Un producto' : 'Varios códigos, cantidades por color y talla';
             $('acciones-grupo').classList.toggle('hidden', ind);
             if (ind) $('panel-codigos').classList.add('hidden');
         }
@@ -1507,7 +1554,7 @@
             if (m === S.modo) return;
             if (m === 'individual') {
                 const conDatos = S.items.filter(it => !bloqueVacio(it));
-                if (conDatos.length > 1) return toast('Este pedido tiene varios códigos. Déjalo en Grupo, o elimina códigos hasta dejar uno.', 'warn', 6000);
+                if (conDatos.length > 1) return toast('Este pedido tiene varios códigos. Déjalo en Multi códigos, o quita códigos hasta dejar uno.', 'warn', 6000);
                 S.items = conDatos.length ? conDatos : [S.items[0] || nuevoBloque()];
             }
             S.modo = m;
@@ -1530,88 +1577,9 @@
                 </div>`;
         }
 
-        function cantHTML(it, i) {
-            return it.vars.length
-                ? `<div class="h-[40px] flex items-center justify-center bg-cobalto-claro border border-cobalto/25 text-cobalto rounded-lg font-cond font-bold text-xl" title="Suma de las variantes">Σ ${totalVars(it)}</div>`
-                : `<input type="number" data-b="${i}" data-f="c" value="${esc(it.c ?? '')}" min="0" step="1" inputmode="numeric" placeholder="Cant." title="Cantidad (deja vacío si no sabes)" aria-label="Cantidad" class="campo h-[40px] px-2 text-center font-cond font-bold text-xl">`;
-        }
-
-        const inputVar = (i, vi, c) => `<input type="number" min="0" step="1" inputmode="numeric" data-b="${i}" data-f="varC" data-vi="${vi}" value="${esc(c ?? '')}" placeholder="0" class="campo w-14 px-1 py-1 text-center font-cond font-bold text-base">`;
-
-        function varsQtyHTML(it, i) {
-            if (!it.vars.length) return `<p class="text-xs text-gray-500">Ejemplo: Talla con S, M, L y Color con Blanco, Negro. Cada combinación tendrá su propia cantidad.</p>`;
-            const l2 = parseValores(it.varVals2);
-            if (l2.length) {
-                const l1 = parseValores(it.varVals);
-                const idx = (a, b) => it.vars.findIndex(v => norm(v.v) === norm(a) && norm(v.v2) === norm(b));
-                return `<div class="overflow-x-auto"><table class="text-xs">
-                    <thead><tr><th class="text-left pr-2 pb-1 text-xs text-gray-500 font-semibold">${esc(it.varNom || 'Var. 1')} / ${esc(it.varNom2 || 'Var. 2')}</th>${l2.map(b => `<th class="px-1 pb-1 text-[13px] font-semibold whitespace-nowrap">${esc(b)}</th>`).join('')}</tr></thead>
-                    <tbody>${l1.map(a => `<tr><th class="text-left pr-2 font-cond font-bold text-base whitespace-nowrap">${esc(a)}</th>${l2.map(b => { const vi = idx(a, b); return `<td class="p-0.5">${vi >= 0 ? inputVar(i, vi, it.vars[vi].c) : ''}</td>`; }).join('')}</tr>`).join('')}</tbody>
-                </table></div>
-                <p class="text-xs text-gray-500 mt-1.5">Las combinaciones en 0 o vacías no se guardan.</p>`;
-            }
-            return `<div class="flex flex-wrap gap-2">${it.vars.map((v, vi) => `
-                <label class="inline-flex items-center gap-1.5 bg-white border border-linea rounded-md pl-2 pr-1 py-1 font-cond font-bold text-base">
-                    ${esc(v.v)}${inputVar(i, vi, v.c)}
-                </label>`).join('')}</div>
-                <p class="text-xs text-gray-500 mt-1.5">Las variantes en 0 o vacías no se guardan.</p>`;
-        }
-
-        function bloqueHTML(it, i) {
-            const grupo = S.modo === 'grupo';
-            const micro = (campo, titulo) => `<button type="button" data-action="dictar-valores" data-b="${i}" data-campo="${campo}" class="btn-mic-${campo} absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="${titulo}" aria-label="${titulo}">${icono('mic', 'w-3.5 h-3.5')}</button>`;
-            return `
-            <section id="bloque-${i}" data-b="${i}" class="bloque bg-white rounded-xl border border-linea transition-shadow">
-                <header class="flex items-center justify-between px-4 h-11 border-b border-linea">
-                    <p class="font-cond font-bold text-lg flex items-center gap-1.5">${icono(grupo ? 'hash' : 'package', 'w-4 h-4 text-cobalto')} ${grupo ? `Código ${i + 1}` : 'Producto'}</p>
-                    ${grupo && S.items.length > 1 ? `<button type="button" data-action="quitar-bloque" data-b="${i}" class="w-8 h-8 rounded-md text-gray-400 hover:text-senal hover:bg-red-50 flex items-center justify-center" title="Eliminar este código" aria-label="Eliminar este código">${icono('trash-2')}</button>` : ''}
-                </header>
-                <div class="p-4 flex flex-col md:flex-row gap-4">
-                    <div class="flex-grow space-y-2.5 min-w-0">
-                        <div class="grid grid-cols-[76px_minmax(0,1fr)] sm:grid-cols-[76px_130px_minmax(0,1fr)] gap-2">
-                            <div id="cant-${i}">${cantHTML(it, i)}</div>
-                            <input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código (opc.)" title="Código del producto o modelo (opcional)" aria-label="Código" class="campo h-[40px] col-span-2 sm:col-span-1 order-last sm:order-none">
-                            <input type="text" data-b="${i}" data-f="n" value="${esc(it.n)}" list="dl-nombres" maxlength="120" placeholder="Nombre del producto" aria-label="Nombre del producto" class="campo h-[40px] font-semibold">
-                        </div>
-                        <div class="relative">
-                            <input type="text" data-b="${i}" data-f="det" value="${esc(it.det)}" maxlength="300" placeholder="Detalle: color, modelo, medida…" aria-label="Detalle" class="campo pr-11">
-                            <button type="button" data-action="dictado" data-b="${i}" class="btn-dictado absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="Dictar el detalle" aria-label="Dictar el detalle">${icono('mic')}</button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <input type="text" data-b="${i}" data-f="mar" value="${esc(it.mar)}" list="dl-marcas" maxlength="60" placeholder="Marca (opc.)" aria-label="Marca" class="campo text-sm">
-                            <input type="text" data-b="${i}" data-f="cat" value="${esc(it.cat)}" list="dl-cats" maxlength="60" placeholder="Categoría (opc.)" aria-label="Categoría" class="campo text-sm">
-                        </div>
-                        <div class="rounded-lg border border-dashed border-[#c8d1c9] p-3 bg-papel/60">
-                            <div class="flex items-center justify-between gap-2 mb-2">
-                                <p class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">${icono('ruler', 'w-4 h-4 text-gray-500')} Variaciones <span class="hidden sm:inline font-normal text-gray-500">(opcional, hasta 2)</span></p>
-                                <button type="button" data-action="dictar-vars" data-b="${i}" class="btn-dictar-vars shrink-0 btn text-[13px] px-2.5 py-1 bg-cobalto-claro text-cobalto hover:bg-cobalto/15" title="Dicta: talla S rosado 2 lila 2, talla M rojo 3">${icono('mic', 'w-3.5 h-3.5')} <span>Dictar variantes</span></button>
-                            </div>
-                            <div id="dictado-vars-${i}" class="hidden mb-2 p-2.5 rounded-md bg-red-50 border border-red-200 text-sm text-red-900"></div>
-                            <div class="grid grid-cols-[112px_minmax(0,1fr)] gap-2">
-                                <input type="text" data-b="${i}" data-f="varNom" value="${esc(it.varNom)}" list="dl-varnom" maxlength="30" placeholder="Talla, Peso…" aria-label="Nombre de la variación 1" class="campo text-sm font-semibold">
-                                <div class="relative min-w-0">
-                                    <input type="text" data-b="${i}" data-f="varVals" value="${esc(it.varVals)}" maxlength="300" placeholder="S, M, L, XL" aria-label="Valores de la variación 1" class="campo text-sm pr-10">
-                                    ${micro('varVals', 'Dictar las tallas')}
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-[112px_minmax(0,1fr)] gap-2 mt-2">
-                                <input type="text" data-b="${i}" data-f="varNom2" value="${esc(it.varNom2)}" list="dl-varnom" maxlength="30" placeholder="Color…" aria-label="Nombre de la variación 2" class="campo text-sm font-semibold">
-                                <div class="relative min-w-0">
-                                    <input type="text" data-b="${i}" data-f="varVals2" value="${esc(it.varVals2)}" maxlength="300" placeholder="Blanco, Negro (opcional)" aria-label="Valores de la variación 2" class="campo text-sm pr-10">
-                                    ${micro('varVals2', 'Dictar los colores')}
-                                </div>
-                            </div>
-                            <div id="vars-${i}" class="mt-2.5">${varsQtyHTML(it, i)}</div>
-                        </div>
-                    </div>
-                    <div class="w-full md:w-40 shrink-0 flex flex-col gap-2" id="foto-${i}">${fotoHTML(it, i)}</div>
-                </div>
-            </section>`;
-        }
-
         function renderBloques() {
             aplicarModo();
-            $('np-bloques').innerHTML = S.modo === 'tabla' ? ajustesTablaHTML() + S.items.map(tarjetaTablaHTML).join('') : S.items.map(bloqueHTML).join('');
+            $('np-bloques').innerHTML = (S.modo === 'tabla' ? ajustesTablaHTML() : '') + S.items.map(tarjetaHTML).join('');
             pintarIconos();
             actualizarResumenForm();
         }
@@ -1622,13 +1590,14 @@
             const b = S.items.filter(it => !bloqueVacio(it));
             const und = b.reduce((a, it) => a + (it.vars.length ? totalVars(it) : (toCant(it.c) || 0)), 0);
             el.textContent = b.length ? `${plural(b.length, 'producto', 'productos')}, ${plural(und, 'unidad', 'unidades')}` : 'Aún no hay productos';
+            guardarBorrador();
         }
         function renderUnBloque(i) {
             const b = $(`bloque-${i}`);
             if (!b) return;
             // Si el cursor estaba dentro del bloque, vuelve al mismo campo después de redibujar.
             const a = document.activeElement, dentro = b.contains(a) ? { f: a.dataset.f, t: a.dataset.t, c: a.dataset.c } : null;
-            b.outerHTML = (S.modo === 'tabla' ? tarjetaTablaHTML : bloqueHTML)(S.items[i], i);
+            b.outerHTML = tarjetaHTML(S.items[i], i);
             pintarIconos();
             if (dentro?.f) {
                 const cand = [...$(`bloque-${i}`).querySelectorAll(`[data-f="${dentro.f}"]`)].find(x => x.dataset.t === dentro.t && x.dataset.c === dentro.c);
@@ -1636,13 +1605,6 @@
             }
         }
         function renderFoto(i) { const c = $(`foto-${i}`); if (c) { c.innerHTML = fotoHTML(S.items[i], i); pintarIconos(); } actualizarResumenForm(); }
-        function actualizarCant(i) {
-            const it = S.items[i], cell = $(`cant-${i}`);
-            if (!it || !cell) return;
-            if (it.vars.length || !cell.querySelector('input')) cell.innerHTML = cantHTML(it, i);
-            actualizarResumenForm();
-        }
-
         function agregarBloque() {
             const b = nuevoBloque();
             if (S.modo === 'tabla') prepararBloqueTabla(b);
@@ -1664,7 +1626,7 @@
 
         // ================== MODO TABLA (código × color × talla) ==================
         // Cada código es una tarjeta compacta: filas = colores, columnas = tallas.
-        // Usa el mismo modelo de datos que Grupo (varNom/varVals = tallas, varNom2/varVals2 = colores).
+        // Usa el mismo modelo de datos de siempre (varNom/varVals = tallas, varNom2/varVals2 = colores).
         const esNomColor = s => /^colou?r(es)?$/.test(norm(s));
         function dimsTabla(it) {
             const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
@@ -1684,7 +1646,7 @@
             const d = dimsTabla(it);
             const antes = new Map(it.vars.map(v => [claveCelda(v, d), v]));
             const sumaAntes = it.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
-            const nomTalla = (!esNomColor(it.varNom) && String(it.varNom || '').trim()) || S.tabla.nomTalla || 'Talla';
+            const nomTalla = (!esNomColor(it.varNom) && String(it.varNom || '').trim()) || (tallas.length && tallas.every(v => /\d\s*(kg|lb|g|gr|oz)$/i.test(v)) ? 'Peso' : 'Talla');
             const nomColor = String(it.varNom2 || '').trim() || (esNomColor(it.varNom) ? it.varNom : '') || 'Color';
             if (tallas.length) Object.assign(it, { varNom: nomTalla, varVals: tallas.join(', '), varNom2: colores.length ? nomColor : '', varVals2: colores.join(', ') });
             else if (colores.length) Object.assign(it, { varNom: nomColor, varVals: colores.join(', '), varNom2: '', varVals2: '' });
@@ -1692,7 +1654,13 @@
             it.vars = [];
             reconstruirVars(it);
             const d2 = dimsTabla(it);
-            it.vars.forEach(v => { const p = antes.get(claveCelda(v, d2)); if (p) Object.assign(v, { c: p.c, chk: !!p.chk, chkAuto: !!p.chkAuto }); });
+            // Si recién se agregan colores (o tallas), lo ya escrito pasa al primer color (o a la primera talla).
+            const [t0, c0] = [norm(d2.tallas[0] || ''), norm(d2.colores[0] || '')];
+            it.vars.forEach(v => {
+                const k = claveCelda(v, d2), [t, c] = k.split('|');
+                const p = antes.get(k) || (c === c0 && !d.colores.length ? antes.get(t + '|') : null) || (t === t0 && !d.tallas.length ? antes.get('|' + c) : null);
+                if (p) Object.assign(v, { c: p.c, chk: !!p.chk, chkAuto: !!p.chkAuto });
+            });
             if (!it.vars.length && antes.size) it.c = sumaAntes || null;
         }
         function prepararBloqueTabla(b) {
@@ -1746,35 +1714,62 @@
                         <label for="tb-tallas" class="etiqueta">Tallas para todos</label>
                         <div class="relative">
                             <input type="text" id="tb-tallas" data-tb="tallas" maxlength="300" value="${esc(S.tabla.tallas)}" placeholder="S, M, L, XL" class="campo pr-11">
-                            <button type="button" data-action="dictar-tabla" data-tipo="tallas" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="Dictar las tallas" aria-label="Dictar las tallas">${icono('mic')}</button>
+                            ${botonMic('dictar-lista', 'Dictar las tallas', 'data-tipo="tallas-comun"', 'right-1.5 w-8 h-8')}
                         </div>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">Escribe solo las cantidades; Enter pasa a la siguiente casilla. Si un código usa otras tallas, cámbialas en ese código. Para agregar foto o detalle, usa el botón del lápiz.</p>
             </section>`;
         }
+        const botonMic = (accion, titulo, attrs = '', pos = 'right-1 w-8 h-8') =>
+            `<button type="button" data-action="${accion}" ${attrs} class="absolute ${pos} top-1/2 -translate-y-1/2 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="${titulo}" aria-label="${titulo}">${icono('mic', 'w-3.5 h-3.5')}</button>`;
 
-        function tarjetaTablaHTML(it, i) {
+        // Foto, detalle, marca y categoría. En Individual siempre visible; en Multi códigos, con el lápiz.
+        function masDatosHTML(it, i) {
+            const ind = S.modo === 'individual';
+            return `
+                <div class="mx-3 mb-3 p-3 rounded-lg bg-papel/70 border border-linea flex flex-col sm:flex-row gap-3">
+                    <div class="flex-grow min-w-0 space-y-2">
+                        <div class="relative">
+                            <input type="text" data-b="${i}" data-f="det" value="${esc(it.det)}" maxlength="300" placeholder="${ind ? 'Detalle: medida, modelo… (o usa tallas y colores)' : 'Detalle (opcional)'}" aria-label="Detalle" class="campo pr-11">
+                            ${botonMic('dictado', 'Dictar el detalle', `data-b="${i}"`, 'right-1.5 w-8 h-8')}
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" data-b="${i}" data-f="mar" value="${esc(it.mar)}" list="dl-marcas" maxlength="60" placeholder="Marca" aria-label="Marca" class="campo text-sm">
+                            <input type="text" data-b="${i}" data-f="cat" value="${esc(it.cat)}" list="dl-cats" maxlength="60" placeholder="Categoría" aria-label="Categoría" class="campo text-sm">
+                        </div>
+                    </div>
+                    <div class="w-full sm:w-36 shrink-0 flex flex-col gap-2" id="foto-${i}">${fotoHTML(it, i)}</div>
+                </div>`;
+        }
+
+        // Una sola tarjeta para los dos formatos: código, nombre, colores (filas) × tallas (columnas).
+        function tarjetaHTML(it, i) {
+            const ind = S.modo === 'individual', abierto = ind || it._abierto;
             const d = dimsTabla(it);
-            const extra = [it.det, it.mar && norm(it.mar) !== norm(S.tabla.marca) ? `Marca: ${it.mar}` : '', (it._preview || it.img) ? 'Con foto' : ''].filter(Boolean).join(', ');
+            const resumen = abierto ? '' : [it.det, it.mar && norm(it.mar) !== norm(S.tabla.marca) ? `Marca: ${it.mar}` : '', (it._preview || it.img) ? 'Con foto' : ''].filter(Boolean).join(', ');
+            const codigo = `<input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código${ind ? ' (opc.)' : ''}" aria-label="Código" class="campo h-10 flex-1 sm:flex-none sm:w-28 min-w-0 font-cond font-bold text-lg">`;
+            const nombre = `<input type="text" data-b="${i}" data-f="n" value="${esc(it.n)}" list="dl-nombres" maxlength="120" placeholder="Nombre del producto" aria-label="Nombre del producto" class="campo h-10 basis-full sm:basis-auto order-last sm:order-none sm:flex-grow min-w-0 font-semibold">`;
             return `
             <section id="bloque-${i}" data-b="${i}" class="bloque bg-white rounded-xl border border-linea">
                 <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 px-3 pt-3">
-                    <input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código" aria-label="Código" class="campo h-10 flex-1 sm:flex-none sm:w-28 min-w-0 font-cond font-bold text-lg">
-                    <input type="text" data-b="${i}" data-f="n" value="${esc(it.n)}" list="dl-nombres" maxlength="120" placeholder="Nombre del producto" aria-label="Nombre del producto" class="campo h-10 basis-full sm:basis-auto order-last sm:order-none sm:flex-grow min-w-0 font-semibold">
-                    <div id="tot-${i}" class="shrink-0 h-10 min-w-[3rem] px-2 rounded-lg bg-cobalto-claro text-cobalto font-cond font-bold text-xl flex items-center justify-center tabular-nums" title="Total del código">${totalItem(it)}</div>
-                    <button type="button" data-action="tabla-detalle" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md text-gray-500 hover:text-cobalto hover:bg-cobalto-claro flex items-center justify-center" title="Foto, detalle y más datos" aria-label="Foto, detalle y más datos">${icono('square-pen')}</button>
-                    ${S.items.length > 1 ? `<button type="button" data-action="quitar-bloque" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md text-gray-400 hover:text-senal hover:bg-red-50 flex items-center justify-center" title="Quitar este código" aria-label="Quitar este código">${icono('trash-2')}</button>` : ''}
+                    ${codigo}${nombre}
+                    <div id="tot-${i}" class="shrink-0 h-10 min-w-[3rem] px-2 rounded-lg bg-cobalto-claro text-cobalto font-cond font-bold text-xl flex items-center justify-center tabular-nums" title="Total">${totalItem(it)}</div>
+                    ${ind ? '' : `<button type="button" data-action="mas-datos" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md ${abierto ? 'text-cobalto bg-cobalto-claro' : 'text-gray-500'} hover:text-cobalto hover:bg-cobalto-claro flex items-center justify-center" title="Foto, detalle y marca" aria-label="Foto, detalle y marca" aria-expanded="${abierto}">${icono('square-pen')}</button>`}
+                    ${!ind && S.items.length > 1 ? `<button type="button" data-action="quitar-bloque" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md text-gray-400 hover:text-senal hover:bg-red-50 flex items-center justify-center" title="Quitar este código" aria-label="Quitar este código">${icono('trash-2')}</button>` : ''}
                 </div>
-                ${extra ? `<p class="px-3 pt-1 text-xs text-gray-500 truncate">${esc(extra)}</p>` : ''}
-                <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] sm:grid-cols-[minmax(0,1fr)_11rem] gap-2 px-3 pt-2">
+                ${resumen ? `<p class="px-3 pt-1 text-xs text-gray-500 truncate">${esc(resumen)}</p>` : ''}
+                <div class="grid grid-cols-[minmax(0,1fr)_7rem] sm:grid-cols-[minmax(0,1fr)_12rem] gap-2 px-3 pt-2">
                     <div class="relative">
-                        <input type="text" data-b="${i}" data-f="colores" value="${esc(d.colores.join(', '))}" maxlength="300" placeholder="Colores: Rojo, Negro (opcional)" aria-label="Colores de este código" class="campo h-10 text-sm pr-10">
-                        <button type="button" data-action="dictar-tabla" data-tipo="colores" data-b="${i}" class="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md text-cobalto bg-cobalto-claro hover:bg-cobalto/15 flex items-center justify-center" title="Dictar los colores" aria-label="Dictar los colores">${icono('mic', 'w-3.5 h-3.5')}</button>
+                        <input type="text" data-b="${i}" data-f="colores" value="${esc(d.colores.join(', '))}" maxlength="300" placeholder="Colores (opcional)" aria-label="Colores" class="campo h-10 text-sm pr-10">
+                        ${botonMic('dictar-lista', 'Dictar los colores', `data-tipo="colores" data-b="${i}"`)}
                     </div>
-                    <input type="text" data-b="${i}" data-f="tallas" value="${esc(d.tallas.join(', '))}" maxlength="300" placeholder="Tallas (opcional)" aria-label="Tallas de este código" class="campo h-10 text-sm">
+                    <div class="relative">
+                        <input type="text" data-b="${i}" data-f="tallas" value="${esc(d.tallas.join(', '))}" maxlength="300" placeholder="Tallas o pesos" aria-label="Tallas o pesos" class="campo h-10 text-sm ${ind ? 'pr-10' : ''}">
+                        ${ind ? botonMic('dictar-lista', 'Dictar las tallas', `data-tipo="tallas" data-b="${i}"`) : ''}
+                    </div>
                 </div>
                 <div id="grid-${i}" class="overflow-x-auto px-3 pt-2 pb-3">${gridTablaHTML(it, i)}</div>
+                ${abierto ? masDatosHTML(it, i) : ''}
             </section>`;
         }
 
@@ -1839,21 +1834,40 @@
             }
             return false; // código y nombre siguen el flujo normal
         }
-        // Dictado de colores (por código) o de tallas (para todos): se suman a lo ya escrito.
-        function dictarTabla(i, tipo) {
-            const clave = `tabla-${tipo}-${i}`;
+        // ---- Un solo ayudante de dictado para todos los campos ----
+        // vivo: el texto se va escribiendo en el campo mientras hablas (detalle, códigos);
+        // si no, se muestra en el placeholder y al terminar se agrega como lista (colores, tallas).
+        function dictarEnCampo(clave, input, btn, { continuo = false, vivo = false, alFinal }) {
             if (S.voz && S.vozId === clave) { S.voz.stop(); return; }
-            const input = () => tipo === 'tallas' ? $('tb-tallas') : document.querySelector(`#bloque-${i} [data-f="colores"]`);
-            const btn = () => input()?.parentElement.querySelector('button');
-            const ph = input()?.placeholder || '';
+            const x0 = input();
+            if (!x0) return;
+            const ph = x0.placeholder, base = x0.value.trim();
+            const unir = t => [base, t].filter(Boolean).join(', ');
             const rc = crearVoz(clave, {
-                alParcial: (final, interino) => { const x = input(); if (x) x.placeholder = '🎙️ ' + (final + ' ' + interino).trim(); },
+                continuo,
+                alParcial: (final, interino) => {
+                    const x = input(), t = (final + ' ' + interino).trim();
+                    if (!x) return;
+                    if (vivo) x.value = unir(t); else x.placeholder = '🎙️ ' + t;
+                },
                 alTerminar: final => {
                     const x = input();
-                    if (x) x.placeholder = ph;
                     estadoBotonVoz(btn(), false);
-                    if (!final || !x) return;
-                    const nuevos = parsearListaValores(final, tipo === 'tallas' ? 'varVals' : 'varVals2');
+                    if (!x) return;
+                    x.placeholder = ph;
+                    if (vivo) { x.value = unir(final); x.dispatchEvent(new Event('input', { bubbles: true })); }
+                    if (final && alFinal) alFinal(final, x);
+                }
+            });
+            if (rc) { estadoBotonVoz(btn(), true); if (!vivo) x0.placeholder = '🎙️ Escuchando…'; }
+        }
+        // Colores o tallas dictados: se suman a lo ya escrito ("rojo azul verde" → 3 colores).
+        function dictarLista(i, tipo) {
+            const comun = tipo === 'tallas-comun';
+            const input = () => comun ? $('tb-tallas') : document.querySelector(`#bloque-${i} [data-f="${tipo}"]`);
+            dictarEnCampo(`lista-${tipo}-${i}`, input, () => input()?.parentElement.querySelector('button'), {
+                alFinal: (final, x) => {
+                    const nuevos = parsearListaValores(final, tipo === 'colores' ? 'varVals2' : 'varVals');
                     if (!nuevos.length) return toast('No entendí ningún valor. Ej.: "rojo, azul, verde".', 'warn');
                     const lista = parseValores(x.value);
                     const agregados = nuevos.filter(v => !lista.some(y => norm(y) === norm(v)));
@@ -1862,21 +1876,26 @@
                     toast(agregados.length ? `Agregado: ${agregados.join(', ')}` : 'Esos valores ya estaban.', agregados.length ? 'ok' : 'info', 2500);
                 }
             });
-            if (rc) { estadoBotonVoz(btn(), true); const x = input(); if (x) x.placeholder = '🎙️ Escuchando… di los valores seguidos'; }
+        }
+        function dictarDetalle(i) {
+            const input = () => document.querySelector(`#bloque-${i} [data-f="det"]`);
+            dictarEnCampo('det-' + i, input, () => input()?.parentElement.querySelector('button'), { vivo: true });
         }
         // Enter avanza: código → nombre → colores → tallas → casillas → siguiente código.
         $('np-bloques').addEventListener('keydown', (e) => {
-            if (S.modo !== 'tabla' || e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+            if (e.key !== 'Enter' || e.target.tagName !== 'INPUT' || e.target.type === 'file') return;
             e.preventDefault();
             const todos = [...$('np-bloques').querySelectorAll('input')].filter(x => x.offsetParent !== null);
             const sig = todos[todos.indexOf(e.target) + 1];
             if (sig) { sig.focus(); try { sig.select(); } catch { /* sin selección */ } }
             else e.target.blur();
         });
-        function abrirDetalleTabla(i) {
-            cambiarModo('grupo');
-            setTimeout(() => { const b = $(`bloque-${i}`); b?.scrollIntoView({ block: 'center', behavior: 'smooth' }); b?.classList.add('ring-2', 'ring-amber-300'); setTimeout(() => b?.classList.remove('ring-2', 'ring-amber-300'), 2500); }, 60);
-            toast('Para volver a la tabla, toca "Tabla" arriba.', 'info', 3500);
+        function alternarMasDatos(i) {
+            const it = S.items[i];
+            if (!it) return;
+            it._abierto = !it._abierto;
+            renderUnBloque(i);
+            if (it._abierto) setTimeout(() => document.querySelector(`#bloque-${i} [data-f="det"]`)?.focus(), 30);
         }
 
         // Combina variación 1 × variación 2. Si solo hay la 1, queda como antes.
@@ -1904,87 +1923,6 @@
             .replace(/(\d)\s*(kg|kgs|lb|oz|cm|ml|gr)\b/g, '$1 $2');
         const valorNumero = w => w in NUMEROS ? NUMEROS[w] : (/^\d+([.,]\d+)?$/.test(w) ? Number(w.replace(',', '.')) : null);
 
-        function parsearDictadoVariantes(texto) {
-            const t = normalizarHabla(norm(texto)).replace(/[,;.:]/g, ' ');
-            const tok = t.split(/\s+/).filter(Boolean);
-            const esNum = w => valorNumero(w) !== null;
-            const num = valorNumero;
-            const entradas = [], sinCant = [];
-            let a = null, tipoA = null, color = [];
-            for (let i = 0; i < tok.length; i++) {
-                const w = tok[i];
-                if (w === 'talla' || w === 'tallas' || w === 'numero' || w === 'nro') {
-                    const sig = tok[i + 1];
-                    if (sig) { a = TALLAS[sig] || sig.toUpperCase(); tipoA = 'Talla'; i++; if (color.length) sinCant.push(color.join(' ')); color = []; }
-                    continue;
-                }
-                if (esNum(w)) {
-                    const n = num(w), u = UNIDADES[tok[i + 1]];
-                    if (u) { a = `${n}${u}`; tipoA = u === 'cm' ? 'Medida' : u === 'oz' ? 'Onzas' : u === 'L' || u === 'ml' ? 'Capacidad' : 'Peso'; i++; if (color.length) sinCant.push(color.join(' ')); color = []; continue; }
-                    if (color.length) { entradas.push({ a, b: capital(color.join(' ')), c: n }); color = []; }
-                    else if (a !== null) entradas.push({ a, b: null, c: n });
-                    continue;
-                }
-                if (w in TALLAS) { if (color.length) sinCant.push(color.join(' ')); color = []; a = TALLAS[w]; tipoA = 'Talla'; continue; }
-                if (RELLENO.has(w)) continue;
-                color.push(w);
-            }
-            if (color.length) sinCant.push(color.join(' '));
-            // Sin tallas: lo dictado son solo colores → una sola variación "Color".
-            if (entradas.length && entradas.every(e => e.a === null)) return { nom1: 'Color', nom2: '', entradas: entradas.map(e => ({ a: e.b, b: null, c: e.c })), sinCant };
-            const conColor = entradas.some(e => e.b);
-            return { nom1: tipoA || 'Talla', nom2: conColor ? 'Color' : '', entradas: entradas.map(e => ({ a: e.a ?? '—', b: e.b, c: e.c })), sinCant };
-        }
-
-        // Suma lo dictado a las variaciones del producto (se puede dictar por partes).
-        function aplicarDictadoVars(i, texto) {
-            const it = S.items[i];
-            if (!it) return 0;
-            const r = parsearDictadoVariantes(texto);
-            if (!r.entradas.length) { toast('No entendí variantes con cantidad. Ej.: "talla S rosado 2 lila 2, talla M rojo 3".', 'warn', 7000); return 0; }
-            const usaDos = r.entradas.some(e => e.b);
-            const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
-            const agregar = (lista, v) => { if (v && !lista.some(x => norm(x) === norm(v))) lista.push(v); };
-            r.entradas.forEach(e => { agregar(l1, e.a); if (e.b) agregar(l2, e.b); });
-            if (!String(it.varNom).trim()) it.varNom = r.nom1;
-            if (usaDos && !String(it.varNom2).trim()) it.varNom2 = r.nom2 || 'Color';
-            it.varVals = l1.join(', ');
-            it.varVals2 = l2.join(', ');
-            reconstruirVars(it);
-            let puestos = 0; const faltan = [];
-            r.entradas.forEach(e => {
-                const v = it.vars.find(x => norm(x.v) === norm(e.a) && norm(x.v2 || '') === norm(e.b || ''));
-                if (v) { v.c = e.c; puestos++; } else faltan.push(e.a);
-            });
-            renderUnBloque(i);
-            actualizarCant(i);
-            if (faltan.length) toast(`Falta decir el color para: ${[...new Set(faltan)].join(', ')}`, 'warn', 7000);
-            if (r.sinCant.length) toast(`Sin cantidad (no se agregó): ${r.sinCant.join(', ')}`, 'warn', 7000);
-            if (puestos) toast(`${puestos} variante${puestos > 1 ? 's' : ''} agregada${puestos > 1 ? 's' : ''}. Revisa la cuadrícula.`, 'ok');
-            return puestos;
-        }
-
-        function dictarVariantes(i) {
-            const clave = 'vars-' + i;
-            if (S.voz && S.vozId === clave) { S.voz.stop(); return; }   // segundo toque = terminar
-            const btn = () => document.querySelector(`#bloque-${i} .btn-dictar-vars`);
-            const caja = () => $(`dictado-vars-${i}`);
-            const pintar = (final, interino = '') => {
-                const c = caja(); if (!c) return;
-                c.classList.remove('hidden');
-                c.innerHTML = `<b>🎙️ Escuchando…</b> toca <b>Terminar</b> cuando acabes.<br><span class="text-gray-800">${esc(final)}</span> <span class="text-gray-400">${esc(interino)}</span>`;
-            };
-            const rc = crearVoz(clave, {
-                continuo: true,
-                alParcial: pintar,
-                alTerminar: final => {
-                    caja()?.classList.add('hidden');
-                    estadoBotonVoz(btn(), false, 'Dictar variantes');
-                    if (final) aplicarDictadoVars(i, final);
-                }
-            });
-            if (rc) { estadoBotonVoz(btn(), true, 'Terminar'); pintar(''); }
-        }
         // ---- Dictar solo los valores de una variación (ej. "rojo azul verde blanco" → 4 colores) ----
         // Une los modificadores al color anterior: "azul marino", "verde agua", "rosa palo", "gris oscuro"…
         const MODIF_COLOR = new Set(['claro', 'clara', 'oscuro', 'oscura', 'marino', 'agua', 'limon', 'militar', 'palo', 'cielo', 'electrico',
@@ -2019,44 +1957,6 @@
                 }
             }
             return out;
-        }
-
-        function aplicarValoresDictados(i, campo, texto) {
-            const it = S.items[i];
-            if (!it) return [];
-            const nuevos = parsearListaValores(texto, campo);
-            if (!nuevos.length) { toast('No entendí ningún valor. Ej.: "rojo, azul, verde, blanco".', 'warn'); return []; }
-            const lista = parseValores(it[campo]);
-            const agregados = nuevos.filter(v => !lista.some(x => norm(x) === norm(v)));
-            lista.push(...agregados);
-            it[campo] = lista.join(', ');
-            const nomCampo = campo === 'varVals' ? 'varNom' : 'varNom2';
-            if (!String(it[nomCampo]).trim()) it[nomCampo] = campo === 'varVals' ? (nuevos.every(v => /\d(kg|lb|g|oz)$/.test(v)) ? 'Peso' : 'Talla') : 'Color';
-            const bloque = $(`bloque-${i}`);
-            bloque.querySelector(`[data-f="${campo}"]`).value = it[campo];
-            bloque.querySelector(`[data-f="${nomCampo}"]`).value = it[nomCampo];
-            reconstruirVars(it);
-            $(`vars-${i}`).innerHTML = varsQtyHTML(it, i);
-            actualizarCant(i);
-            toast(agregados.length ? `Agregado: ${agregados.join(', ')}` : 'Esos valores ya estaban.', agregados.length ? 'ok' : 'info', 3000);
-            return agregados;
-        }
-
-        function dictarValores(i, campo) {
-            const clave = `val-${campo}-${i}`;
-            if (S.voz && S.vozId === clave) { S.voz.stop(); return; }
-            const btn = () => document.querySelector(`#bloque-${i} .btn-mic-${campo}`);
-            const input = () => document.querySelector(`#bloque-${i} [data-f="${campo}"]`);
-            const ph = input()?.placeholder || '';
-            const rc = crearVoz(clave, {
-                alParcial: (final, interino) => { const x = input(); if (x) x.placeholder = '🎙️ ' + (final + ' ' + interino).trim(); },
-                alTerminar: final => {
-                    const x = input(); if (x) x.placeholder = ph;
-                    estadoBotonVoz(btn(), false);
-                    if (final) aplicarValoresDictados(i, campo, final);
-                }
-            });
-            if (rc) { estadoBotonVoz(btn(), true); const x = input(); if (x) x.placeholder = '🎙️ Escuchando… di los valores seguidos'; }
         }
 
         // ---- Ayudante de voz compartido: un solo micrófono a la vez ----
@@ -2097,7 +1997,7 @@
             if (texto !== null && btn.querySelector('span')) btn.querySelector('span').textContent = texto;
         }
         // Acceso para pruebas, solo si la página se abre con ?debug
-        if (new URLSearchParams(location.search).has('debug')) window.__pg = { parsearDictadoVariantes, aplicarDictadoVars, parsearListaValores, aplicarValoresDictados, parsearCodigos: t => parsearCodigos(t), textoLista: (i, e) => textoLista(i, e) };
+        if (new URLSearchParams(location.search).has('debug')) window.__pg = { parsearListaValores, parsearCodigos: t => parsearCodigos(t), textoLista: (i, e) => textoLista(i, e), dimsTabla: it => dimsTabla(it) };
 
         function reconstruirVars(it) {
             const l1 = parseValores(it.varVals), l2 = parseValores(it.varVals2);
@@ -2121,18 +2021,11 @@
 
         // Escribir en un bloque actualiza el estado sin redibujar (no se pierde el cursor).
         $('np-bloques').addEventListener('input', (e) => {
-            if (S.modo === 'tabla' && manejarInputTabla(e.target)) return;
+            if (manejarInputTabla(e.target)) return;
             const el = e.target, f = el.dataset.f, i = Number(el.dataset.b), it = S.items[i];
             if (!it || !f) return;
-            if (f === 'varC') { const v = it.vars[Number(el.dataset.vi)]; if (v) v.c = el.value === '' ? null : Number(el.value); actualizarCant(i); return; }
-            it[f] = el.value;
-            if (f === 'varVals' || f === 'varVals2') {
-                reconstruirVars(it);
-                $(`vars-${i}`).innerHTML = varsQtyHTML(it, i);
-                actualizarCant(i);
-            }
+            it[f] = el.value; // código, nombre, detalle, marca, categoría
             actualizarResumenForm();
-            if (f === 'varNom' || f === 'varNom2') { const th = document.querySelector(`#vars-${i} thead th`); if (th) th.textContent = `${it.varNom || 'Var. 1'} / ${it.varNom2 || 'Var. 2'}`; }
         });
         // Completa lo que falte de un bloque con lo que se pidió antes con ese código (nombre, marca, tallas, colores).
         const buscarCodigo = s => S.catalogoRemoto.get(idCatalogo(s)) || S.catalogo.get(norm(s));
@@ -2207,7 +2100,7 @@
             });
             S.items = [...S.items.filter(it => !bloqueVacio(it)), ...nuevos];
             if (!S.items.length) S.items = [nuevoBloque()];
-            if (S.modo === 'individual') S.modo = 'grupo';
+            if (S.modo === 'individual') { S.modo = 'tabla'; guardarPref('modoPedido', 'tabla'); prepararTabla(); }
             renderBloques();
             $('panel-codigos').classList.add('hidden');
             toast(`${plural(nuevos.length, 'código agregado', 'códigos agregados')}${repetidos.length ? `. Ya estaban: ${repetidos.join(', ')}` : ''}`, nuevos.length ? 'ok' : 'warn', 5000);
@@ -2221,17 +2114,10 @@
             }, 120);
         }
         function dictarCodigos() {
-            if (S.voz && S.vozId === 'codigos') { S.voz.stop(); return; }
-            const caja = $('np-codigos'), base = caja.value.trim(), btn = $('btn-mic-codigos');
-            const unir = t => [base, t].filter(Boolean).join(', ');
-            const rc = crearVoz('codigos', {
-                continuo: true,
-                alParcial: (final, interino) => { caja.value = unir((final + ' ' + interino).trim()); contarCodigos(); },
-                alTerminar: final => { estadoBotonVoz(btn, false); caja.value = unir(final); contarCodigos(); }
-            });
-            if (rc) estadoBotonVoz(btn, true);
+            dictarEnCampo('codigos', () => $('np-codigos'), () => $('btn-mic-codigos'), { continuo: true, vivo: true });
         }
         $('np-codigos').addEventListener('input', contarCodigos);
+        ['input', 'change'].forEach(ev => $('modal-pedido').addEventListener(ev, () => guardarBorrador()));
 
         // Al escribir un código ya usado antes, completa nombre, marca y categoría vacíos.
         $('np-bloques').addEventListener('change', (e) => {
@@ -2304,7 +2190,8 @@
         }
 
         function enfocar(i, f) {
-            if (S.modo === 'tabla' && ['varC', 'c', 'det'].includes(f)) f = 'celda';
+            if (f === 'varC' || f === 'c') f = 'celda';
+            if (f === 'det' && !document.querySelector(`#bloque-${i} [data-f="det"]`)) { S.items[i]._abierto = true; renderUnBloque(i); }
             const el = document.querySelector(`#bloque-${i} [data-f="${f}"]`);
             if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => el.focus(), 200); }
         }
@@ -2359,6 +2246,7 @@
                     const cod = await crearPedido(datos);
                     toast(`Pedido ${cod} enviado`, 'ok');
                 }
+                if (!S.editId) borrarBorrador();
                 liberarPreviews(S.items);
                 detenerVoz(); detenerCamara();
                 S.items = []; S.editId = null;
@@ -2568,24 +2456,6 @@
         });
 
         // ================== DICTADO ==================
-        function iniciarDictado(i = 0) {
-            const clave = 'det-' + i;
-            if (S.voz && S.vozId === clave) { S.voz.stop(); return; }
-            const btn = () => document.querySelector(`#bloque-${i} .btn-dictado`);
-            const input = () => document.querySelector(`#bloque-${i} [data-f="det"]`);
-            const base = input()?.value || '';
-            const unir = t => t ? (base ? base + ', ' + t : t) : base;
-            const rc = crearVoz(clave, {
-                alParcial: (final, interino) => { const x = input(); if (x) x.value = unir((final + ' ' + interino).trim()); },
-                alTerminar: final => {
-                    estadoBotonVoz(btn(), false);
-                    const x = input(); if (x) x.value = unir(final);
-                    if (S.items[i]) S.items[i].det = unir(final);
-                }
-            });
-            if (rc) estadoBotonVoz(btn(), true);
-        }
-
         // ================== COMPRAS ==================
         // Formato único de texto: "• Producto (Marca) [Cód. X] — detalle (cantidad)"
         const lineaSimpleTexto = (pr, cant, viñeta = '•') =>
@@ -2818,7 +2688,7 @@
                 (p.productos || []).forEach(pr => { if ((tipo === 'proveedores' && pr.prov === id) || (tipo === 'lugares' && pr.lugar === id)) enUso++; });
             });
             const extra = enUso ? `\n\nAtención: se usa en ${enUso} registro(s) cargado(s). Seguirán mostrando el nombre guardado.` : '';
-            if (!confirm(`¿Eliminar "${item.nombre}"?${extra}`)) return;
+            if (!await confirmarUI({ titulo: `¿Eliminar "${item.nombre}"?`, html: extra ? `<p class="text-sm text-gray-600">${esc(extra.trim())}</p>` : '', ok: 'Eliminar', peligro: true })) return;
             try { await mutarConfig(tipo, l => l.filter(x => x.id !== id)); toast('Eliminado', 'ok'); }
             catch (e) { toast(mensajeError(e), 'error'); }
         }
@@ -2869,14 +2739,14 @@
 
         async function quitarUsuario(uid) {
             const u = S.usuarios.find(x => x.uid === uid);
-            if (!confirm(`¿Quitar el acceso a ${u?.nombre || 'este usuario'}? No podrá ver ni crear pedidos.`)) return;
+            if (!await confirmarUI({ titulo: `¿Quitar el acceso a ${u?.nombre || 'este usuario'}?`, html: '<p class="text-sm text-gray-600">No podrá ver ni crear pedidos.</p>', ok: 'Quitar acceso', peligro: true })) return;
             try { await deleteDoc(doc(db, 'usuarios', uid)); toast('Acceso quitado', 'ok'); }
             catch (e) { toast(mensajeError(e), 'error'); }
         }
 
         // ---- Migración de datos de la versión anterior ----
         async function migrar() {
-            if (!confirm('Se revisarán todos los pedidos y se adaptarán al nuevo formato. ¿Continuar?')) return;
+            if (!await confirmarUI({ titulo: '¿Adaptar los pedidos antiguos?', html: '<p class="text-sm text-gray-600">Se revisarán todos los pedidos y se pasarán al formato nuevo.</p>', ok: 'Adaptar' })) return;
             const btn = $('btn-migrar'); btn.disabled = true; btn.textContent = 'Actualizando…';
             try {
                 const snap = await getDocs(collection(db, PATH));
@@ -2927,7 +2797,7 @@
                 lista.forEach(p => (p.productos || []).flatMap(pr => filasDe(p, pr)).forEach(({ v, pr }) => filas.push({
                     'Código': p.cod, 'Fecha': new Date(p.timestamp), 'Sucursal': nombreSucursal(p), 'Tipo': p.tipo,
                     'Fecha programada': p.fechaProg ? fmtFechaISO(p.fechaProg) : '', 'Cliente': p.cliente || '', 'Contacto': p.contacto || '',
-                    'Estado': ESTADOS[p.estado]?.label || p.estado, 'Urgente': p.urgente ? 'Sí' : '', 'Forma': esGrupo(p) ? 'Grupo' : 'Individual', 'Código producto': pr.s || '', 'Producto': pr.n, 'Variación': v ? (pr.varNom || '') : '', 'Valor': v ? v.v : '',
+                    'Estado': ESTADOS[p.estado]?.label || p.estado, 'Urgente': p.urgente ? 'Sí' : '', 'Forma': esGrupo(p) ? 'Multi códigos' : 'Individual', 'Código producto': pr.s || '', 'Producto': pr.n, 'Variación': v ? (pr.varNom || '') : '', 'Valor': v ? v.v : '',
                     'Variación 2': v?.v2 ? (pr.varNom2 || '') : '', 'Valor 2': v?.v2 || '',
                     'Cantidad': (v ? toCant(v.c) : toCant(pr.c)) ?? '', 'Detalle': pr.det || '',
                     'Marca': pr.mar || '', 'Categoría': pr.cat || '',
@@ -3008,6 +2878,7 @@
         }
         async function cerrarModalPedido() {
             if (S.items.some(it => !bloqueVacio(it)) && !S.editId && !await confirmarUI({ titulo: '¿Descartar este pedido?', html: '<p class="text-sm text-gray-600">Lo que escribiste no se enviará.</p>', ok: 'Descartar', peligro: true })) return;
+            if (!S.editId) borrarBorrador();
             cerrarModales();
         }
 
@@ -3048,12 +2919,11 @@
             'camara-capturar': () => capturarFoto(),
             'camara-cerrar': () => detenerCamara(),
             'camara-girar': () => { camFrente = camFrente === 'environment' ? 'user' : 'environment'; iniciarCamara(); },
-            'dictado': el => iniciarDictado(Number(el.dataset.b) || 0),
-            'dictar-vars': el => dictarVariantes(Number(el.dataset.b) || 0),
-            'dictar-valores': el => dictarValores(Number(el.dataset.b) || 0, el.dataset.campo),
+            'dictado': el => dictarDetalle(Number(el.dataset.b) || 0),
             'abrir-codigos': () => abrirPanelCodigos(),
-            'dictar-tabla': el => dictarTabla(Number(el.dataset.b) || 0, el.dataset.tipo),
-            'tabla-detalle': el => abrirDetalleTabla(Number(el.dataset.b) || 0),
+            'dictar-lista': el => dictarLista(Number(el.dataset.b) || 0, el.dataset.tipo),
+            'mas-datos': el => alternarMasDatos(Number(el.dataset.b) || 0),
+            'descartar-borrador': () => descartarBorrador(),
             'cerrar-codigos': () => { detenerVoz(); $('panel-codigos').classList.add('hidden'); },
             'crear-codigos': () => crearCodigos(),
             'dictar-codigos': () => dictarCodigos(),
