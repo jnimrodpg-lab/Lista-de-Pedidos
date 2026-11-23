@@ -218,6 +218,9 @@
                         <option value="individual">Solo individuales</option>
                         <option value="grupo">Solo multi códigos</option>
                     </select>
+                    <select id="filtro-compra" data-action="filtro-compra" class="admin-only hidden campo sel w-auto text-sm py-1.5" aria-label="Filtrar por proveedor o lugar de compra">
+                        <option value="todo">Proveedor y lugar: todos</option>
+                    </select>
                     <button type="button" data-action="exportar" id="btn-exportar" class="admin-only hidden btn btn-quieto text-sm py-1.5 md:ml-auto" title="Exporta lo que ves con los filtros actuales"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Excel</button>
                 </div>
 
@@ -504,7 +507,7 @@
             vista: 'dashboard', filtroEstado: 'Activos', rangoDias: 14, orden: 'recientes', comprasModo: 'prov',
             items: [], editId: null, guardando: false, modo: 'individual', voz: null, vozId: null, renderPendiente: false,
             detalle: null, recienCompletados: new Set(), textosCompra: new Map(),
-            expandidos: new Set(), filtroForma: 'todos', marcasCerradas: new Set(), vistaLista: leerPref('vistaLista', 'pedido'),
+            expandidos: new Set(), filtroForma: 'todos', filtroCompra: 'todo', marcasCerradas: new Set(), vistaLista: leerPref('vistaLista', 'pedido'),
             catalogo: new Map(), catalogoRemoto: new Map(), fotoTarget: 0, bloqueActivo: 0, notasVistas: leerPref('notasVistas', {}),
             avisos: leerPref('avisos', true),
             tabla: { marca: '', tallas: '', nomTalla: 'Talla' }
@@ -965,6 +968,7 @@
                 if (suc !== 'Todas' && sucId(p) !== suc) return false;
                 if (S.filtroForma === 'individual' && esGrupo(p)) return false;
                 if (S.filtroForma === 'grupo' && !esGrupo(p)) return false;
+                if (S.filtroCompra !== 'todo' && !(p.productos || []).some(cumpleCompra)) return false;
                 if (!txt) return true;
                 const campos = [p.cod, p.cliente, p.contacto, nombreSucursal(p), p.tipo,
                     ...(p.productos || []).flatMap(pr => [pr.n, pr.det, pr.mar, pr.cat, pr.s, pr.varNom, pr.varNom2, ...(pr.vars || []).flatMap(v => [v.v, v.v2])]),
@@ -977,6 +981,33 @@
             // Los urgentes sin terminar siempre van primero.
             lista.sort((a, b) => (urgenteActivo(b) - urgenteActivo(a)) || base(a, b));
             return lista;
+        }
+
+        // Filtro de compra (Logística). "Sin…" mira solo lo que falta conseguir; "Con…" y uno en particular, todo.
+        function cumpleCompra(pr) {
+            const f = S.filtroCompra;
+            if (f === 'todo') return true;
+            if (f === 'sin-prov') return !pr.chk && !pr.prov;
+            if (f === 'sin-lugar') return !pr.chk && !pr.lugar;
+            if (f === 'sin-ambos') return !pr.chk && !pr.prov && !pr.lugar;
+            if (f === 'con-prov') return !!pr.prov;
+            if (f === 'con-lugar') return !!pr.lugar;
+            if (f.startsWith('prov:')) return pr.prov === f.slice(5);
+            if (f.startsWith('lugar:')) return pr.lugar === f.slice(6);
+            return true;
+        }
+        function pintarFiltroCompra() {
+            const sel = $('filtro-compra');
+            if (!sel) return;
+            const op = (v, t) => `<option value="${esc(v)}">${esc(t)}</option>`;
+            const grupo = (t, ops) => ops.length ? `<optgroup label="${esc(t)}">${ops.join('')}</optgroup>` : '';
+            sel.innerHTML = op('todo', 'Proveedor y lugar: todos')
+                + grupo('Falta definir', [op('sin-prov', 'Sin proveedor'), op('sin-lugar', 'Sin lugar de compra'), op('sin-ambos', 'Sin proveedor ni lugar')])
+                + grupo('Proveedor', [op('con-prov', 'Con proveedor (cualquiera)'), ...S.config.proveedores.map(x => op('prov:' + x.id, x.nombre))])
+                + grupo('Lugar de compra', [op('con-lugar', 'Con lugar (cualquiera)'), ...S.config.lugares.map(x => op('lugar:' + x.id, x.nombre))]);
+            if ([...sel.options].some(o => o.value === S.filtroCompra)) sel.value = S.filtroCompra;
+            else { S.filtroCompra = 'todo'; sel.value = 'todo'; }
+            sel.classList.toggle('ring-2', S.filtroCompra !== 'todo'); sel.classList.toggle('ring-cobalto/40', S.filtroCompra !== 'todo');
         }
 
         function renderPedidos() {
@@ -1140,6 +1171,7 @@
         function renderPorMarca(lista) {
             const grupos = new Map();
             lista.forEach(p => (p.productos || []).forEach((pr, idx) => {
+                if (!cumpleCompra(pr)) return;
                 const k = norm(pr.mar);
                 if (!grupos.has(k)) grupos.set(k, { nombre: (pr.mar || '').trim(), items: [] });
                 grupos.get(k).items.push({ p, pr, idx });
@@ -1188,16 +1220,19 @@
                 const pct = total ? Math.round(hechos / total * 100) : 0;
                 const abierto = S.expandidos.has(p.id);
                 const resumen = productos.slice(0, 3).map(pr => pr.n).join(', ') + (productos.length > 3 ? '…' : '');
+                const visibles = productos.map((pr, idx) => ({ pr, idx })).filter(x => cumpleCompra(x.pr));
+                const filtrado = S.filtroCompra !== 'todo' && visibles.length < productos.length;
                 cuerpo = `
                     <button type="button" data-action="toggle-grupo" data-id="${esc(p.id)}" aria-expanded="${abierto}" class="text-left w-full">
-                        <p class="flex items-center gap-2"><span class="font-cond font-bold text-xl leading-none">${productos.length} productos</span>${icono(abierto ? 'chevron-up' : 'chevron-down', 'w-4 h-4 text-gray-400')}</p>
+                        <p class="flex items-center gap-2"><span class="font-cond font-bold text-xl leading-none">${productos.length} productos</span>${filtrado ? `<span class="text-xs font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">${visibles.length} con el filtro</span>` : ''}${icono(abierto ? 'chevron-up' : 'chevron-down', 'w-4 h-4 text-gray-400')}</p>
                         <p class="text-sm text-gray-600 truncate mt-1">${esc(resumen)}</p>
                     </button>
                     <div class="flex items-center gap-2 mt-2.5 max-w-xs">
                         <div class="flex-grow h-1.5 rounded-full bg-papel overflow-hidden"><div class="h-full rounded-full bg-cobalto" style="width:${pct}%"></div></div>
                         <span class="text-xs font-semibold text-gray-600 shrink-0">${hechos} de ${total} und.</span>
                     </div>
-                    ${abierto ? `<div class="mt-2 border-t border-linea">${productos.map((pr, idx) => lineaProducto(p, pr, idx, true)).join('')}</div>` : ''}
+                    ${abierto ? `<div class="mt-2 border-t border-linea">${visibles.map(x => lineaProducto(p, x.pr, x.idx, true)).join('')}</div>
+                        ${filtrado ? `<p class="text-xs text-gray-500 mt-1">Se ocultan ${productos.length - visibles.length} que no coinciden con el filtro de proveedor o lugar.</p>` : ''}` : ''}
                     <button type="button" data-action="toggle-grupo" data-id="${esc(p.id)}" class="mt-2 text-sm font-semibold text-cobalto hover:underline">${abierto ? 'Ocultar productos' : 'Ver productos'}</button>`;
             }
 
@@ -2621,6 +2656,7 @@
                 else if (conTodas) sel.value = 'Todas';
             });
             if (!esLog()) return;
+            pintarFiltroCompra();
             for (const [tipo, ic] of Object.entries(TIPOS_CFG)) {
                 const ul = $(`lista-${tipo}-admin`);
                 const datos = S.config[tipo];
@@ -2794,7 +2830,7 @@
                 await cargarScript(XLSX_URL);
                 const filas = [];
                 const filasDe = (p, pr) => tieneVars(pr) ? pr.vars.map(v => ({ v, pr })) : [{ v: null, pr }];
-                lista.forEach(p => (p.productos || []).flatMap(pr => filasDe(p, pr)).forEach(({ v, pr }) => filas.push({
+                lista.forEach(p => (p.productos || []).filter(cumpleCompra).flatMap(pr => filasDe(p, pr)).forEach(({ v, pr }) => filas.push({
                     'Código': p.cod, 'Fecha': new Date(p.timestamp), 'Sucursal': nombreSucursal(p), 'Tipo': p.tipo,
                     'Fecha programada': p.fechaProg ? fmtFechaISO(p.fechaProg) : '', 'Cliente': p.cliente || '', 'Contacto': p.contacto || '',
                     'Estado': ESTADOS[p.estado]?.label || p.estado, 'Urgente': p.urgente ? 'Sí' : '', 'Forma': esGrupo(p) ? 'Multi códigos' : 'Individual', 'Código producto': pr.s || '', 'Producto': pr.n, 'Variación': v ? (pr.varNom || '') : '', 'Valor': v ? v.v : '',
@@ -2810,7 +2846,7 @@
                 XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
                 // Resumen por código: suma lo mismo de todos los pedidos filtrados.
                 const res = new Map();
-                lista.forEach(p => (p.productos || []).forEach(pr => filasDe(p, pr).forEach(({ v }) => {
+                lista.forEach(p => (p.productos || []).filter(cumpleCompra).forEach(pr => filasDe(p, pr).forEach(({ v }) => {
                     const base = pr.s ? norm(pr.s) : 'sin|' + [norm(pr.n), norm(pr.det), norm(pr.mar)].join('|');
                     const k = base + '|' + (v ? norm(v.v) + '|' + norm(v.v2 || '') : '');
                     const r = res.get(k) || { 'Código producto': pr.s || '(sin código)', 'Producto': pr.n, 'Marca': pr.mar || '', 'Detalle': pr.det || '',
@@ -2945,6 +2981,7 @@
             'rango': el => { S.rangoDias = Number(el.value) || 14; suscribirPedidos(); },
             'orden': el => { S.orden = el.value; renderPedidos(); },
             'forma': el => { S.filtroForma = el.value; renderPedidos(); },
+            'filtro-compra': el => { S.filtroCompra = el.value; pintarFiltroCompra(); renderPedidos(); },
             'filtro-sucursal': () => refrescar(),
             'np-tipo': () => toggleFechaProg(),
             'usr-rol': () => toggleUsrSucursal()
