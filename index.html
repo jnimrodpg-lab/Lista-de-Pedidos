@@ -147,7 +147,7 @@
             </div>
         </div>
         <nav class="flex-grow px-3 space-y-1">
-            <button type="button" data-action="vista" data-vista="dashboard" data-nav="side" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-semibold transition-colors"><i data-lucide="clipboard-list" class="w-5 h-5"></i> Pedidos</button>
+            <button type="button" data-action="vista" data-vista="dashboard" data-nav="side" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-semibold transition-colors"><i data-lucide="clipboard-list" class="w-5 h-5"></i> Pedidos <span data-badge-compra class="hidden ml-auto min-w-[1.5rem] px-1.5 py-0.5 rounded-full bg-amber-400 text-tinta text-xs font-bold text-center" title="Pedidos con proveedor o lugar por asignar"></span></button>
             <button type="button" data-action="vista" data-vista="compras" data-nav="side" class="admin-only hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-semibold transition-colors"><i data-lucide="truck" class="w-5 h-5"></i> Compras</button>
             <button type="button" data-action="vista" data-vista="configuracion" data-nav="side" class="admin-only hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-semibold transition-colors"><i data-lucide="settings" class="w-5 h-5"></i> Configuración</button>
         </nav>
@@ -224,7 +224,8 @@
                     <button type="button" data-action="exportar" id="btn-exportar" class="admin-only hidden btn btn-quieto text-sm py-1.5 md:ml-auto" title="Exporta lo que ves con los filtros actuales"><i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Exportar Excel</button>
                 </div>
 
-                <div id="lista-pedidos" class="mt-4 grid gap-3"></div>
+                <div id="atajos-compra" class="admin-only hidden sticky top-0 z-10 -mx-1 px-1 py-2 mt-2 bg-papel/95 backdrop-blur-sm"></div>
+                <div id="lista-pedidos" class="mt-2 grid gap-3"></div>
                 <div id="empty-state" class="hidden flex-col items-center justify-center py-16 px-4 text-center">
                     <i data-lucide="package-search" class="w-12 h-12 text-gray-300 mb-3"></i>
                     <h3 class="font-cond font-bold text-2xl">No hay pedidos aquí</h3>
@@ -314,7 +315,7 @@
 
         <!-- MENÚ INFERIOR (celular) -->
         <nav id="nav-movil" class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-linea z-30 flex pb-safe">
-            <button type="button" data-action="vista" data-vista="dashboard" data-nav="movil" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-semibold"><i data-lucide="clipboard-list" class="w-5 h-5"></i> Pedidos</button>
+            <button type="button" data-action="vista" data-vista="dashboard" data-nav="movil" class="relative flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-semibold"><i data-lucide="clipboard-list" class="w-5 h-5"></i> Pedidos <span data-badge-compra class="hidden absolute top-1 left-1/2 ml-2 min-w-[1.25rem] px-1 rounded-full bg-amber-400 text-tinta text-[11px] font-bold text-center leading-5" title="Pedidos con proveedor o lugar por asignar"></span></button>
             <button type="button" data-action="vista" data-vista="compras" data-nav="movil" class="admin-only hidden flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-semibold"><i data-lucide="truck" class="w-5 h-5"></i> Compras</button>
             <button type="button" data-action="vista" data-vista="configuracion" data-nav="movil" class="admin-only hidden flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-semibold"><i data-lucide="settings" class="w-5 h-5"></i> Ajustes</button>
         </nav>
@@ -999,7 +1000,7 @@
         // ================== VISTA PEDIDOS ==================
         function sucursalFiltro() { return esLog() ? ($('filtro-sucursal').value || 'Todas') : S.perfil.sucursalId; }
 
-        function pedidosFiltrados() {
+        function pedidosFiltrados(ignorarCompra = false) {
             const txt = norm($('filtro-texto').value);
             const suc = sucursalFiltro();
             const lista = todosPedidos().filter(p => {
@@ -1010,7 +1011,7 @@
                 if (suc !== 'Todas' && sucId(p) !== suc) return false;
                 if (S.filtroForma === 'individual' && esGrupo(p)) return false;
                 if (S.filtroForma === 'grupo' && !esGrupo(p)) return false;
-                if (S.filtroCompra !== 'todo' && !(p.productos || []).some(cumpleCompra)) return false;
+                if (!ignorarCompra && S.filtroCompra !== 'todo' && !(p.productos || []).some(cumpleCompra)) return false;
                 if (!txt) return true;
                 const campos = [p.cod, p.cliente, p.contacto, nombreSucursal(p), p.tipo,
                     ...(p.productos || []).flatMap(pr => [pr.n, pr.det, pr.mar, pr.cat, pr.s, pr.varNom, pr.varNom2, ...(pr.vars || []).flatMap(v => [v.v, v.v2])]),
@@ -1037,6 +1038,32 @@
             if (f.startsWith('prov:')) return pr.prov === f.slice(5);
             if (f.startsWith('lugar:')) return pr.lugar === f.slice(6);
             return true;
+        }
+        // ---- Lo que falta asignar: botones rápidos, etiquetas y número en el menú (Logística) ----
+        const faltanEn = (p, campo) => (p.productos || []).filter(pr => !pr.chk && !pr[campo]).length;
+        function pintarAtajosCompra() {
+            const cont = $('atajos-compra');
+            const badges = document.querySelectorAll('[data-badge-compra]');
+            if (!esLog()) { badges.forEach(b => b.classList.add('hidden')); return; }
+            const base = pedidosFiltrados(true);
+            const num = campo => base.filter(p => faltanEn(p, campo) > 0).length;
+            const chip = (valor, ic, texto, n) => {
+                const on = S.filtroCompra === valor;
+                return `<button type="button" data-action="atajo-compra" data-v="${valor}" aria-pressed="${on}" class="btn text-sm px-3 py-1.5 border-2 ${on ? 'bg-amber-400 border-amber-400 text-tinta' : 'bg-white border-linea hover:border-amber-400'}">
+                    ${icono(on ? 'x' : ic, 'w-4 h-4')} ${texto} <span class="min-w-[1.5rem] px-1.5 rounded-full text-xs font-bold ${on ? 'bg-white/70' : n ? 'bg-amber-100 text-amber-900' : 'bg-papel text-gray-500'}">${n}</span></button>`;
+            };
+            if (cont) {
+                cont.innerHTML = `<div class="flex gap-2 overflow-x-auto">${chip('sin-prov', 'truck', 'Sin proveedor', num('prov'))}${chip('sin-lugar', 'map-pin', 'Sin lugar<span class="hidden sm:inline"> de compra</span>', num('lugar'))}</div>`;
+                pintarIconos();
+            }
+            const total = todosPedidos().filter(p => ESTADOS_ACTIVOS.includes(p.estado) && (faltanEn(p, 'prov') || faltanEn(p, 'lugar'))).length;
+            badges.forEach(b => { b.textContent = total; b.classList.toggle('hidden', !total); });
+        }
+        function etiquetasFalta(p) {
+            if (!esLog() || !ESTADOS_ACTIVOS.includes(p.estado)) return '';
+            const varios = (p.productos || []).length > 1;
+            const et = (n, texto) => n ? `<span class="px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-900">${varios ? `${n} ` : ''}${varios ? texto : capital(texto)}</span>` : '';
+            return et(faltanEn(p, 'prov'), 'sin proveedor') + et(faltanEn(p, 'lugar'), 'sin lugar');
         }
         function pintarFiltroCompra() {
             const sel = $('filtro-compra');
@@ -1074,6 +1101,7 @@
                 : 'Cargando pedidos…';
             const porMarca = S.vistaLista === 'marca';
             $('lista-pedidos').innerHTML = porMarca ? renderPorMarca(lista) : lista.map(filaPedido).join('');
+            pintarAtajosCompra();
             marcarVistaLista();
             pintarIconos();
         }
@@ -1096,6 +1124,20 @@
                 : `<div class="mt-2 flex flex-wrap gap-2">${prov}${lug}</div>`;
         }
 
+        // Proveedor y lugar para todo el pedido (Logística). Muestra el común o "Varios"; elegir uno lo pone en todos los códigos.
+        function selectsCompraPedido(p, grande = false) {
+            const productos = p.productos || [];
+            const comun = campo => { const vals = new Set(productos.map(pr => pr[campo] || '')); return vals.size === 1 ? [...vals][0] : null; };
+            const sel = (campo, lista, vacio, varios) => {
+                const v = comun(campo);
+                return `<select data-action="compra" data-id="${esc(p.id)}" data-idx="-1" data-campo="${campo}" aria-label="${vacio} para todo el pedido" class="campo sel w-auto max-w-[200px] text-[13px] py-1 pl-2 font-semibold ${v ? '' : 'text-gray-500'}">
+                    ${v === null ? `<option value="" selected disabled>${varios}</option>` : ''}${opcionesLista(lista, v ?? '', `${vacio} para todos…`)}</select>`;
+            };
+            return `<div class="${grande ? 'mb-2 p-3 rounded-lg bg-papel border border-linea' : 'mt-2.5'} flex flex-wrap items-center gap-2">
+                <span class="text-xs font-semibold text-gray-600 flex items-center gap-1">${icono('layers', 'w-3.5 h-3.5')} Todo el pedido:</span>
+                ${sel('prov', S.config.proveedores, 'Proveedor', 'Varios proveedores')}${sel('lugar', S.config.lugares, 'Lugar', 'Varios lugares')}
+            </div>`;
+        }
         function chipsCompra(pr, { sinProv = false, sinLugar = false } = {}) {
             const prov = pr.prov && !sinProv ? `<span class="text-xs bg-papel border border-linea text-gray-700 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1 whitespace-nowrap">${icono('truck', 'w-3 h-3')} ${esc(nombreDe(S.config.proveedores, pr.prov))}</span>` : '';
             const lug = pr.lugar && !sinLugar ? `<span class="text-xs bg-papel border border-linea text-gray-700 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1 whitespace-nowrap">${icono('map-pin', 'w-3 h-3')} ${esc(nombreDe(S.config.lugares, pr.lugar))}</span>` : '';
@@ -1247,7 +1289,8 @@
 
             const etiquetas = [
                 urg ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-senal text-white text-xs font-bold">${icono('siren', 'w-3 h-3')} Urgente</span>` : '',
-                p.tipo && p.tipo !== 'Pedido' ? `<span class="px-1.5 py-0.5 rounded text-xs font-semibold ${claseTipo(p)}">${esc(p.tipo)}</span>` : ''
+                p.tipo && p.tipo !== 'Pedido' ? `<span class="px-1.5 py-0.5 rounded text-xs font-semibold ${claseTipo(p)}">${esc(p.tipo)}</span>` : '',
+                etiquetasFalta(p)
             ].join('');
 
             const foto = `<button type="button" data-action="detalle" data-id="${esc(p.id)}" data-idx="${grupo ? idxFoto : 0}" class="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-lg border border-linea overflow-hidden bg-papel shrink-0 hover:border-cobalto transition-colors" title="Ver detalle">${grupo ? mosaico(p) : miniatura(productos[0]?.img, 'w-full h-full')}</button>`;
@@ -1274,6 +1317,7 @@
                         <div class="flex-grow h-1.5 rounded-full bg-papel overflow-hidden"><div class="h-full rounded-full bg-cobalto" style="width:${pct}%"></div></div>
                         <span class="text-xs font-semibold text-gray-600 shrink-0">${hechos} de ${total} und.</span>
                     </div>
+                    ${log ? selectsCompraPedido(p) : ''}
                     ${abierto ? `<div class="mt-2 border-t border-linea">${visibles.map(x => lineaProducto(p, x.pr, x.idx, true)).join('')}</div>
                         ${filtrado ? `<p class="text-xs text-gray-500 mt-1">Se ocultan ${productos.length - visibles.length} que no coinciden con el filtro de proveedor o lugar.</p>` : ''}` : ''}
                     <button type="button" data-action="toggle-grupo" data-id="${esc(p.id)}" class="mt-2 text-sm font-semibold text-cobalto hover:underline">${abierto ? 'Ocultar productos' : 'Ver productos'}</button>`;
@@ -1386,6 +1430,7 @@
             cuerpo.innerHTML = `
                 ${infoCliente(p, true)}
                 <h4 class="font-cond font-bold text-lg mb-1">${productos.length === 1 ? 'Producto' : `${productos.length} productos`}</h4>
+                ${esLog() && productos.length > 1 ? selectsCompraPedido(p, true) : ''}
                 ${prods}
                 <h4 class="font-cond font-bold text-lg mt-6 mb-2">Notas</h4>
                 ${notas ? `<div class="space-y-2" id="mdi-notas">${notas}</div>` : '<p class="text-sm text-gray-500 mb-2">Sin notas. Escribe abajo para coordinar con la tienda o con Logística.</p>'}
@@ -1510,13 +1555,19 @@
             finally { btn.disabled = false; input.focus(); }
         }
 
+        // idx = -1: el mismo proveedor o lugar para todos los productos del pedido (luego se puede cambiar por código).
         async function actDatoCompra(id, idx, campo, valor) {
             if (!['prov', 'lugar'].includes(campo)) return;
             const lista = campo === 'prov' ? S.config.proveedores : S.config.lugares;
+            const todos = idx === -1, pr0 = pedidoPorId(id)?.productos?.[idx];
+            const quien = todos ? 'todo el pedido' : `"${[pr0?.s, pr0?.n].filter(Boolean).join(' ') || 'producto'}"`;
             try {
                 await mutarPedido(id, p => ({
-                    productos: (p.productos || []).map((pr, i) => i === idx ? { ...pr, [campo]: valor } : pr)
-                }), `${campo === 'prov' ? 'Proveedor' : 'Lugar'} de "${pedidoPorId(id)?.productos?.[idx]?.n || 'producto'}": ${valor ? nombreDe(lista, valor) : '(ninguno)'}`);
+                    productos: (p.productos || []).map((pr, i) => todos || i === idx ? { ...pr, [campo]: valor } : pr)
+                }), `${campo === 'prov' ? 'Proveedor' : 'Lugar'} de ${quien}: ${valor ? nombreDe(lista, valor) : '(ninguno)'}`);
+                const prods = pedidoPorId(id)?.productos || [];
+                recordarCompra(todos ? prods : prods.filter((_, i) => i === idx), campo, valor);
+                if (todos) toast(`${campo === 'prov' ? 'Proveedor' : 'Lugar'} aplicado a los ${prods.length} productos`, 'ok', 2500);
             } catch (e) { toast(mensajeError(e), 'error'); refrescar(); }
         }
 
@@ -1829,7 +1880,7 @@
             const ind = S.modo === 'individual', abierto = ind || it._abierto;
             const d = dimsTabla(it);
             const resumen = abierto ? '' : [it.det, it.mar && norm(it.mar) !== norm(S.tabla.marca) ? `Marca: ${it.mar}` : '', (it._preview || it.img) ? 'Con foto' : ''].filter(Boolean).join(', ');
-            const codigo = `<input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código${ind ? ' (opc.)' : ''}" aria-label="Código" class="campo h-10 flex-1 sm:flex-none sm:w-28 min-w-0 font-cond font-bold text-lg">`;
+            const codigo = `<input type="text" data-b="${i}" data-f="s" value="${esc(it.s)}" list="dl-codigos" maxlength="60" placeholder="Código" aria-label="Código" class="campo h-10 flex-1 sm:flex-none sm:w-28 min-w-0 font-cond font-bold text-lg">`;
             const nombre = `<input type="text" data-b="${i}" data-f="n" value="${esc(it.n)}" list="dl-nombres" maxlength="120" placeholder="Nombre del producto" aria-label="Nombre del producto" class="campo h-10 basis-full sm:basis-auto order-last sm:order-none sm:flex-grow min-w-0 font-semibold">`;
             return `
             <section id="bloque-${i}" data-b="${i}" class="bloque bg-white rounded-xl border border-linea">
@@ -1840,19 +1891,18 @@
                     ${!ind && S.items.length > 1 ? `<button type="button" data-action="quitar-bloque" data-b="${i}" class="shrink-0 w-9 h-10 rounded-md text-gray-400 hover:text-senal hover:bg-red-50 flex items-center justify-center" title="Quitar este código" aria-label="Quitar este código">${icono('trash-2')}</button>` : ''}
                 </div>
                 ${resumen ? `<p class="px-3 pt-1 text-xs text-gray-500 truncate">${esc(resumen)}</p>` : ''}
-                <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_12rem] gap-2 px-3 pt-2">
-                    <div class="flex gap-1.5 min-w-0">
-                        <select data-b="${i}" data-f="nomFila" aria-label="Las filas son" title="Las filas son colores, modelos o códigos" class="campo sel h-10 text-sm font-semibold w-[6.75rem] shrink-0">
-                            ${(NOMBRES_FILA.some(x => norm(x) === norm(nomFila(it))) ? NOMBRES_FILA : [nomFila(it), ...NOMBRES_FILA]).map(x => `<option ${norm(x) === norm(nomFila(it)) ? 'selected' : ''}>${esc(x)}</option>`).join('')}
-                        </select>
-                        <div class="relative flex-grow min-w-0">
-                            <input type="text" data-b="${i}" data-f="colores" value="${esc(d.colores.join(', '))}" maxlength="300" placeholder="${esc(plurFila(nomFila(it)))} (opcional)" aria-label="${esc(plurFila(nomFila(it)))}" class="campo h-10 text-sm pr-10">
-                            ${botonMic('dictar-lista', 'Dictar ' + plurFila(nomFila(it)).toLowerCase(), `data-tipo="colores" data-b="${i}"`)}
-                        </div>
+                <div class="grid grid-cols-[6.75rem_minmax(0,1fr)] gap-x-2 gap-y-2 items-center px-3 pt-3">
+                    <label for="tallas-${i}" class="text-sm font-semibold text-gray-700 pl-1">Tallas</label>
+                    <div class="relative min-w-0">
+                        <input type="text" id="tallas-${i}" data-b="${i}" data-f="tallas" value="${esc(d.tallas.join(', '))}" maxlength="300" placeholder="S, M, L o 2kg, 4kg (opcional)" aria-label="Tallas o pesos" class="campo h-10 text-sm pr-10">
+                        ${botonMic('dictar-lista', 'Dictar las tallas', `data-tipo="tallas" data-b="${i}"`)}
                     </div>
-                    <div class="relative">
-                        <input type="text" data-b="${i}" data-f="tallas" value="${esc(d.tallas.join(', '))}" maxlength="300" placeholder="Tallas o pesos" aria-label="Tallas o pesos" class="campo h-10 text-sm ${ind ? 'pr-10' : ''}">
-                        ${ind ? botonMic('dictar-lista', 'Dictar las tallas', `data-tipo="tallas" data-b="${i}"`) : ''}
+                    <select data-b="${i}" data-f="nomFila" aria-label="La segunda variación es" title="Colores, modelos o códigos" class="campo sel h-10 text-sm font-semibold">
+                        ${(NOMBRES_FILA.some(x => norm(x) === norm(nomFila(it))) ? NOMBRES_FILA : [nomFila(it), ...NOMBRES_FILA]).map(x => `<option ${norm(x) === norm(nomFila(it)) ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+                    </select>
+                    <div class="relative min-w-0">
+                        <input type="text" data-b="${i}" data-f="colores" value="${esc(d.colores.join(', '))}" maxlength="300" placeholder="${esc(plurFila(nomFila(it)))} (opcional)" aria-label="${esc(plurFila(nomFila(it)))}" class="campo h-10 text-sm pr-10">
+                        ${botonMic('dictar-lista', 'Dictar ' + plurFila(nomFila(it)).toLowerCase(), `data-tipo="colores" data-b="${i}"`)}
                     </div>
                 </div>
                 <div id="grid-${i}" class="overflow-x-auto px-3 pt-2 pb-3">${gridTablaHTML(it, i)}</div>
@@ -2130,15 +2180,52 @@
         const buscarCodigo = s => S.catalogoRemoto.get(idCatalogo(s)) || S.catalogo.get(norm(s));
         const idCatalogo = s => norm(s).replace(/[\/.#\[\]\s]+/g, '_').slice(0, 100) || '_';
         // Guarda en el catálogo compartido los productos con código (para que cualquier sucursal los reconozca después).
+        const baseCatalogo = pr => ({
+            s: pr.s, n: pr.n, mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '', varNom2: pr.varNom2 || '',
+            varVals: [...new Set((pr.vars || []).map(v => v.v))].join(', '),
+            varVals2: [...new Set((pr.vars || []).map(v => v.v2).filter(Boolean))].join(', '),
+            actualizado: ahora()
+        });
+        // Se combina con lo que ya había (no borra el proveedor ni el lugar recordados).
         function recordarCodigos(productos) {
             productos.filter(pr => pr.s && pr.n).forEach(pr => {
-                setDoc(doc(db, 'catalogo', idCatalogo(pr.s)), {
-                    s: pr.s, n: pr.n, mar: pr.mar || '', cat: pr.cat || '', varNom: pr.varNom || '', varNom2: pr.varNom2 || '',
-                    varVals: [...new Set((pr.vars || []).map(v => v.v))].join(', '),
-                    varVals2: [...new Set((pr.vars || []).map(v => v.v2).filter(Boolean))].join(', '),
-                    actualizado: ahora()
-                }).catch(e => console.warn('Catálogo:', e));
+                const datos = baseCatalogo(pr);
+                if (pr.prov) datos.prov = pr.prov;
+                if (pr.lugar) datos.lugar = pr.lugar;
+                setDoc(doc(db, 'catalogo', idCatalogo(pr.s)), datos, { merge: true }).catch(e => console.warn('Catálogo:', e));
             });
+        }
+        // Cuando Logística asigna proveedor o lugar, queda recordado para ese código.
+        function recordarCompra(productos, campo, valor) {
+            productos.filter(pr => pr.s && pr.n).forEach(pr => {
+                const id = idCatalogo(pr.s);
+                const datos = S.catalogoRemoto.has(id) ? { [campo]: valor, actualizado: ahora() } : { ...baseCatalogo(pr), [campo]: valor };
+                setDoc(doc(db, 'catalogo', id), datos, { merge: true }).catch(e => console.warn('Catálogo:', e));
+            });
+        }
+        // Proveedor y lugar para un producto nuevo: el de su código; si no, el de su marca (solo si la marca siempre usa el mismo).
+        function compraRecordada(pr) {
+            const r = { prov: '', lugar: '' }, cod = norm(pr.s), mar = norm(pr.mar);
+            const fuentes = [...S.catalogoRemoto.values(), ...todosPedidos().sort((a, b) => b.timestamp - a.timestamp).flatMap(p => p.productos || [])];
+            for (const [campo, lista] of [['prov', S.config.proveedores], ['lugar', S.config.lugares]]) {
+                const valido = v => v && lista.some(x => x.id === v);
+                const delCodigo = cod ? fuentes.find(x => norm(x.s) === cod && valido(x[campo])) : null;
+                if (delCodigo) { r[campo] = delCodigo[campo]; continue; }
+                if (!mar) continue;
+                const vals = new Set(fuentes.filter(x => norm(x.mar) === mar && valido(x[campo])).map(x => x[campo]));
+                if (vals.size === 1) r[campo] = [...vals][0];
+            }
+            return r;
+        }
+        function aplicarCompraRecordada(productos) {
+            let n = 0;
+            productos.forEach(pr => {
+                if (pr.prov && pr.lugar) return;
+                const m = compraRecordada(pr);
+                if (!pr.prov && m.prov) { pr.prov = m.prov; n++; }
+                if (!pr.lugar && m.lugar) { pr.lugar = m.lugar; n++; }
+            });
+            return n;
         }
         function completarDesdeCatalogo(it) {
             const prev = buscarCodigo(it.s);
@@ -2332,6 +2419,7 @@
             S.guardando = true; btn.disabled = true;
             try {
                 const productos = await resolverImagenes(bloques);
+                aplicarCompraRecordada(productos);
                 if (JSON.stringify(productos).length > LIMITE_DOC) {
                     toast('El pedido tiene demasiadas fotos para guardarse. Quita algunas o divídelo en dos pedidos.', 'error', 8000);
                     return;
@@ -3082,6 +3170,7 @@
             'camara-girar': () => { camFrente = camFrente === 'environment' ? 'user' : 'environment'; iniciarCamara(); },
             'dictado': el => dictarDetalle(Number(el.dataset.b) || 0),
             'abrir-codigos': () => abrirPanelCodigos(),
+            'atajo-compra': el => { S.filtroCompra = S.filtroCompra === el.dataset.v ? 'todo' : el.dataset.v; pintarFiltroCompra(); renderPedidos(); },
             'dictar-lista': el => dictarLista(Number(el.dataset.b) || 0, el.dataset.tipo),
             'mas-datos': el => alternarMasDatos(Number(el.dataset.b) || 0),
             'descartar-borrador': () => descartarBorrador(),
