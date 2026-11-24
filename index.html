@@ -590,7 +590,20 @@
         }
         const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
         function liberarPreviews(items) { (items || []).forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); }); }
-        const nombreVars = pr => pr.varNom2 ? `${pr.varNom2} / ${pr.varNom || 'Variante'}` : (pr.varNom || 'Variante'); // con dos: "Color / Talla" (fila / ficha)
+        // Con dos variaciones, ¿qué va primero al mostrar? La talla, salvo que la otra sea un código o modelo.
+        const filaEsCodigo = pr => !!String(pr.varNom2 || '').trim() && !/^colou?r(es)?$/.test(norm(pr.varNom2));
+        const nombreVars = pr => !pr.varNom2 ? (pr.varNom || 'Variante')
+            : filaEsCodigo(pr) ? `${pr.varNom2} / ${pr.varNom || 'Talla'}` : `${pr.varNom || 'Talla'} / ${pr.varNom2}`;
+        // Agrupa las variantes por la jerarquía principal: [[fila, [{v, txt, vi}]], …]
+        function agruparVariantes(pr, vars) {
+            const porCodigo = filaEsCodigo(pr), filas = new Map();
+            vars.forEach((v, vi) => {
+                const k = porCodigo ? capital(v.v2 || '') : v.v;
+                if (!filas.has(k)) filas.set(k, []);
+                filas.get(k).push({ v, vi, txt: porCodigo ? v.v : capital(v.v2 || '') });
+            });
+            return { porCodigo, filas: [...filas] };
+        }
         const cantTotal = pr => tieneVars(pr) ? pr.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0) : toCant(pr.c);
         const urgenteActivo = p => !!p.urgente && !TERMINADOS.includes(p.estado);
         const sucId = p => p.sucursalId ?? p.sucursal ?? '';
@@ -647,6 +660,19 @@
                 const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
                 o.frequency.value = 880; g.gain.setValueAtTime(0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
                 o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + 0.4);
+            } catch { /* sin audio */ }
+        }
+        // Tono corto al prender (sube) y apagar (baja) el micrófono, más una vibración.
+        function tonoMic(prender) {
+            try { navigator.vibrate?.(prender ? 35 : [20, 40, 20]); } catch { /* sin vibración */ }
+            prepararAudio();
+            if (!audioCtx) return;
+            try {
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
+                o.frequency.setValueAtTime(prender ? 520 : 760, t);
+                o.frequency.exponentialRampToValueAtTime(prender ? 780 : 440, t + 0.1);
+                g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+                o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + 0.17);
             } catch { /* sin audio */ }
         }
         function pedirPermisoNotif() {
@@ -1133,8 +1159,10 @@
             if (!tieneVars(pr)) return '';
             const bloqueado = p?.estado === 'Cancelado';
             const dos = pr.vars.some(v => v.v2);
+            const grupo = dos ? agruparVariantes(pr, pr.vars) : null;
+            const fichaTxt = new Map((grupo?.filas || []).flatMap(([, l]) => l.map(x => [x.vi, x.txt])));
             const ficha = (v, vi) => {
-                const txt = v.v; // con dos variaciones, la fila es el color y la ficha la talla
+                const txt = dos ? fichaTxt.get(vi) : v.v;
                 return conCheck && p
                     ? `<label class="inline-flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-md border text-[13px] font-semibold cursor-pointer select-none ${v.chk ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-linea hover:border-cobalto'}">
                             <input type="checkbox" ${v.chk ? 'checked' : ''} ${bloqueado ? 'disabled' : ''} data-action="chk-var" data-id="${esc(p.id)}" data-idx="${idx}" data-vi="${vi}" class="w-3.5 h-3.5 accent-cobalto">
@@ -1143,10 +1171,9 @@
             };
             const titulo = `<span class="text-xs font-semibold text-gray-500">${esc(nombreVars(pr))}</span>`;
             if (!dos) return `<div class="mt-2 flex flex-wrap items-center gap-1.5">${titulo}${pr.vars.map(ficha).join('')}</div>`;
-            const filas = new Map();
-            pr.vars.forEach((v, vi) => { if (!filas.has(v.v2)) filas.set(v.v2, []); filas.get(v.v2).push(ficha(v, vi)); });
-            return `<div class="mt-2 space-y-1.5">${titulo}${[...filas].map(([k, f]) => `
-                <div class="flex flex-wrap items-center gap-1.5"><span class="min-w-[4.5rem] font-semibold text-sm">${esc(k)}</span>${f.join('')}</div>`).join('')}</div>`;
+            const etq = grupo.porCodigo ? 'min-w-[4.5rem] font-semibold text-sm' : 'min-w-[2.5rem] font-cond font-bold text-base';
+            return `<div class="mt-2 space-y-1.5">${titulo}${grupo.filas.map(([k, l]) => `
+                <div class="flex flex-wrap items-center gap-1.5"><span class="${etq}">${esc(k)}</span>${l.map(x => ficha(x.v, x.vi)).join('')}</div>`).join('')}</div>`;
         }
 
         const chapaCodigo = s => s ? `<span class="inline-block align-middle font-cond font-bold text-[13px] leading-none tracking-wide px-1.5 py-1 mr-1.5 rounded border border-tinta/25 bg-papel text-tinta" title="Código del producto">${esc(s)}</span>` : '';
@@ -2050,10 +2077,12 @@
             };
             rc.onend = () => {
                 if (S.voz === rc) { S.voz = null; S.vozId = null; }
+                tonoMic(false);
                 alTerminar?.(final.trim());
             };
             S.voz = rc; S.vozId = clave;
             try { rc.start(); } catch { S.voz = null; S.vozId = null; alTerminar?.(''); return null; }
+            tonoMic(true);
             return rc;
         }
         function detenerVoz() {
@@ -2406,9 +2435,8 @@
                 unidadesTot += cant || 0;
                 let variantes = '';
                 if (v.length && v.some(x => x.v2)) {
-                    const porTalla = new Map();
-                    v.forEach(x => { if (!porTalla.has(x.v)) porTalla.set(x.v, []); porTalla.get(x.v).push(`${esc(capital(x.v2))} <b class="font-cond text-cobalto">${toCant(x.c)}</b>`); });
-                    variantes = [...porTalla].map(([t, l]) => `<p><span class="font-cond font-bold inline-block min-w-[2rem]">${esc(t)}</span> ${l.join(', ')}</p>`).join('');
+                    const g = agruparVariantes(it, v);
+                    variantes = g.filas.map(([k, l]) => `<p><span class="${g.porCodigo ? 'font-semibold' : 'font-cond font-bold'} inline-block min-w-[2rem]">${esc(k)}</span> ${l.map(x => `${esc(x.txt)} <b class="font-cond text-cobalto">${toCant(x.v.c)}</b>`).join(', ')}</p>`).join('');
                 } else if (v.length) {
                     variantes = `<p>${esc(it.varNom || 'Variante')}: ${v.map(x => `${esc(x.v)} <b class="font-cond text-cobalto">${toCant(x.c)}</b>`).join(', ')}</p>`;
                 }
