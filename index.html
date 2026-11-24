@@ -245,7 +245,13 @@
                         <button type="button" data-action="compras-modo" data-modo="lugar" role="tab" class="px-2 sm:px-7 py-2.5 rounded-lg font-cond font-bold text-lg sm:text-xl flex items-center justify-center gap-2"><i data-lucide="map-pin" class="hidden sm:block w-5 h-5"></i> Lugar</button>
                         <button type="button" data-action="compras-modo" data-modo="marca" role="tab" class="px-2 sm:px-7 py-2.5 rounded-lg font-cond font-bold text-lg sm:text-xl flex items-center justify-center gap-2"><i data-lucide="tag" class="hidden sm:block w-5 h-5"></i> Marca</button>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">Marca cada producto al comprarlo; el pedido se completa solo.</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mt-2">
+                        <p class="text-xs text-gray-500">Marca cada producto al comprarlo; el pedido se completa solo.</p>
+                        <div class="flex bg-white rounded-lg border border-linea p-0.5" id="compras-vista" role="group" aria-label="Forma de ver">
+                            <button type="button" data-action="compras-vista" data-v="reducida" class="px-3 py-1.5 rounded-md text-sm font-semibold flex items-center gap-1.5"><i data-lucide="rows-3" class="w-4 h-4"></i> Reducida</button>
+                            <button type="button" data-action="compras-vista" data-v="detallada" class="px-3 py-1.5 rounded-md text-sm font-semibold flex items-center gap-1.5"><i data-lucide="layout-list" class="w-4 h-4"></i> Detallada</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="compras-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start"></div>
             </div>
@@ -506,7 +512,7 @@
             activos: new Map(), rango: new Map(),
             prev: new Map(), conocidos: new Set(), cargado: { act: false, ran: false },
             unsubs: [], unsubPedidos: [],
-            vista: 'dashboard', filtroEstado: 'Activos', rangoDias: 14, orden: 'recientes', comprasModo: 'prov',
+            vista: 'dashboard', filtroEstado: 'Activos', rangoDias: 14, orden: 'recientes', comprasModo: 'prov', comprasVista: leerPref('comprasVista', 'reducida'), comprasCerrados: new Set(leerPref('comprasCerrados', [])), comprasAbiertos: new Set(), gruposCompra: new Map(),
             items: [], editId: null, guardando: false, modo: 'individual', voz: null, vozId: null, renderPendiente: false,
             detalle: null, recienCompletados: new Set(), textosCompra: new Map(),
             expandidos: new Set(), filtroForma: 'todos', filtroCompra: 'todo', marcasCerradas: new Set(), vistaLista: leerPref('vistaLista', 'pedido'),
@@ -593,8 +599,10 @@
         function liberarPreviews(items) { (items || []).forEach(i => { if (i._preview?.startsWith('blob:')) URL.revokeObjectURL(i._preview); }); }
         // Con dos variaciones, ¿qué va primero al mostrar? La talla, salvo que la otra sea un código o modelo.
         const filaEsCodigo = pr => !!String(pr.varNom2 || '').trim() && !/^colou?r(es)?$/.test(norm(pr.varNom2));
-        const nombreVars = pr => !pr.varNom2 ? (pr.varNom || 'Variante')
-            : filaEsCodigo(pr) ? `${pr.varNom2} / ${pr.varNom || 'Talla'}` : `${pr.varNom || 'Talla'} / ${pr.varNom2}`;
+        // Nombre de la 1ª variación; si se guardó sin nombre y sus valores son tallas, "Talla".
+        const nomVar1 = (pr, vars = pr.vars) => String(pr.varNom || '').trim() || ((vars || []).length && vars.every(v => PATRON_TALLA.test(String(v.v).trim())) ? 'Talla' : 'Variante');
+        const nombreVars = pr => !pr.varNom2 ? nomVar1(pr)
+            : filaEsCodigo(pr) ? `${pr.varNom2} / ${nomVar1(pr)}` : `${nomVar1(pr)} / ${pr.varNom2}`;
         // Agrupa las variantes por la jerarquía principal: [[fila, [{v, txt, vi}]], …]
         function agruparVariantes(pr, vars) {
             const porCodigo = filaEsCodigo(pr), filas = new Map();
@@ -1138,11 +1146,16 @@
                 ${sel('prov', S.config.proveedores, 'Proveedor', 'Varios proveedores')}${sel('lugar', S.config.lugares, 'Lugar', 'Varios lugares')}
             </div>`;
         }
-        function chipsCompra(pr, { sinProv = false, sinLugar = false } = {}) {
+        function chipsCompra(pr, { sinProv = false, sinLugar = false, sinEc = false } = {}) {
             const prov = pr.prov && !sinProv ? `<span class="text-xs bg-papel border border-linea text-gray-700 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1 whitespace-nowrap">${icono('truck', 'w-3 h-3')} ${esc(nombreDe(S.config.proveedores, pr.prov))}</span>` : '';
             const lug = pr.lugar && !sinLugar ? `<span class="text-xs bg-papel border border-linea text-gray-700 px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1 whitespace-nowrap">${icono('map-pin', 'w-3 h-3')} ${esc(nombreDe(S.config.lugares, pr.lugar))}</span>` : '';
-            return prov || lug ? `<div class="mt-1.5 flex flex-wrap gap-1">${prov}${lug}</div>` : '';
+            const ec = sinEc ? '' : chipEstadoCompra(pr);
+            return prov || lug || ec ? `<div class="mt-1.5 flex flex-wrap gap-1">${ec}${prov}${lug}</div>` : '';
         }
+        // Estado de compra de un producto (lo pone Logística desde Compras, por proveedor, lugar o marca).
+        const ESTADOS_COMPRA = { '': 'Por pedir', pedido: 'Pedido al proveedor', camino: 'En camino' };
+        const chipEstadoCompra = pr => pr.ec && ESTADOS_COMPRA[pr.ec] && !pr.chk
+            ? `<span class="text-xs px-1.5 py-0.5 rounded font-semibold inline-flex items-center gap-1 whitespace-nowrap ${pr.ec === 'camino' ? 'bg-blue-100 text-blue-800' : 'bg-violet-100 text-violet-800'}">${icono(pr.ec === 'camino' ? 'truck' : 'send', 'w-3 h-3')} ${ESTADOS_COMPRA[pr.ec]}</span>` : '';
 
         function extrasProducto(pr) {
             const partes = [
@@ -2267,7 +2280,7 @@
             $('panel-codigos').classList.remove('hidden');
             $('np-codigos').value = ''; $('np-codigos-marca').value = ''; contarCodigos();
             $('panel-codigos').scrollIntoView({ block: 'center', behavior: 'smooth' });
-            setTimeout(() => $('np-codigos').focus(), 250);
+            setTimeout(() => { if (!$('panel-codigos').contains(document.activeElement)) $('np-codigos').focus(); }, 250); // no quita el foco si ya estás escribiendo
         }
         function crearCodigos() {
             const cods = parsearCodigos($('np-codigos').value);
@@ -2476,7 +2489,7 @@
                     }
                     ex.c = ex.vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
                 } else ex.c = (toCant(ex.c) || 0) + (toCant(nu.c) || 0) || null;
-                Object.assign(ex, { chk: false, chkAuto: false });
+                Object.assign(ex, { chk: false, chkAuto: false, ec: '' }); // llegan unidades nuevas: falta pedirlas
                 if (!ex.img && nu.img) ex.img = nu.img;
             }
             if (out.length > 100) throw new Error('El pedido llegaría a más de 100 productos. Crea un pedido nuevo.');
@@ -2565,7 +2578,7 @@
             return nuevos.map((pr, k) => {
                 const b = bloques[k], act = b?._orig != null ? actuales[b._orig] : null;
                 if (!act || norm(act.n) !== b._origN) return pr;
-                const r = { ...pr, prov: act.prov || '', lugar: act.lugar || '', chk: !!act.chk, chkAuto: !!act.chkAuto };
+                const r = { ...pr, prov: act.prov || '', lugar: act.lugar || '', ec: act.ec || '', chk: !!act.chk, chkAuto: !!act.chkAuto };
                 if (tieneVars(pr)) {
                     const m = new Map((act.vars || []).map(v => [clave(v), v]));
                     r.vars = pr.vars.map(v => { const a = m.get(clave(v)); return { ...v, chk: !!a?.chk, chkAuto: !!a?.chkAuto }; });
@@ -2706,7 +2719,7 @@
         function lineasVariantes(pr, vars, porColor = false) {
             if (!vars.length) return [];
             if (vars.some(v => v.v2)) {
-                const pre = abrevVar(pr.varNom) === 'T' ? 'T ' : '';
+                const pre = abrevVar(nomVar1(pr, vars)) === 'T' ? 'T ' : '';
                 const filas = new Map();
                 const agregar = (k, txt) => { if (!filas.has(k)) filas.set(k, []); filas.get(k).push(txt); };
                 // Si las filas son modelos o códigos (no colores), siempre una línea por modelo: "- Modelo Pima: T 10 (6), 12 (6)"
@@ -2718,7 +2731,7 @@
                 vars.forEach(v => agregar(v.v, `${capital(v.v2 || '')} (${fmtCant(v.c)})`));
                 return [...filas].map(([talla, l]) => `- ${pre}${talla}: ${l.join(', ')}`);
             }
-            return [`- ${abrevVar(pr.varNom)}: ${vars.map(v => `${v.v} (${fmtCant(v.c)})`).join(', ')}`];
+            return [`- ${abrevVar(nomVar1(pr, vars))}: ${vars.map(v => `${v.v} (${fmtCant(v.c)})`).join(', ')}`];
         }
         function bloqueVariantes(pr, vars, viñeta = '•') {
             const tot = vars.reduce((a, v) => a + (toCant(v.c) || 0), 0);
@@ -2798,43 +2811,103 @@
                 pintarIconos(); return;
             }
             const claves = [...grupos.keys()].sort((a, b) => (a === '') - (b === '') || etiqueta(a).localeCompare(etiqueta(b)));
+            const reducida = S.comprasVista === 'reducida';
+            S.gruposCompra.clear();
             cont.innerHTML = claves.map((k, gi) => {
                 const prods = grupos.get(k);
                 const ent = lista.find(x => x.id === k);
                 const titulo = k ? etiqueta(k) : (modo === 'prov' ? 'Sin proveedor asignado' : modo === 'lugar' ? 'Sin lugar asignado' : 'Sin marca');
                 const texto = textoLista(prods, modo === 'prov' ? 'Hola, necesito hacer el siguiente pedido:' : `Lista de compras – ${titulo}:`);
                 S.textosCompra.set(String(gi), texto);
+                S.gruposCompra.set(String(gi), { titulo, prods });
                 const tel = modo === 'prov' ? telWA(ent?.telefono) : '';
                 const waLink = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+                const claveG = `${modo}:${k}`, cerrado = S.comprasCerrados.has(claveG);
+                const und = prods.reduce((a, pr) => a + undPendientes(pr), 0);
+                const ecs = new Set(prods.map(pr => pr.ec || '')), ecComun = ecs.size === 1 ? [...ecs][0] : null;
+                const selEstado = `<select data-action="estado-compra" data-key="${gi}" aria-label="Estado de compra de ${esc(titulo)}" class="campo sel w-auto text-sm py-1.5 pl-2 font-semibold ${ecComun === 'camino' ? 'text-blue-800' : ecComun === 'pedido' ? 'text-violet-800' : ''}">
+                    ${ecComun === null ? '<option value="" selected disabled>Varios estados</option>' : ''}
+                    ${Object.entries(ESTADOS_COMPRA).map(([v, t]) => `<option value="${v}" ${ecComun === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
                 return `
                 <section class="bg-white rounded-xl border border-linea overflow-hidden">
-                    <header class="px-4 py-3 border-b border-linea flex flex-wrap justify-between items-center gap-2">
-                        <div class="min-w-0">
-                            <h3 class="font-cond font-bold text-xl flex items-center gap-2">${icono(modo === 'prov' ? 'building-2' : modo === 'lugar' ? 'map-pin' : 'tag', 'w-5 h-5 text-cobalto')} ${esc(titulo)}</h3>
-                            <p class="text-[13px] text-gray-500">${plural(prods.length, 'producto', 'productos')}${tel ? `, +${esc(tel)}` : ''}</p>
-                        </div>
-                        <div class="flex gap-2">
+                    <header class="px-4 py-3 ${cerrado ? '' : 'border-b border-linea'} flex flex-wrap justify-between items-center gap-2">
+                        <button type="button" data-action="toggle-compra-grupo" data-k="${esc(claveG)}" aria-expanded="${!cerrado}" class="min-w-0 text-left flex items-start gap-2 group">
+                            ${icono(cerrado ? 'chevron-right' : 'chevron-down', 'w-5 h-5 text-gray-400 mt-0.5 shrink-0 group-hover:text-cobalto')}
+                            <span class="min-w-0">
+                                <span class="font-cond font-bold text-xl flex items-center gap-2">${icono(modo === 'prov' ? 'building-2' : modo === 'lugar' ? 'map-pin' : 'tag', 'w-5 h-5 text-cobalto')} ${esc(titulo)}</span>
+                                <span class="block text-[13px] text-gray-500">${plural(prods.length, 'producto', 'productos')}, ${und} und.${tel ? `, +${esc(tel)}` : ''}</span>
+                            </span>
+                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            ${selEstado}
                             <button type="button" data-action="copiar-lista" data-key="${gi}" class="btn btn-quieto text-sm px-3 py-1.5">${icono('copy', 'w-4 h-4')} Copiar</button>
                             <a href="${esc(waLink)}" target="_blank" rel="noopener" data-action="enviar-wa" data-key="${gi}" data-tel="${esc(tel)}" class="btn text-sm px-3 py-1.5 bg-[#1f8f4e] hover:bg-[#187a41] text-white" title="${modo === 'prov' && !tel ? 'Agrega el celular del proveedor en Configuración para abrir su chat directo' : ''}">${icono('message-circle', 'w-4 h-4')} ${modo === 'prov' ? 'Pedir por WhatsApp' : 'Enviar por WhatsApp'}</a>
                         </div>
                     </header>
-                    <ul class="divide-y divide-linea">
-                        ${prods.map(pr => `
-                        <li class="flex items-start gap-3 px-4 py-3">
-                            <button type="button" data-action="detalle" data-id="${esc(pr.pedidoId)}" data-idx="${pr.idx}" class="w-12 h-12 rounded-md border border-linea overflow-hidden bg-papel shrink-0">${miniatura(pr.img, 'w-full h-full')}</button>
-                            <div class="flex-grow min-w-0">
-                                ${infoProducto({ id: pr.pedidoId, estado: 'Pendiente' }, pr, pr.idx)}
-                                ${chipsCompra(pr, { sinProv: modo === 'prov', sinLugar: modo === 'lugar' })}
-                                <p class="mt-1.5 text-xs text-gray-500 flex flex-wrap gap-x-3"><span class="font-cond font-bold text-sm text-gray-700">${esc(pr.cod)}</span><span class="inline-flex items-center gap-1">${icono('store', 'w-3 h-3')} ${esc(pr.suc)}</span></p>
-                            </div>
-                            ${tieneVars(pr) ? '' : `<label class="flex flex-col items-center gap-1 text-xs font-semibold text-gray-600 cursor-pointer shrink-0 pt-1">
-                                <input type="checkbox" data-action="chk" data-id="${esc(pr.pedidoId)}" data-idx="${pr.idx}" class="w-5 h-5 accent-cobalto"> Comprado
-                            </label>`}
-                        </li>`).join('')}
-                    </ul>
+                    ${cerrado ? '' : `<ul class="divide-y divide-linea">${prods.map(pr => reducida ? lineaCompraCorta(pr, modo) : lineaCompraCompleta(pr, modo)).join('')}</ul>`}
                 </section>`;
             }).join('');
+            marcarSegmento('#compras-vista button', 'v', S.comprasVista);
             pintarIconos();
+        }
+
+        const undPendientes = pr => tieneVars(pr) ? pr.vars.filter(v => !v.chk).reduce((a, v) => a + (toCant(v.c) || 0), 0) : (toCant(pr.c) || 0);
+        // Resumen en una línea: "S 4 · L 3 · XL 2 (Blanco)" o "S: Rosado 2, Lila 2 · M: Rojo 3"
+        function resumenCorto(pr) {
+            if (!tieneVars(pr)) return pr.det || '';
+            const vars = pr.vars.filter(v => !v.chk);
+            if (!vars.some(v => v.v2)) return vars.map(v => `${v.v} ${fmtCant(v.c)}`).join(' · ');
+            const segundos = [...new Set(vars.map(v => norm(v.v2)))];
+            if (segundos.length === 1 && !filaEsCodigo(pr)) return `${vars.map(v => `${v.v} ${fmtCant(v.c)}`).join(' · ')} (${capital(vars[0].v2)})`;
+            return agruparVariantes(pr, vars).filas.map(([k, l]) => `${k}: ${l.map(x => `${x.txt} ${fmtCant(x.v.c)}`).join(', ')}`).join(' · ');
+        }
+        function lineaCompraCompleta(pr, modo, anidada = false) {
+            return `${anidada ? '<div class="flex items-start gap-3 pt-2 pl-8">' : '<li class="flex items-start gap-3 px-4 py-3">'}
+                <button type="button" data-action="detalle" data-id="${esc(pr.pedidoId)}" data-idx="${pr.idx}" class="w-12 h-12 rounded-md border border-linea overflow-hidden bg-papel shrink-0">${miniatura(pr.img, 'w-full h-full')}</button>
+                <div class="flex-grow min-w-0">
+                    ${anidada ? `${detalleLinea(pr)}${extrasProducto(pr)}${htmlVars({ id: pr.pedidoId, estado: 'Pendiente' }, pr, pr.idx)}` : infoProducto({ id: pr.pedidoId, estado: 'Pendiente' }, pr, pr.idx)}
+                    ${chipsCompra(pr, { sinProv: modo === 'prov', sinLugar: modo === 'lugar', sinEc: anidada })}
+                    <p class="mt-1.5 text-xs text-gray-500 flex flex-wrap gap-x-3"><span class="font-cond font-bold text-sm text-gray-700">${esc(pr.cod)}</span><span class="inline-flex items-center gap-1">${icono('store', 'w-3 h-3')} ${esc(pr.suc)}</span></p>
+                </div>
+                ${tieneVars(pr) || anidada ? '' : `<label class="flex flex-col items-center gap-1 text-xs font-semibold text-gray-600 cursor-pointer shrink-0 pt-1">
+                    <input type="checkbox" data-action="chk" data-id="${esc(pr.pedidoId)}" data-idx="${pr.idx}" class="w-5 h-5 accent-cobalto"> Comprado
+                </label>`}
+            ${anidada ? '</div>' : '</li>'}`;
+        }
+        function lineaCompraCorta(pr, modo) {
+            const clave = `${pr.pedidoId}:${pr.idx}`, abierto = S.comprasAbiertos.has(clave);
+            return `
+            <li class="px-4 py-2.5">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" data-action="chk" data-id="${esc(pr.pedidoId)}" data-idx="${pr.idx}" class="w-5 h-5 accent-cobalto shrink-0" title="Marcar todo como comprado" aria-label="Marcar ${esc(pr.n)} como comprado">
+                    <button type="button" data-action="toggle-compra-prod" data-k="${esc(clave)}" aria-expanded="${abierto}" class="flex-grow min-w-0 text-left flex items-center gap-2 group">
+                        <span class="min-w-0 flex-grow">
+                            <span class="flex flex-wrap items-baseline gap-x-2">${chapaCodigo(pr.s)}<span class="font-semibold">${esc(pr.n)}</span><span class="font-cond font-bold text-cobalto">${undPendientes(pr)} und</span>${chipEstadoCompra(pr)}</span>
+                            <span class="block text-sm text-gray-600 ${abierto ? '' : 'truncate'}">${esc(resumenCorto(pr))}</span>
+                        </span>
+                        ${icono(abierto ? 'chevron-up' : 'chevron-down', 'w-5 h-5 text-gray-400 shrink-0 group-hover:text-cobalto')}
+                    </button>
+                </div>
+                ${abierto ? lineaCompraCompleta(pr, modo, true) : ''}
+            </li>`;
+        }
+        // Estado de compra para todo un grupo (proveedor, lugar o marca). Al pedir, el pedido pasa a "En proceso".
+        async function cambiarEstadoCompra(key, valor) {
+            const g = S.gruposCompra.get(key);
+            if (!g) return;
+            const porPedido = new Map();
+            g.prods.forEach(pr => { if (!porPedido.has(pr.pedidoId)) porPedido.set(pr.pedidoId, new Set()); porPedido.get(pr.pedidoId).add(pr.idx); });
+            let enProceso = 0;
+            try {
+                for (const [id, idxs] of porPedido) {
+                    await mutarPedido(id, p => {
+                        const r = { productos: (p.productos || []).map((pr, i) => idxs.has(i) ? { ...pr, ec: valor } : pr) };
+                        if (valor && p.estado === 'Pendiente') { r.estado = 'En Preparación'; enProceso++; }
+                        return r;
+                    }, `Compra de ${g.titulo}: ${ESTADOS_COMPRA[valor]}`);
+                }
+                toast(`${g.titulo}: ${ESTADOS_COMPRA[valor]}${enProceso ? `. ${plural(enProceso, 'pedido pasó', 'pedidos pasaron')} a En proceso` : ''}`, 'ok', 4000);
+            } catch (e) { toast(mensajeError(e), 'error'); refrescar(); }
         }
 
         async function copiarLista(key) {
@@ -3179,6 +3252,9 @@
             'dictar-codigos': () => dictarCodigos(),
             'exportar': () => exportar(),
             'compras-modo': el => { S.comprasModo = el.dataset.modo; marcarModoCompras(); renderCompras(); },
+            'compras-vista': el => { S.comprasVista = el.dataset.v; guardarPref('comprasVista', S.comprasVista); S.comprasAbiertos.clear(); renderCompras(); },
+            'toggle-compra-grupo': el => { const k = el.dataset.k; S.comprasCerrados.has(k) ? S.comprasCerrados.delete(k) : S.comprasCerrados.add(k); guardarPref('comprasCerrados', [...S.comprasCerrados]); renderCompras(); },
+            'toggle-compra-prod': el => { const k = el.dataset.k; S.comprasAbiertos.has(k) ? S.comprasAbiertos.delete(k) : S.comprasAbiertos.add(k); renderCompras(); },
             'copiar-lista': el => copiarLista(el.dataset.key),
             'cfg-agregar': el => cfgAgregar(el.dataset.tipo),
             'cfg-editar': el => cfgEditar(el.dataset.tipo, el.dataset.id),
@@ -3191,6 +3267,7 @@
             'chk': el => toggleMarca(el.dataset.id, Number(el.dataset.idx)),
             'chk-var': el => toggleMarca(el.dataset.id, Number(el.dataset.idx), Number(el.dataset.vi)),
             'estado': el => cambiarEstado(el.dataset.id, el.value),
+            'estado-compra': el => cambiarEstadoCompra(el.dataset.key, el.value),
             'compra': el => actDatoCompra(el.dataset.id, Number(el.dataset.idx), el.dataset.campo, el.value),
             'rango': el => { S.rangoDias = Number(el.value) || 14; suscribirPedidos(); },
             'orden': el => { S.orden = el.value; renderPedidos(); },
