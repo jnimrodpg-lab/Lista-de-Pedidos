@@ -328,10 +328,16 @@
     </main>
 
     <!-- DETALLE DEL PEDIDO -->
+    <!-- Foto en pantalla completa -->
+    <div id="visor-foto" class="fixed inset-0 z-[140] bg-black/95 hidden items-center justify-center" data-action="cerrar-visor">
+        <img id="visor-img" src="" alt="" class="w-full h-full object-contain">
+        <button type="button" data-action="cerrar-visor" class="absolute top-3 right-3 bg-white/90 hover:bg-white w-11 h-11 rounded-lg flex items-center justify-center" aria-label="Cerrar foto"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+
     <div id="modal-detalle" class="fixed inset-0 bg-tinta/80 z-[110] flex items-end md:items-center justify-center md:p-4 hidden">
         <div class="w-full max-w-6xl h-[94dvh] md:h-[90vh] bg-white rounded-t-2xl md:rounded-2xl overflow-hidden flex flex-col md:flex-row relative">
             <button type="button" data-action="cerrar-detalle" class="absolute top-3 right-3 z-20 bg-white border border-linea hover:bg-papel w-10 h-10 rounded-lg flex items-center justify-center" aria-label="Cerrar"><i data-lucide="x" class="w-5 h-5"></i></button>
-            <div class="md:w-[58%] bg-[#1f2a25] flex items-center justify-center p-4 h-[34%] md:h-full shrink-0" id="mdi-img-wrap"></div>
+            <div class="md:w-[58%] bg-[#1f2a25] relative overflow-hidden flex items-center justify-center h-[40%] md:h-full shrink-0" id="mdi-img-wrap"></div>
             <div class="w-full md:w-[42%] bg-white flex flex-col flex-grow min-h-0 md:h-full">
                 <div class="p-5 pr-16 border-b border-linea shrink-0" id="mdi-cabecera"></div>
                 <div class="p-5 overflow-y-auto flex-grow" id="mdi-cuerpo"></div>
@@ -1382,9 +1388,16 @@
             const productos = p.productos || [];
             const idx = Math.min(Math.max(0, S.detalle.idx), Math.max(0, productos.length - 1));
             const img = safeUrl(productos[idx]?.img);
-            $('mdi-img-wrap').innerHTML = img
-                ? `<img src="${esc(img)}" alt="${esc(productos[idx]?.n || '')}" class="max-w-full max-h-full object-contain rounded">`
-                : `<div class="text-white/50 flex flex-col items-center gap-2">${icono('image-off', 'w-12 h-12')}<span class="text-sm font-semibold">Este producto no tiene foto</span></div>`;
+            // La foto llena todo el panel; el fondo es la misma foto desenfocada (sin marco oscuro). Toca para verla en pantalla completa.
+            const wrap = $('mdi-img-wrap');
+            wrap.classList.toggle('h-[40%]', !!img); wrap.classList.toggle('h-20', !img);
+            wrap.innerHTML = img
+                ? `<img src="${esc(img)}" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60">
+                   <button type="button" data-action="ampliar-foto" data-src="${esc(img)}" class="relative w-full h-full cursor-zoom-in" title="Ver en pantalla completa">
+                       <img src="${esc(img)}" alt="${esc(productos[idx]?.n || '')}" class="w-full h-full object-contain drop-shadow-xl">
+                       <span class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/55 text-white text-xs font-semibold">${icono('maximize-2', 'w-3.5 h-3.5')} Ampliar</span>
+                   </button>`
+                : `<div class="text-white/60 flex items-center gap-2">${icono('image-off', 'w-6 h-6')}<span class="text-sm font-semibold">Este producto no tiene foto</span></div>`;
 
             const est = estadoDe(p);
             const editable = puedeEditar(p);
@@ -2433,6 +2446,8 @@
             try {
                 const productos = await resolverImagenes(bloques);
                 aplicarCompraRecordada(productos);
+                const ocupado = unirCon ? JSON.stringify(pedidoPorId(unirCon.id) || unirCon).length : 60_000; // notas e historial
+                await ajustarFotos(productos, LIMITE_DOC - ocupado - 20_000);
                 if (JSON.stringify(productos).length > LIMITE_DOC) {
                     toast('El pedido tiene demasiadas fotos para guardarse. Quita algunas o divídelo en dos pedidos.', 'error', 8000);
                     return;
@@ -2635,12 +2650,25 @@
             if (!file || !file.type?.startsWith('image/')) return toast('Ese archivo no es una imagen.', 'warn');
             try {
                 const img = await cargarImg(file);
-                const dataUrl = dibujar(img, 500).toDataURL('image/jpeg', 0.6);
+                const dataUrl = dibujar(img, 960).toDataURL('image/jpeg', 0.72); // nítida; si el pedido pesa mucho se reduce al guardar
                 const blob = USAR_STORAGE ? await new Promise(r => dibujar(img, 1200).toBlob(r, 'image/jpeg', 0.8)) : null;
                 if (it._preview?.startsWith('blob:')) URL.revokeObjectURL(it._preview);
                 Object.assign(it, { img: null, _dataUrl: dataUrl, _blob: blob, _preview: blob ? URL.createObjectURL(blob) : dataUrl });
                 renderFoto(i);
             } catch { toast('No se pudo leer la imagen.', 'error'); }
+        }
+        // Si el pedido trae muchas fotos, se comprimen un poco más hasta que quepa (en vez de rechazarlo).
+        async function recomprimir(dataUrl, max, q) {
+            const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = dataUrl; });
+            return dibujar(img, max).toDataURL('image/jpeg', q);
+        }
+        async function ajustarFotos(productos, limite) {
+            const tam = () => JSON.stringify(productos).length;
+            for (const [max, q] of [[760, 0.66], [600, 0.6], [460, 0.55], [340, 0.5]]) {
+                if (tam() <= limite) return true;
+                for (const pr of productos) if (String(pr.img || '').startsWith('data:image/')) { try { pr.img = await recomprimir(pr.img, max, q); } catch { /* se deja igual */ } }
+            }
+            return tam() <= limite;
         }
         function quitarFotoBloque(i) {
             const it = S.items[i];
@@ -3190,6 +3218,7 @@
             b.classList.toggle('activa', on); b.setAttribute('aria-selected', on);
         });
 
+        function cerrarVisor() { $('visor-foto').classList.add('hidden'); $('visor-foto').classList.remove('flex'); $('visor-img').src = ''; }
         function cerrarDetalleSiAbierto() { $('modal-detalle').classList.add('hidden'); S.detalle = null; }
         function cerrarModales() {
             cerrarDetalleSiAbierto();
@@ -3222,6 +3251,8 @@
             'ver-por-recibir': () => { S.filtroEstado = 'Preparado'; marcarFiltroEstado(); renderPedidos(); },
             'det-img': el => { if (S.detalle) { S.detalle.idx = Number(el.dataset.idx) || 0; renderDetalle(); } },
             'cerrar-detalle': () => cerrarDetalleSiAbierto(),
+            'ampliar-foto': el => { $('visor-img').src = el.dataset.src; $('visor-foto').classList.remove('hidden'); $('visor-foto').classList.add('flex'); },
+            'cerrar-visor': () => cerrarVisor(),
             'editar-pedido': el => { const p = pedidoPorId(el.dataset.id); if (p) abrirModalPedido(p); },
             'cancelar-pedido': el => cambiarEstado(el.dataset.id, 'Cancelado'),
             'toggle-filtros': () => { const f = $('panel-filtros'); const ver = f.classList.contains('hidden'); f.classList.toggle('hidden', !ver); f.classList.toggle('flex', ver); },
@@ -3297,7 +3328,8 @@
         $('mdi-nota-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarNota(); } });
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
-            if (S.confirmando) S.confirmando(false);
+            if (!$('visor-foto').classList.contains('hidden')) cerrarVisor();
+            else if (S.confirmando) S.confirmando(false);
             else if (!$('modal-camara').classList.contains('hidden')) detenerCamara();
             else if (!$('modal-detalle').classList.contains('hidden')) cerrarDetalleSiAbierto();
             else if (!$('modal-pedido').classList.contains('hidden')) cerrarModalPedido();
