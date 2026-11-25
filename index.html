@@ -2869,6 +2869,7 @@
                         <div class="flex flex-wrap gap-2">
                             ${selEstado}
                             <button type="button" data-action="copiar-lista" data-key="${gi}" class="btn btn-quieto text-sm px-3 py-1.5">${icono('copy', 'w-4 h-4')} Copiar</button>
+                            ${prods.some(pr => safeUrl(pr.img)) ? `<button type="button" data-action="compartir-fotos" data-key="${gi}" class="btn btn-quieto text-sm px-3 py-1.5 border-[#1f8f4e]/50 text-[#187a41]" title="Envía las fotos con el código y las cantidades escritos en cada una">${icono('images', 'w-4 h-4')} Compartir con fotos</button>` : ''}
                             <a href="${esc(waLink)}" target="_blank" rel="noopener" data-action="enviar-wa" data-key="${gi}" data-tel="${esc(tel)}" class="btn text-sm px-3 py-1.5 bg-[#1f8f4e] hover:bg-[#187a41] text-white" title="${modo === 'prov' && !tel ? 'Agrega el celular del proveedor en Configuración para abrir su chat directo' : ''}">${icono('message-circle', 'w-4 h-4')} ${modo === 'prov' ? 'Pedir por WhatsApp' : 'Enviar por WhatsApp'}</a>
                         </div>
                     </header>
@@ -2948,6 +2949,95 @@
         const marcarModoCompras = () => marcarSegmento('#compras-modo button', 'modo', S.comprasModo);
 
         // WhatsApp: si la lista es muy larga para el enlace, se copia y se abre el chat para pegarla.
+        // ================== COMPARTIR CON FOTOS ==================
+        // Cada foto lleva abajo una franja con código, nombre y cantidades. En el celular se abre "Compartir"
+        // (eliges WhatsApp y el contacto); en la computadora se descargan. El texto del pedido se copia.
+        function unirParaFoto(prods) {
+            const grupos = new Map();
+            prods.filter(pr => safeUrl(pr.img)).forEach(pr => {
+                const k = pr.s ? 's|' + norm(pr.s) : 'n|' + norm(pr.n) + '|' + norm(pr.mar) + '|' + norm(pr.det);
+                const g = grupos.get(k);
+                if (!g) { grupos.set(k, { ...pr, vars: tieneVars(pr) ? pr.vars.filter(v => !v.chk).map(v => ({ ...v })) : pr.vars, c: undPendientes(pr) }); return; }
+                if (tieneVars(pr)) pr.vars.filter(v => !v.chk).forEach(v => {
+                    const e = (g.vars || []).find(x => norm(x.v) === norm(v.v) && norm(x.v2) === norm(v.v2));
+                    if (e) e.c = (toCant(e.c) || 0) + (toCant(v.c) || 0); else (g.vars ||= []).push({ ...v });
+                });
+                g.c += undPendientes(pr);
+            });
+            return [...grupos.values()];
+        }
+        function partirLineas(ctx, texto, ancho) {
+            const out = [];
+            for (const parrafo of String(texto).split('\n')) {
+                let linea = '';
+                for (const palabra of parrafo.split(' ')) {
+                    const prueba = linea ? linea + ' ' + palabra : palabra;
+                    if (ctx.measureText(prueba).width > ancho && linea) { out.push(linea); linea = palabra; } else linea = prueba;
+                }
+                out.push(linea);
+            }
+            return out;
+        }
+        async function fotoRotulada(pr) {
+            const img = await new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = safeUrl(pr.img); });
+            const W = Math.max(720, Math.min(1080, img.naturalWidth));
+            const H = Math.round(img.naturalHeight * W / img.naturalWidth);
+            const fs = Math.round(W / 24), pad = Math.round(fs * 0.8);
+            const c = document.createElement('canvas'), ctx = c.getContext('2d');
+            const titulo = [pr.s, pr.n].filter(Boolean).join(' · ') + (pr.mar ? ` (${pr.mar})` : '');
+            const detalle = `${fmtCant(undPendientes(pr))} und${tieneVars(pr) ? ' — ' + resumenCorto(pr) : pr.det ? ' — ' + pr.det : ''}`;
+            ctx.font = `700 ${fs}px Barlow, system-ui, sans-serif`;
+            const l1 = partirLineas(ctx, titulo, W - pad * 2);
+            ctx.font = `500 ${Math.round(fs * 0.85)}px Barlow, system-ui, sans-serif`;
+            const l2 = partirLineas(ctx, detalle, W - pad * 2);
+            const banda = pad * 2 + l1.length * fs * 1.2 + l2.length * fs * 1.1;
+            c.width = W; c.height = H + Math.round(banda);
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+            ctx.drawImage(img, 0, 0, W, H);
+            ctx.fillStyle = '#00412f'; ctx.fillRect(0, H, W, c.height - H);
+            ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
+            let y = H + pad;
+            ctx.font = `700 ${fs}px Barlow, system-ui, sans-serif`;
+            l1.forEach(t => { ctx.fillText(t, pad, y); y += fs * 1.2; });
+            ctx.font = `500 ${Math.round(fs * 0.85)}px Barlow, system-ui, sans-serif`; ctx.fillStyle = '#d9efe5';
+            l2.forEach(t => { ctx.fillText(t, pad, y); y += fs * 1.1; });
+            const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86));
+            const nombre = (String(pr.s || pr.n || 'producto').replace(/[^\w\-áéíóúñ ]+/gi, '').trim() || 'producto') + '.jpg';
+            return new File([blob], nombre, { type: 'image/jpeg' });
+        }
+        async function compartirConFotos(key) {
+            const g = S.gruposCompra.get(key), texto = S.textosCompra.get(key) || '';
+            if (!g) return;
+            const copiado = navigator.clipboard?.writeText(texto).then(() => true, () => false) ?? Promise.resolve(false);
+            toast('Preparando las fotos…', 'info', 2000);
+            const files = [];
+            for (const pr of unirParaFoto(g.prods)) { try { files.push(await fotoRotulada(pr)); } catch (e) { console.warn('Foto no disponible', e); } }
+            if (!files.length) return toast('No se pudieron preparar las fotos.', 'warn');
+            const okCopia = await copiado;
+            const datos = { files, title: g.titulo, text: texto };
+            const puede = navigator.canShare?.({ files }) && navigator.share;
+            if (puede) {
+                const compartir = async () => {
+                    try { await navigator.share(navigator.canShare(datos) ? datos : { files }); toast(okCopia ? 'Si el texto no llegó con las fotos, pégalo en el chat: ya está copiado.' : 'Fotos enviadas.', 'ok', 6000); }
+                    catch (e) {
+                        if (e.name === 'AbortError') return;
+                        // Preparar las fotos tomó tiempo y el navegador pide otro toque para abrir "Compartir".
+                        if (e.name === 'NotAllowedError' && await confirmarUI({ titulo: `${plural(files.length, 'foto lista', 'fotos listas')}`, html: '<p class="text-sm text-gray-600">Toca Compartir y elige WhatsApp y el contacto.</p>', ok: 'Compartir' })) return compartir();
+                        if (e.name !== 'NotAllowedError') toast('No se pudo compartir: ' + e.message, 'error');
+                    }
+                };
+                return compartir();
+            }
+            // Computadora: se descargan para arrastrarlas al chat de WhatsApp Web.
+            for (const f of files) {
+                const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+                await new Promise(r => setTimeout(r, 250));
+            }
+            toast(`Se descargaron ${plural(files.length, 'foto', 'fotos')}${okCopia ? ' y se copió el texto' : ''}. Arrástralas al chat de WhatsApp Web.`, 'ok', 7000);
+        }
+
         async function enviarWA(el, e) {
             if (el.href.length <= 3500) return;   // normal: el enlace ya trae el texto
             e.preventDefault();
@@ -3287,6 +3377,7 @@
             'toggle-compra-grupo': el => { const k = el.dataset.k; S.comprasCerrados.has(k) ? S.comprasCerrados.delete(k) : S.comprasCerrados.add(k); guardarPref('comprasCerrados', [...S.comprasCerrados]); renderCompras(); },
             'toggle-compra-prod': el => { const k = el.dataset.k; S.comprasAbiertos.has(k) ? S.comprasAbiertos.delete(k) : S.comprasAbiertos.add(k); renderCompras(); },
             'copiar-lista': el => copiarLista(el.dataset.key),
+            'compartir-fotos': el => compartirConFotos(el.dataset.key),
             'cfg-agregar': el => cfgAgregar(el.dataset.tipo),
             'cfg-editar': el => cfgEditar(el.dataset.tipo, el.dataset.id),
             'cfg-eliminar': el => cfgEliminar(el.dataset.tipo, el.dataset.id),
