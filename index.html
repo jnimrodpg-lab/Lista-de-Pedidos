@@ -328,6 +328,17 @@
     </main>
 
     <!-- DETALLE DEL PEDIDO -->
+    <!-- ENVIAR POR WHATSAPP CON FOTOS -->
+    <div id="modal-fotos" class="fixed inset-0 bg-tinta/60 z-[125] hidden items-end sm:items-center justify-center sm:p-4">
+        <div class="bg-papel w-full sm:max-w-2xl max-h-[92dvh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
+            <div class="px-5 h-14 flex items-center justify-between bg-white border-b border-linea shrink-0">
+                <h3 class="font-cond font-bold text-xl truncate" id="mf-titulo">Enviar con fotos</h3>
+                <button type="button" data-action="cerrar-fotos" class="w-10 h-10 rounded-lg hover:bg-papel flex items-center justify-center" aria-label="Cerrar"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto" id="mf-cuerpo"></div>
+        </div>
+    </div>
+
     <!-- Foto en pantalla completa -->
     <div id="visor-foto" class="fixed inset-0 z-[140] bg-black/95 hidden items-center justify-center" data-action="cerrar-visor">
         <img id="visor-img" src="" alt="" class="w-full h-full object-contain">
@@ -2847,8 +2858,8 @@
                 const titulo = k ? etiqueta(k) : (modo === 'prov' ? 'Sin proveedor asignado' : modo === 'lugar' ? 'Sin lugar asignado' : 'Sin marca');
                 const texto = textoLista(prods, modo === 'prov' ? 'Hola, necesito hacer el siguiente pedido:' : `Lista de compras – ${titulo}:`);
                 S.textosCompra.set(String(gi), texto);
-                S.gruposCompra.set(String(gi), { titulo, prods });
                 const tel = modo === 'prov' ? telWA(ent?.telefono) : '';
+                S.gruposCompra.set(String(gi), { titulo, prods, tel });
                 const waLink = `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
                 const claveG = `${modo}:${k}`, cerrado = S.comprasCerrados.has(claveG);
                 const und = prods.reduce((a, pr) => a + undPendientes(pr), 0);
@@ -2869,7 +2880,7 @@
                         <div class="flex flex-wrap gap-2">
                             ${selEstado}
                             <button type="button" data-action="copiar-lista" data-key="${gi}" class="btn btn-quieto text-sm px-3 py-1.5">${icono('copy', 'w-4 h-4')} Copiar</button>
-                            ${prods.some(pr => safeUrl(pr.img)) ? `<button type="button" data-action="compartir-fotos" data-key="${gi}" class="btn btn-quieto text-sm px-3 py-1.5 border-[#1f8f4e]/50 text-[#187a41]" title="Envía las fotos con el código y las cantidades escritos en cada una">${icono('images', 'w-4 h-4')} Compartir con fotos</button>` : ''}
+                            ${prods.some(pr => safeUrl(pr.img)) ? `<button type="button" data-action="compartir-fotos" data-key="${gi}" class="btn btn-quieto text-sm px-3 py-1.5 border-[#1f8f4e]/50 text-[#187a41]" title="Envía el pedido y las fotos con el código y las cantidades escritos en cada una">${icono('images', 'w-4 h-4')} Enviar con fotos</button>` : ''}
                             <a href="${esc(waLink)}" target="_blank" rel="noopener" data-action="enviar-wa" data-key="${gi}" data-tel="${esc(tel)}" class="btn text-sm px-3 py-1.5 bg-[#1f8f4e] hover:bg-[#187a41] text-white" title="${modo === 'prov' && !tel ? 'Agrega el celular del proveedor en Configuración para abrir su chat directo' : ''}">${icono('message-circle', 'w-4 h-4')} ${modo === 'prov' ? 'Pedir por WhatsApp' : 'Enviar por WhatsApp'}</a>
                         </div>
                     </header>
@@ -3003,39 +3014,75 @@
             l2.forEach(t => { ctx.fillText(t, pad, y); y += fs * 1.1; });
             const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86));
             const nombre = (String(pr.s || pr.n || 'producto').replace(/[^\w\-áéíóúñ ]+/gi, '').trim() || 'producto') + '.jpg';
-            return new File([blob], nombre, { type: 'image/jpeg' });
+            const file = new File([blob], nombre, { type: 'image/jpeg' });
+            return { canvas: c, file, url: URL.createObjectURL(file), titulo: [pr.s, pr.n].filter(Boolean).join(' · ') };
         }
+        // WhatsApp no deja mandar fotos y texto juntos desde un enlace, así que se hace en 2 pasos:
+        // 1) abrir el chat del proveedor con el texto ya escrito; 2) mandar las fotos (rotuladas) por Compartir,
+        // o en la computadora copiándolas (Ctrl+V en el chat) o arrastrándolas.
         async function compartirConFotos(key) {
             const g = S.gruposCompra.get(key), texto = S.textosCompra.get(key) || '';
             if (!g) return;
-            const copiado = navigator.clipboard?.writeText(texto).then(() => true, () => false) ?? Promise.resolve(false);
-            toast('Preparando las fotos…', 'info', 2000);
-            const files = [];
-            for (const pr of unirParaFoto(g.prods)) { try { files.push(await fotoRotulada(pr)); } catch (e) { console.warn('Foto no disponible', e); } }
-            if (!files.length) return toast('No se pudieron preparar las fotos.', 'warn');
-            const okCopia = await copiado;
-            const datos = { files, title: g.titulo, text: texto };
-            const puede = navigator.canShare?.({ files }) && navigator.share;
-            if (puede) {
-                const compartir = async () => {
-                    try { await navigator.share(navigator.canShare(datos) ? datos : { files }); toast(okCopia ? 'Si el texto no llegó con las fotos, pégalo en el chat: ya está copiado.' : 'Fotos enviadas.', 'ok', 6000); }
-                    catch (e) {
-                        if (e.name === 'AbortError') return;
-                        // Preparar las fotos tomó tiempo y el navegador pide otro toque para abrir "Compartir".
-                        if (e.name === 'NotAllowedError' && await confirmarUI({ titulo: `${plural(files.length, 'foto lista', 'fotos listas')}`, html: '<p class="text-sm text-gray-600">Toca Compartir y elige WhatsApp y el contacto.</p>', ok: 'Compartir' })) return compartir();
-                        if (e.name !== 'NotAllowedError') toast('No se pudo compartir: ' + e.message, 'error');
-                    }
-                };
-                return compartir();
-            }
-            // Computadora: se descargan para arrastrarlas al chat de WhatsApp Web.
-            for (const f of files) {
-                const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
-                document.body.appendChild(a); a.click(); a.remove();
-                setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-                await new Promise(r => setTimeout(r, 250));
-            }
-            toast(`Se descargaron ${plural(files.length, 'foto', 'fotos')}${okCopia ? ' y se copió el texto' : ''}. Arrástralas al chat de WhatsApp Web.`, 'ok', 7000);
+            liberarFotosEnvio();
+            const movil = esMovil() && !!navigator.share;
+            $('mf-titulo').textContent = `Enviar a ${g.titulo}`;
+            $('mf-cuerpo').innerHTML = `<p class="text-sm text-gray-600 flex items-center gap-2">${icono('loader-circle', 'w-4 h-4 animate-spin')} Preparando las fotos…</p>`;
+            $('modal-fotos').classList.remove('hidden'); $('modal-fotos').classList.add('flex');
+            pintarIconos();
+            const fotos = [];
+            for (const pr of unirParaFoto(g.prods)) { try { fotos.push(await fotoRotulada(pr)); } catch (e) { console.warn('Foto no disponible', e); } }
+            S.fotosEnvio = { fotos, texto, tel: g.tel, titulo: g.titulo };
+            const wa = `https://wa.me/${g.tel || ''}${texto.length <= 3500 ? `?text=${encodeURIComponent(texto)}` : ''}`;
+            const paso = (n, t) => `<p class="font-cond font-bold text-lg flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-cobalto text-white text-sm flex items-center justify-center">${n}</span>${t}</p>`;
+            $('mf-cuerpo').innerHTML = `
+                <section class="bg-white rounded-xl border border-linea p-4">
+                    ${paso(1, 'Envía el texto del pedido')}
+                    <p class="text-sm text-gray-600 mt-1 mb-3">${g.tel ? `Se abre el chat de ${esc(g.titulo)} con el pedido ya escrito: solo toca Enviar.` : 'Se abre WhatsApp con el pedido ya escrito; elige el contacto y toca Enviar.'}</p>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="${esc(wa)}" target="_blank" rel="noopener" data-action="mf-abrir-chat" class="btn text-sm px-4 py-2 bg-[#1f8f4e] hover:bg-[#187a41] text-white">${icono('message-circle', 'w-4 h-4')} Abrir chat con el texto</a>
+                        <button type="button" data-action="mf-copiar-texto" class="btn btn-quieto text-sm px-3 py-2">${icono('copy', 'w-4 h-4')} Copiar texto</button>
+                    </div>
+                </section>
+                <section class="bg-white rounded-xl border border-linea p-4 mt-3">
+                    ${paso(2, fotos.length === 1 ? 'Envía la foto' : `Envía las ${fotos.length} fotos`)}
+                    ${!fotos.length ? '<p class="text-sm text-gray-600 mt-1">No se pudieron preparar las fotos.</p>' : movil ? `
+                        <p class="text-sm text-gray-600 mt-1 mb-3">Toca Compartir, elige WhatsApp y el mismo chat. Cada foto ya lleva escritos el código y las cantidades.</p>
+                        <button type="button" data-action="mf-compartir" class="btn btn-primario text-sm px-4 py-2 w-full sm:w-auto">${icono('share-2', 'w-4 h-4')} Compartir ${plural(fotos.length, 'foto', 'fotos')}</button>` : `
+                        <p class="text-sm text-gray-600 mt-1 mb-3">En el chat de WhatsApp: toca <b>Copiar</b> en una foto y pégala con <b>Ctrl+V</b> (o arrástrala al chat). Repite con cada foto.</p>`}
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                        ${fotos.map((f, i) => `
+                        <figure class="rounded-lg border border-linea overflow-hidden bg-papel">
+                            <img src="${f.url}" alt="${esc(f.titulo)}" draggable="true" class="w-full aspect-[3/4] object-contain bg-white" title="Arrástrala al chat de WhatsApp">
+                            <figcaption class="p-2">
+                                <p class="text-xs font-semibold truncate">${esc(f.titulo)}</p>
+                                <div class="grid ${movil ? 'grid-cols-1' : 'grid-cols-2'} gap-1.5 mt-1.5">
+                                    ${movil ? '' : `<button type="button" data-action="mf-copiar-foto" data-i="${i}" class="btn btn-quieto text-xs px-2 py-1.5">${icono('copy', 'w-3.5 h-3.5')} Copiar</button>`}
+                                    <a href="${f.url}" download="${esc(f.file.name)}" class="btn btn-quieto text-xs px-2 py-1.5">${icono('download', 'w-3.5 h-3.5')} Bajar</a>
+                                </div>
+                            </figcaption>
+                        </figure>`).join('')}
+                    </div>
+                </section>`;
+            pintarIconos();
+        }
+        function liberarFotosEnvio() { (S.fotosEnvio?.fotos || []).forEach(f => URL.revokeObjectURL(f.url)); S.fotosEnvio = null; }
+        function cerrarFotos() { $('modal-fotos').classList.add('hidden'); $('modal-fotos').classList.remove('flex'); liberarFotosEnvio(); }
+        async function copiarFotoEnvio(i, btn) {
+            const f = S.fotosEnvio?.fotos?.[i];
+            if (!f) return;
+            try {
+                // El portapapeles acepta PNG; se pasa como promesa para no perder el permiso del toque.
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Promise(r => f.canvas.toBlob(r, 'image/png')) })]);
+                if (btn) { btn.innerHTML = `${icono('check', 'w-3.5 h-3.5')} Copiada`; pintarIconos(); }
+                toast('Foto copiada. En el chat de WhatsApp pulsa Ctrl+V y Enviar.', 'ok', 4000);
+            } catch { toast('Este navegador no deja copiar imágenes. Arrastra la foto al chat o usa Bajar.', 'warn', 6000); }
+        }
+        async function compartirFotosEnvio() {
+            const d = S.fotosEnvio;
+            if (!d?.fotos?.length) return;
+            const files = d.fotos.map(f => f.file);
+            try { await navigator.share({ files }); }
+            catch (e) { if (e.name !== 'AbortError') toast('No se pudo abrir Compartir: ' + e.message + '. Usa Bajar en cada foto.', 'error', 7000); }
         }
 
         async function enviarWA(el, e) {
@@ -3378,6 +3425,11 @@
             'toggle-compra-prod': el => { const k = el.dataset.k; S.comprasAbiertos.has(k) ? S.comprasAbiertos.delete(k) : S.comprasAbiertos.add(k); renderCompras(); },
             'copiar-lista': el => copiarLista(el.dataset.key),
             'compartir-fotos': el => compartirConFotos(el.dataset.key),
+            'cerrar-fotos': () => cerrarFotos(),
+            'mf-copiar-texto': async () => { try { await navigator.clipboard.writeText(S.fotosEnvio?.texto || ''); toast('Texto copiado', 'ok'); } catch { toast('No se pudo copiar.', 'warn'); } },
+            'mf-abrir-chat': async (el, e) => { const t = S.fotosEnvio?.texto || ''; if (t.length > 3500) { try { await navigator.clipboard.writeText(t); } catch { /* sin portapapeles */ } toast('El texto es largo: se copió, pégalo en el chat.', 'info', 6000); } },
+            'mf-copiar-foto': el => copiarFotoEnvio(Number(el.dataset.i), el),
+            'mf-compartir': () => compartirFotosEnvio(),
             'cfg-agregar': el => cfgAgregar(el.dataset.tipo),
             'cfg-editar': el => cfgEditar(el.dataset.tipo, el.dataset.id),
             'cfg-eliminar': el => cfgEliminar(el.dataset.tipo, el.dataset.id),
@@ -3420,6 +3472,7 @@
         document.addEventListener('keydown', e => {
             if (e.key !== 'Escape') return;
             if (!$('visor-foto').classList.contains('hidden')) cerrarVisor();
+            else if (!$('modal-fotos').classList.contains('hidden')) cerrarFotos();
             else if (S.confirmando) S.confirmando(false);
             else if (!$('modal-camara').classList.contains('hidden')) detenerCamara();
             else if (!$('modal-detalle').classList.contains('hidden')) cerrarDetalleSiAbierto();
